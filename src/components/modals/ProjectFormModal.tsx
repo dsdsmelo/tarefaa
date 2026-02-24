@@ -428,6 +428,10 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
   ];
 
   const handleCreateProject = async (data: ProjectFormData) => {
+    if (selectedMemberIds.length === 0) {
+      toast.error('Selecione pelo menos um membro para a equipe do projeto');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const projectData = {
@@ -490,7 +494,10 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
 
   const handleUpdateProject = async (data: ProjectFormData) => {
     if (!project) return;
-
+    if (selectedMemberIds.length === 0) {
+      toast.error('Selecione pelo menos um membro para a equipe do projeto');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await updateProject(project.id, {
@@ -591,7 +598,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
     <div className="space-y-2">
       <Label className="flex items-center gap-2">
         <Users className="w-4 h-4" />
-        Equipe do Projeto
+        Equipe do Projeto *
       </Label>
       <Popover open={membersPopoverOpen} onOpenChange={setMembersPopoverOpen}>
         <PopoverTrigger asChild>
@@ -640,9 +647,9 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
               </button>
             )}
             {activePeople.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <p className="text-sm text-destructive text-center py-4">
                 Nenhuma pessoa cadastrada.<br />
-                <span className="text-xs">Cadastre pessoas em Configurações → Pessoas</span>
+                <span className="text-xs">Cadastre pessoas em Configurações → Pessoas antes de criar um projeto.</span>
               </p>
             ) : (
               activePeople.map((person) => (
@@ -854,7 +861,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
 
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting} className="gradient-primary text-white">
+                <Button type="submit" disabled={isSubmitting || activePeople.length === 0} className="gradient-primary text-white">
                   {isSubmitting ? 'Salvando...' : 'Atualizar'}
                 </Button>
               </div>
@@ -909,7 +916,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
 
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting} className="gradient-primary text-white">
+                <Button type="submit" disabled={isSubmitting || activePeople.length === 0} className="gradient-primary text-white">
                   {isSubmitting ? 'Criando...' : 'Criar Projeto'}
                 </Button>
               </div>
