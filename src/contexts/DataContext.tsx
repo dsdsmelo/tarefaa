@@ -53,6 +53,7 @@ interface DataContextType {
   addSpreadsheet: (spreadsheet: Omit<Spreadsheet, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<Spreadsheet>;
   updateSpreadsheet: (id: string, updates: Partial<Spreadsheet>) => Promise<void>;
   deleteSpreadsheet: (id: string) => Promise<void>;
+  duplicateSpreadsheet: (spreadsheet: Spreadsheet) => Promise<Spreadsheet>;
   fetchSpreadsheetData: (spreadsheetId: string) => Promise<{
     columns: SpreadsheetColumn[];
     rows: SpreadsheetRow[];

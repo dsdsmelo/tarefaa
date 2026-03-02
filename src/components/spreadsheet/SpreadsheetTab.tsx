@@ -11,6 +11,7 @@ import {
   Calendar,
   ArrowLeft,
   Loader2,
+  Copy,
 } from 'lucide-react';
 import {
   Dialog,
@@ -48,6 +49,7 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
     addSpreadsheet,
     updateSpreadsheet,
     deleteSpreadsheet,
+    duplicateSpreadsheet,
   } = useData();
 
   // Filter spreadsheets for current project
@@ -63,6 +65,7 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
   const [spreadsheetToDelete, setSpreadsheetToDelete] = useState<Spreadsheet | null>(null);
   const [activeSpreadsheet, setActiveSpreadsheet] = useState<Spreadsheet | null>(null);
   const [saving, setSaving] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -129,6 +132,18 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
   const handleDeleteClick = (spreadsheet: Spreadsheet) => {
     setSpreadsheetToDelete(spreadsheet);
     setDeleteDialogOpen(true);
+  };
+
+  const handleDuplicateSpreadsheet = async (spreadsheet: Spreadsheet) => {
+    setDuplicatingId(spreadsheet.id);
+    try {
+      await duplicateSpreadsheet(spreadsheet);
+      toast.success(`"${spreadsheet.name}" duplicada com sucesso!`);
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao duplicar tabela');
+    } finally {
+      setDuplicatingId(null);
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -284,12 +299,25 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
                     <button
                       className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                       onClick={(e) => { e.stopPropagation(); handleOpenModal(spreadsheet); }}
+                      title="Editar tabela"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                     <button
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                      onClick={(e) => { e.stopPropagation(); handleDuplicateSpreadsheet(spreadsheet); }}
+                      disabled={duplicatingId === spreadsheet.id}
+                      title="Duplicar tabela"
+                    >
+                      {duplicatingId === spreadsheet.id
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Copy className="w-3.5 h-3.5" />
+                      }
+                    </button>
+                    <button
                       className="p-1 rounded hover:bg-muted text-destructive/70 hover:text-destructive transition-colors"
                       onClick={(e) => { e.stopPropagation(); handleDeleteClick(spreadsheet); }}
+                      title="Excluir tabela"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

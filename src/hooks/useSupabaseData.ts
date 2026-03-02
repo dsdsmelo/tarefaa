@@ -488,6 +488,132 @@ export function useSupabaseData() {
     setSpreadsheets(prev => prev.filter(s => s.id !== id));
   };
 
+  const duplicateSpreadsheet = async (original: Spreadsheet) => {
+    const userId = await getCurrentUserId();
+    if (!userId) throw new Error('User not authenticated');
+
+    // 1. Create new spreadsheet
+    const { data: newSpData, error: spError } = await supabase
+      .from('project_spreadsheets')
+      .insert([{
+        project_id: original.projectId,
+        user_id: userId,
+        name: `${original.name} (cópia)`,
+        description: original.description || null,
+      }])
+      .select()
+      .single();
+    if (spError) throw spError;
+    const newSpreadsheet = mapSpreadsheet(newSpData);
+
+    // 2. Fetch all sheets from original
+    const { data: sheetsData, error: sheetsError } = await supabase
+      .from('spreadsheet_sheets')
+      .select('*')
+      .eq('spreadsheet_id', original.id)
+      .order('order_index');
+    if (sheetsError) throw sheetsError;
+    const sheets = sheetsData || [];
+
+    // Helper to copy columns/rows/cells/merges for one sheet (or spreadsheet-level)
+    const copySheetContent = async (originalSheetId: string | null, newSheetId: string | null) => {
+      const colQuery = originalSheetId
+        ? supabase.from('spreadsheet_columns').select('*').eq('sheet_id', originalSheetId).order('order_index')
+        : supabase.from('spreadsheet_columns').select('*').eq('spreadsheet_id', original.id).order('order_index');
+      const rowQuery = originalSheetId
+        ? supabase.from('spreadsheet_rows').select('*').eq('sheet_id', originalSheetId).order('order_index')
+        : supabase.from('spreadsheet_rows').select('*').eq('spreadsheet_id', original.id).order('order_index');
+      const mergeQuery = originalSheetId
+        ? supabase.from('spreadsheet_merges').select('*').eq('sheet_id', originalSheetId)
+        : supabase.from('spreadsheet_merges').select('*').eq('spreadsheet_id', original.id);
+
+      const [{ data: colsData, error: colsError }, { data: rowsData, error: rowsError }, { data: mergesData, error: mergesError }] =
+        await Promise.all([colQuery, rowQuery, mergeQuery]);
+      if (colsError) throw colsError;
+      if (rowsError) throw rowsError;
+      if (mergesError) throw mergesError;
+
+      const colIdMap: Record<string, string> = {};
+      const rowIdMap: Record<string, string> = {};
+
+      if ((colsData || []).length > 0) {
+        const payload = (colsData || []).map(col => ({
+          spreadsheet_id: newSpreadsheet.id,
+          ...(newSheetId ? { sheet_id: newSheetId } : {}),
+          name: col.name,
+          type: col.type,
+          width: col.width,
+          order_index: col.order_index,
+          formula: col.formula || null,
+          format: col.format || null,
+        }));
+        const { data: newCols, error: newColsError } = await supabase.from('spreadsheet_columns').insert(payload).select();
+        if (newColsError) throw newColsError;
+        (colsData || []).forEach((oldCol, i) => { colIdMap[oldCol.id] = newCols![i].id; });
+      }
+
+      if ((rowsData || []).length > 0) {
+        const payload = (rowsData || []).map(row => ({
+          spreadsheet_id: newSpreadsheet.id,
+          ...(newSheetId ? { sheet_id: newSheetId } : {}),
+          order_index: row.order_index,
+          is_header: row.is_header || false,
+        }));
+        const { data: newRows, error: newRowsError } = await supabase.from('spreadsheet_rows').insert(payload).select();
+        if (newRowsError) throw newRowsError;
+        (rowsData || []).forEach((oldRow, i) => { rowIdMap[oldRow.id] = newRows![i].id; });
+      }
+
+      const oldRowIds = (rowsData || []).map(r => r.id);
+      if (oldRowIds.length > 0) {
+        const { data: cellsData, error: cellsError } = await supabase.from('spreadsheet_cells').select('*').in('row_id', oldRowIds);
+        if (cellsError) throw cellsError;
+        const newCellsPayload = (cellsData || [])
+          .filter(cell => rowIdMap[cell.row_id] && colIdMap[cell.column_id])
+          .map(cell => ({
+            row_id: rowIdMap[cell.row_id],
+            column_id: colIdMap[cell.column_id],
+            value: cell.value || null,
+            computed_value: cell.computed_value || null,
+          }));
+        if (newCellsPayload.length > 0) {
+          const { error: newCellsError } = await supabase.from('spreadsheet_cells').insert(newCellsPayload);
+          if (newCellsError) throw newCellsError;
+        }
+      }
+
+      if ((mergesData || []).length > 0) {
+        const mergesPayload = (mergesData || []).map(merge => ({
+          spreadsheet_id: newSpreadsheet.id,
+          ...(newSheetId ? { sheet_id: newSheetId } : {}),
+          start_row: merge.start_row,
+          start_col: merge.start_col,
+          end_row: merge.end_row,
+          end_col: merge.end_col,
+        }));
+        const { error: newMergesError } = await supabase.from('spreadsheet_merges').insert(mergesPayload);
+        if (newMergesError) throw newMergesError;
+      }
+    };
+
+    if (sheets.length === 0) {
+      await copySheetContent(null, null);
+    } else {
+      for (const sheet of sheets) {
+        const { data: newSheetData, error: newSheetError } = await supabase
+          .from('spreadsheet_sheets')
+          .insert([{ spreadsheet_id: newSpreadsheet.id, name: sheet.name, order_index: sheet.order_index }])
+          .select()
+          .single();
+        if (newSheetError) throw newSheetError;
+        await copySheetContent(sheet.id, newSheetData.id);
+      }
+    }
+
+    setSpreadsheets(prev => [newSpreadsheet, ...prev]);
+    return newSpreadsheet;
+  };
+
   // Fetch full spreadsheet data (sheets, columns, rows, cells, merges) for editor
   const fetchSpreadsheetData = async (spreadsheetId: string, sheetId?: string) => {
     // Fetch sheets first
@@ -753,7 +879,7 @@ export function useSupabaseData() {
     // Meeting Notes CRUD
     addMeetingNote, updateMeetingNote, deleteMeetingNote,
     // Spreadsheets CRUD
-    addSpreadsheet, updateSpreadsheet, deleteSpreadsheet,
+    addSpreadsheet, updateSpreadsheet, deleteSpreadsheet, duplicateSpreadsheet,
     fetchSpreadsheetData, saveSpreadsheetData,
     addSpreadsheetColumn, updateSpreadsheetColumn, deleteSpreadsheetColumn,
     addSpreadsheetRow, deleteSpreadsheetRow,
