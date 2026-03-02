@@ -586,13 +586,84 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
     toast.success(`Colado: ${rowCount} linha${rowCount > 1 ? 's' : ''} × ${colCount} coluna${colCount > 1 ? 's' : ''}`);
   }, [handlePaste, selectedCell, rows, columns, spreadsheet.id, queueSave]);
 
-  // Keyboard shortcuts for copy/paste
+  // Clear value of all cells in the current selection
+  const clearSelectedCells = useCallback(() => {
+    const bounds = getSelectionBounds();
+    if (!selectedCell && !bounds) return;
+    const newRows = rows.map((r, rowIndex) => {
+      const inRowRange = bounds
+        ? rowIndex >= bounds.startRow && rowIndex <= bounds.endRow
+        : r.id === selectedCell?.rowId;
+      if (!inRowRange) return r;
+      const newCells = { ...r.cells };
+      columns.forEach((col, colIndex) => {
+        const inColRange = bounds
+          ? colIndex >= bounds.startCol && colIndex <= bounds.endCol
+          : col.id === selectedCell?.colId;
+        if (inColRange && newCells[col.id]) {
+          newCells[col.id] = { ...newCells[col.id], value: '' };
+        }
+      });
+      return { ...r, cells: newCells };
+    });
+    setRows(newRows);
+    queueSave(columns, newRows);
+  }, [getSelectionBounds, selectedCell, rows, columns, queueSave]);
+
+  // Move the single-cell selection by (rowDelta, colDelta)
+  const moveSelection = useCallback((rowDelta: number, colDelta: number) => {
+    const fromRow = selectionStart?.row ?? (selectedCell ? rows.findIndex(r => r.id === selectedCell.rowId) : 0);
+    const fromCol = selectionStart?.col ?? (selectedCell ? columns.findIndex(c => c.id === selectedCell.colId) : 0);
+    const newRowIdx = Math.max(0, Math.min(rows.length - 1, fromRow + rowDelta));
+    const newColIdx = Math.max(0, Math.min(columns.length - 1, fromCol + colDelta));
+    const newRow = rows[newRowIdx];
+    const newCol = columns[newColIdx];
+    if (newRow && newCol) {
+      setSelectedCell({ rowId: newRow.id, colId: newCol.id });
+      setSelectionStart({ row: newRowIdx, col: newColIdx });
+      setSelectionEnd({ row: newRowIdx, col: newColIdx });
+    }
+  }, [selectedCell, selectionStart, rows, columns]);
+
+  // Extend the selection end by (rowDelta, colDelta) — Shift+Arrow
+  const extendSelection = useCallback((rowDelta: number, colDelta: number) => {
+    if (!selectionStart) return;
+    const curEnd = selectionEnd ?? selectionStart;
+    const newEndRow = Math.max(0, Math.min(rows.length - 1, curEnd.row + rowDelta));
+    const newEndCol = Math.max(0, Math.min(columns.length - 1, curEnd.col + colDelta));
+    setSelectionEnd({ row: newEndRow, col: newEndCol });
+  }, [selectionStart, selectionEnd, rows.length, columns.length]);
+
+  // Copy selected range as TSV (falls back to single cell if only 1 cell selected)
+  const handleCopyRange = useCallback(() => {
+    if (editingCell || editingColId) return;
+    const bounds = getSelectionBounds();
+    if (!bounds || (bounds.startRow === bounds.endRow && bounds.startCol === bounds.endCol)) {
+      handleCopy();
+      return;
+    }
+    const lines: string[] = [];
+    for (let r = bounds.startRow; r <= bounds.endRow; r++) {
+      const row = rows[r];
+      if (!row) continue;
+      const vals: string[] = [];
+      for (let c = bounds.startCol; c <= bounds.endCol; c++) {
+        const col = columns[c];
+        vals.push(col ? (row.cells[col.id]?.value || '') : '');
+      }
+      lines.push(vals.join('\t'));
+    }
+    navigator.clipboard.writeText(lines.join('\n')).catch(() => {});
+    const rc = bounds.endRow - bounds.startRow + 1;
+    const cc = bounds.endCol - bounds.startCol + 1;
+    toast.success(`Copiado: ${rc} linha${rc > 1 ? 's' : ''} × ${cc} coluna${cc > 1 ? 's' : ''}`);
+  }, [editingCell, editingColId, getSelectionBounds, rows, columns, handleCopy]);
+
+  // Keyboard shortcuts — navigation, editing, copy/paste, delete, select all
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // CRITICAL: Don't interfere with text editing
+      // Don't interfere with text editing
       if (editingCell || editingColId) return;
-
-      // Skip if focus is on an input/textarea
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
@@ -600,16 +671,52 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
 
       if (modKey && e.key === 'c') {
         e.preventDefault();
-        handleCopy();
+        handleCopyRange();
       } else if (modKey && e.key === 'v') {
         e.preventDefault();
         handlePasteData();
+      } else if (modKey && e.key === 'a') {
+        e.preventDefault();
+        if (rows.length > 0 && columns.length > 0) {
+          setSelectionStart({ row: 0, col: 0 });
+          setSelectionEnd({ row: rows.length - 1, col: columns.length - 1 });
+          setSelectedCell({ rowId: rows[0].id, colId: columns[0].id });
+        }
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && (selectedCell || getSelectionBounds())) {
+        e.preventDefault();
+        clearSelectedCells();
+      } else if (e.key === 'Escape') {
+        setSelectedCell(null);
+        setSelectionStart(null);
+        setSelectionEnd(null);
+      } else if ((e.key === 'Enter' || e.key === 'F2') && selectedCell) {
+        e.preventDefault();
+        startEditCell(selectedCell.rowId, selectedCell.colId);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        e.shiftKey ? extendSelection(-1, 0) : moveSelection(-1, 0);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        e.shiftKey ? extendSelection(1, 0) : moveSelection(1, 0);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        e.shiftKey ? extendSelection(0, -1) : moveSelection(0, -1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        e.shiftKey ? extendSelection(0, 1) : moveSelection(0, 1);
+      } else if (!modKey && !e.altKey && e.key.length === 1 && selectedCell) {
+        // Any printable character starts editing the selected cell
+        startEditCellWithValue(selectedCell.rowId, selectedCell.colId, e.key);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [editingCell, editingColId, handleCopy, handlePasteData]);
+  }, [
+    editingCell, editingColId, handleCopyRange, handlePasteData,
+    selectedCell, rows, columns, getSelectionBounds,
+    clearSelectedCells, moveSelection, extendSelection,
+  ]);
 
   // Mouse up handler for selection
   useEffect(() => {
@@ -645,6 +752,13 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
   const startEditCell = (rowId: string, colId: string) => {
     const row = rows.find(r => r.id === rowId);
     setEditValue(row?.cells[colId]?.value || '');
+    setEditingCell({ rowId, colId });
+    setSelectedCell({ rowId, colId });
+  };
+
+  // Start editing with an initial typed character (press any key to start editing)
+  const startEditCellWithValue = (rowId: string, colId: string, initialValue: string) => {
+    setEditValue(initialValue);
     setEditingCell({ rowId, colId });
     setSelectedCell({ rowId, colId });
   };
@@ -689,29 +803,34 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
     queueSave(newCols, rows);
   };
 
-  // Apply style to selected cell
+  // Apply style to all cells in the current selection range (or single selectedCell)
   const applyStyle = (styleUpdate: Partial<CellStyle>) => {
-    if (!selectedCell) {
+    const bounds = getSelectionBounds();
+    if (!selectedCell && !bounds) {
       toast.error('Selecione uma célula primeiro');
       return;
     }
 
-    const newRows = rows.map(r => {
-      if (r.id === selectedCell.rowId) {
-        const existingCell = r.cells[selectedCell.colId] || { value: '' };
-        const existingStyle = existingCell.style || {};
-        return {
-          ...r,
-          cells: {
-            ...r.cells,
-            [selectedCell.colId]: {
-              ...existingCell,
-              style: { ...existingStyle, ...styleUpdate }
-            }
-          }
-        };
-      }
-      return r;
+    const newRows = rows.map((r, rowIndex) => {
+      const inRowRange = bounds
+        ? rowIndex >= bounds.startRow && rowIndex <= bounds.endRow
+        : r.id === selectedCell?.rowId;
+      if (!inRowRange) return r;
+
+      const newCells = { ...r.cells };
+      columns.forEach((col, colIndex) => {
+        const inColRange = bounds
+          ? colIndex >= bounds.startCol && colIndex <= bounds.endCol
+          : col.id === selectedCell?.colId;
+        if (inColRange) {
+          const existingCell = newCells[col.id] || { value: '' };
+          newCells[col.id] = {
+            ...existingCell,
+            style: { ...(existingCell.style || {}), ...styleUpdate },
+          };
+        }
+      });
+      return { ...r, cells: newCells };
     });
     setRows(newRows);
     queueSave(columns, newRows);
@@ -1472,7 +1591,7 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
       {/* Footer */}
       <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
         <span>{rows.length} linhas × {columns.length} colunas</span>
-        <span>Arraste para selecionar • Duplo clique para editar • Ctrl+C/V para copiar/colar</span>
+        <span>Arraste ou Shift+↑↓←→ para selecionar • Digite para editar • Enter/F2 para editar • Delete para limpar • Ctrl+C/V copiar/colar • Ctrl+A selecionar tudo</span>
       </div>
     </div>
   );
