@@ -624,7 +624,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
       {/* Tasks Table */}
       <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full" style={{ tableLayout: 'fixed' }}>
+          <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left py-1.5 px-2 w-8 sticky left-0 z-20 bg-muted">
@@ -642,18 +642,14 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                   return (
                   <th
                     key={col.id}
-                    style={
-                      isNameCol
-                        ? { width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px`, position: 'sticky', left: '32px', zIndex: 20 }
-                        : { width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px`, position: 'relative' }
-                    }
+                    style={{ minWidth: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }}
                     className={cn(
                       "text-left py-1.5 px-2 text-xs font-medium text-muted-foreground whitespace-nowrap transition-all",
                       isCompactCol && "w-[1px]",
                       shouldWrapHeader && "min-w-[250px]",
                       draggedColumnId === col.id && "opacity-50",
                       dragOverColumnId === col.id && "bg-primary/10 border-l-2 border-primary",
-                      isNameCol && "bg-muted after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border"
+                      isNameCol && "sticky left-8 z-20 bg-muted after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border"
                     )}
                     draggable
                     onDragStart={(e) => handleColumnDragStart(e, col.id)}
@@ -779,17 +775,13 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                       return (
                       <td
                         key={col.id}
-                        style={
-                          isNameCol
-                            ? { width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px`, position: 'sticky', left: '32px', zIndex: 20 }
-                            : { width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }
-                        }
+                        style={{ minWidth: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }}
                         className={cn(
                           "py-1 px-2 text-xs",
                           !shouldWrap && "whitespace-nowrap",
                           shouldWrap && "min-w-[250px]",
                           isCompactCol && "w-[1px]",
-                          isNameCol && "bg-card after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border transition-colors",
+                          isNameCol && "sticky left-8 z-20 bg-card after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border transition-colors",
                           isNameCol && "group-hover/row:bg-muted",
                           isNameCol && overdue && "!bg-red-50 dark:!bg-red-950/50 group-hover/row:!bg-muted",
                           isNameCol && selectedTasks.includes(task.id) && "!bg-blue-50 dark:!bg-blue-950/50 group-hover/row:!bg-muted"
