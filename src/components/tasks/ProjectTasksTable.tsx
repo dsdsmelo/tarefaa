@@ -103,6 +103,25 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
   const columnInputRef = useRef<HTMLInputElement>(null);
 
   // Column resize state
+  const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
+    name: 220,
+    description: 280,
+    responsible: 150,
+    status: 130,
+    priority: 110,
+    startDate: 110,
+    endDate: 110,
+    progress: 100,
+  };
+
+  const getDefaultWidth = (col: CustomColumn): number => {
+    if (col.standardField && DEFAULT_COLUMN_WIDTHS[col.standardField]) {
+      return DEFAULT_COLUMN_WIDTHS[col.standardField];
+    }
+    if (col.type === 'number' || col.type === 'percentage') return 100;
+    return 180;
+  };
+
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const resizingRef = useRef<{ colId: string; startX: number; startWidth: number } | null>(null);
 
@@ -605,7 +624,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
       {/* Tasks Table */}
       <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full" style={{ tableLayout: 'fixed' }}>
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left py-1.5 px-2 w-8 sticky left-0 z-20 bg-muted">
@@ -623,7 +642,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                   return (
                   <th
                     key={col.id}
-                    style={{ width: columnWidths[col.id] ? `${columnWidths[col.id]}px` : undefined, position: 'relative' }}
+                    style={{ width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px`, position: 'relative' }}
                     className={cn(
                       "text-left py-1.5 px-2 text-xs font-medium text-muted-foreground whitespace-nowrap transition-all",
                       isCompactCol && "w-[1px]",
@@ -754,7 +773,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                       return (
                       <td
                         key={col.id}
-                        style={{ width: columnWidths[col.id] ? `${columnWidths[col.id]}px` : undefined }}
+                        style={{ width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }}
                         className={cn(
                           "py-1 px-2 text-xs",
                           !shouldWrap && "whitespace-nowrap",
