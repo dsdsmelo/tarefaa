@@ -605,7 +605,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
       {/* Tasks Table */}
       <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full" style={{ tableLayout: 'fixed' }}>
+          <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left py-1.5 px-2 w-8 sticky left-0 z-20 bg-muted">
