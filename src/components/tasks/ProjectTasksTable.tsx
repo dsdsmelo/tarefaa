@@ -642,14 +642,17 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                   return (
                   <th
                     key={col.id}
-                    style={{ minWidth: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }}
+                    style={isNameCol
+                      ? { width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px`, maxWidth: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }
+                      : { minWidth: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }
+                    }
                     className={cn(
                       "text-left py-1.5 px-2 text-xs font-medium text-muted-foreground whitespace-nowrap transition-all",
                       isCompactCol && "w-[1px]",
                       shouldWrapHeader && "min-w-[250px]",
                       draggedColumnId === col.id && "opacity-50",
                       dragOverColumnId === col.id && "bg-primary/10 border-l-2 border-primary",
-                      isNameCol && "sticky left-8 z-20 bg-muted after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border"
+                      isNameCol && "sticky left-8 z-20 bg-muted after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border overflow-hidden"
                     )}
                     draggable
                     onDragStart={(e) => handleColumnDragStart(e, col.id)}
@@ -775,13 +778,16 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                       return (
                       <td
                         key={col.id}
-                        style={{ minWidth: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }}
+                        style={isNameCol
+                          ? { width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px`, maxWidth: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }
+                          : { minWidth: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }
+                        }
                         className={cn(
                           "py-1 px-2 text-xs",
                           !shouldWrap && "whitespace-nowrap",
                           shouldWrap && "min-w-[250px]",
                           isCompactCol && "w-[1px]",
-                          isNameCol && "sticky left-8 z-20 bg-card after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border transition-colors",
+                          isNameCol && "sticky left-8 z-20 bg-card after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border transition-colors overflow-hidden",
                           isNameCol && "group-hover/row:bg-muted",
                           isNameCol && overdue && "!bg-red-50 dark:!bg-red-950/50 group-hover/row:!bg-muted",
                           isNameCol && selectedTasks.includes(task.id) && "!bg-blue-50 dark:!bg-blue-950/50 group-hover/row:!bg-muted"
