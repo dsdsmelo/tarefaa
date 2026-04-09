@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   Search,
   MoreVertical,
@@ -101,6 +101,45 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const columnInputRef = useRef<HTMLInputElement>(null);
+
+  // Column resize state
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const resizingRef = useRef<{ colId: string; startX: number; startWidth: number } | null>(null);
+
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, colId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const th = (e.target as HTMLElement).closest('th');
+    if (!th) return;
+    resizingRef.current = {
+      colId,
+      startX: e.clientX,
+      startWidth: th.getBoundingClientRect().width,
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const { colId, startX, startWidth } = resizingRef.current;
+      const delta = e.clientX - startX;
+      const newWidth = Math.max(60, startWidth + delta);
+      setColumnWidths(prev => ({ ...prev, [colId]: newWidth }));
+    };
+    const onMouseUp = () => {
+      resizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
 
   // Filter tasks for this project
   const projectTasks = useMemo(() => {
@@ -566,7 +605,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
       {/* Tasks Table */}
       <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full" style={{ tableLayout: 'fixed' }}>
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left py-1.5 px-2 w-8 sticky left-0 z-20 bg-muted">
@@ -584,6 +623,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                   return (
                   <th
                     key={col.id}
+                    style={{ width: columnWidths[col.id] ? `${columnWidths[col.id]}px` : undefined, position: 'relative' }}
                     className={cn(
                       "text-left py-1.5 px-2 text-xs font-medium text-muted-foreground whitespace-nowrap transition-all",
                       isCompactCol && "w-[1px]",
@@ -670,6 +710,11 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                         />
                       )}
                     </div>
+                    {/* Resize handle */}
+                    <div
+                      className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-primary/40 active:bg-primary/60 transition-colors z-10"
+                      onMouseDown={(e) => handleResizeMouseDown(e, col.id)}
+                    />
                   </th>
                   );
                 })}
@@ -709,6 +754,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                       return (
                       <td
                         key={col.id}
+                        style={{ width: columnWidths[col.id] ? `${columnWidths[col.id]}px` : undefined }}
                         className={cn(
                           "py-1 px-2 text-xs",
                           !shouldWrap && "whitespace-nowrap",
