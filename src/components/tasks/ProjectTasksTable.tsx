@@ -624,13 +624,13 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
       {/* Tasks Table */}
       <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
         <div className="overflow-x-auto">
-          <table style={{ tableLayout: 'fixed', width: `${40 + projectColumns.reduce((sum, col) => sum + (columnWidths[col.id] ?? getDefaultWidth(col)), 0) + 40}px`, minWidth: '100%' }}>
+          <table className="w-full" style={{ tableLayout: 'fixed' }}>
             <colgroup>
               <col style={{ width: '40px' }} />
               {projectColumns.map(col => (
                 <col key={col.id} style={{ width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }} />
               ))}
-              <col style={{ width: '40px' }} />
+              <col style={{ width: 'auto' }} />
             </colgroup>
             <thead className="bg-muted/50">
               <tr>
