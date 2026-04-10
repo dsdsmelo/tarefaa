@@ -334,13 +334,13 @@ export const TextEditCell = ({ value, placeholder, onSave, className, isOverdue 
 
   return (
     <div 
-      className="group flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors min-h-[22px]"
+      className="group flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors min-h-[22px] min-w-0 overflow-hidden"
       onClick={() => {
         setLocalValue(value);
         setIsEditing(true);
       }}
     >
-      <span className={cn("text-xs", className, isOverdue && "text-status-blocked")}>
+      <span className={cn("text-xs truncate", className, isOverdue && "text-status-blocked")}>
         {value || <span className="text-muted-foreground">{placeholder || '-'}</span>}
       </span>
       <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />

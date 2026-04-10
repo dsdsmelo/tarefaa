@@ -652,7 +652,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                       shouldWrapHeader && "min-w-[250px]",
                       draggedColumnId === col.id && "opacity-50",
                       dragOverColumnId === col.id && "bg-primary/10 border-l-2 border-primary",
-                      isNameCol && "sticky left-8 z-20 bg-muted after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border overflow-hidden"
+                      isNameCol && "sticky left-8 z-20 bg-muted after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-border/80 overflow-hidden text-ellipsis"
                     )}
                     draggable
                     onDragStart={(e) => handleColumnDragStart(e, col.id)}
@@ -787,7 +787,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                           !shouldWrap && "whitespace-nowrap",
                           shouldWrap && "min-w-[250px]",
                           isCompactCol && "w-[1px]",
-                          isNameCol && "sticky left-8 z-20 bg-card after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border transition-colors overflow-hidden",
+                          isNameCol && "sticky left-8 z-20 bg-card after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-border/80 transition-colors overflow-hidden text-ellipsis",
                           isNameCol && "group-hover/row:bg-muted",
                           isNameCol && overdue && "!bg-red-50 dark:!bg-red-950/50 group-hover/row:!bg-muted",
                           isNameCol && selectedTasks.includes(task.id) && "!bg-blue-50 dark:!bg-blue-950/50 group-hover/row:!bg-muted"
