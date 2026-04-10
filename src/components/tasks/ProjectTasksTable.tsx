@@ -638,7 +638,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
             </colgroup>
             <thead className="bg-muted/50">
               <tr>
-                <th className="text-left py-1.5 px-2 sticky left-0 z-30 bg-muted border-r border-border/60" style={{ width: '40px' }}>
+                <th className="text-left py-1.5 px-2 bg-muted border-r border-border/60" style={{ width: '40px' }}>
                   <Checkbox
                     checked={selectedTasks.length === paginatedTasks.length && paginatedTasks.length > 0}
                     onCheckedChange={toggleAllTasks}
@@ -657,9 +657,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                     className={cn(
                       "text-left py-1.5 px-2 text-xs font-medium text-muted-foreground whitespace-nowrap border-r border-border/60 overflow-hidden text-ellipsis",
                       draggedColumnId === col.id && "opacity-50",
-                      dragOverColumnId === col.id && "bg-primary/10 border-l-2 border-primary",
-                      isNameCol && "sticky z-20 bg-muted",
-                      isNameCol && "left-[40px]"
+                      dragOverColumnId === col.id && "bg-primary/10 border-l-2 border-primary"
                     )}
                     draggable
                     onDragStart={(e) => handleColumnDragStart(e, col.id)}
@@ -763,12 +761,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                       selectedTasks.includes(task.id) && "bg-primary/5"
                     )}
                   >
-                    <td className={cn(
-                      "py-1 px-2 sticky left-0 z-30 bg-card transition-colors border-r border-border/60",
-                      "group-hover/row:bg-muted",
-                      overdue && "!bg-red-50 dark:!bg-red-950/50 group-hover/row:!bg-muted",
-                      selectedTasks.includes(task.id) && "!bg-blue-50 dark:!bg-blue-950/50 group-hover/row:!bg-muted"
-                    )}>
+                    <td className="py-1 px-2 bg-card border-r border-border/60">
                       <Checkbox
                         checked={selectedTasks.includes(task.id)}
                         onCheckedChange={() => toggleTaskSelection(task.id)}
@@ -787,10 +780,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                         className={cn(
                           "py-1 px-2 text-xs border-r border-border/60 overflow-hidden text-ellipsis",
                           !shouldWrap && "whitespace-nowrap",
-                          isNameCol && "sticky left-[40px] z-20 bg-card transition-colors",
-                          isNameCol && "group-hover/row:bg-muted",
-                          isNameCol && overdue && "!bg-red-50 dark:!bg-red-950/50 group-hover/row:!bg-muted",
-                          isNameCol && selectedTasks.includes(task.id) && "!bg-blue-50 dark:!bg-blue-950/50 group-hover/row:!bg-muted"
+                          isNameCol && "font-medium"
                         )}
                       >
                         {renderCellContent(task, col)}
