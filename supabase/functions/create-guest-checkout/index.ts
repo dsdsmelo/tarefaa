@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform",
 };
 
-const PRICE_ID = "price_1SrU56B9FTsCRyJTGzLOngsp";
+const PRICE_ID = "price_1TKlOs3ZSGU2dSgqFzAOEjJA";
 
 const logStep = (step: string, details?: Record<string, unknown>) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';

@@ -30,7 +30,7 @@ Fornecer uma plataforma intuitiva e eficiente para gestão de projetos, tarefas,
 ## 2. Modelo de Negócio
 
 ### 2.1 Precificação
-- **Plano Único:** R$ 69,00/mês
+- **Plano Único:** R$ 49,00/mês
 - **Sem plano gratuito**
 - **Ambiente isolado por usuário**
 - **Pagamento via Stripe**

@@ -104,7 +104,7 @@ const Landing = () => {
       } catch (error) {
         console.error('Error fetching price:', error);
         // Fallback to default price if fetch fails
-        setPriceAmount(6900); // R$ 69 in cents
+        setPriceAmount(4900); // R$ 49 in cents
       } finally {
         setPriceLoading(false);
       }

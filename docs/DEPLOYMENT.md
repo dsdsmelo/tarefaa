@@ -105,7 +105,7 @@ Execute o arquivo `database/rls-policies.sql` no SQL Editor.
 2. Vá em **Products > Add product**
 3. Configure:
    - **Name:** Tarefaa - Plano Mensal
-   - **Price:** R$ 69,00 / mês
+   - **Price:** R$ 49,00 / mês
    - **Billing period:** Monthly
 4. Anote o **Price ID** (ex: `price_xxxxx`)
 

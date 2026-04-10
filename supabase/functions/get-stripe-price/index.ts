@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Default price ID - update this when you change the price in Stripe
-const DEFAULT_PRICE_ID = "price_1SrU56B9FTsCRyJTGzLOngsp";
+const DEFAULT_PRICE_ID = "price_1TKlOs3ZSGU2dSgqFzAOEjJA";
 
 // Helper logging function for debugging
 const logStep = (step: string, details?: Record<string, unknown>) => {

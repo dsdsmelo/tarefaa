@@ -100,7 +100,7 @@ const Admin = () => {
         activeSubscriptions: activeCount,
         trialUsers: trialCount,
         canceledUsers: canceledCount,
-        revenue: activeCount * 69, // R$69/month per active subscription
+        revenue: activeCount * 49, // R$49/month per active subscription
         newUsersThisMonth: newThisMonth,
         churnRate,
       });
