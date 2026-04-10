@@ -624,9 +624,9 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
       {/* Tasks Table */}
       <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
         <div className="overflow-x-auto">
-          <table style={{ tableLayout: 'fixed', width: `${32 + projectColumns.reduce((sum, col) => sum + (columnWidths[col.id] ?? getDefaultWidth(col)), 0) + 40}px`, minWidth: '100%' }}>
+          <table style={{ tableLayout: 'fixed', width: `${40 + projectColumns.reduce((sum, col) => sum + (columnWidths[col.id] ?? getDefaultWidth(col)), 0) + 40}px`, minWidth: '100%' }}>
             <colgroup>
-              <col style={{ width: '32px' }} />
+              <col style={{ width: '40px' }} />
               {projectColumns.map(col => (
                 <col key={col.id} style={{ width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }} />
               ))}
@@ -634,7 +634,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
             </colgroup>
             <thead className="bg-muted/50">
               <tr>
-                <th className="text-left py-1.5 px-2 w-8 sticky left-0 z-20 bg-muted border-r border-border/60">
+                <th className="text-left py-1.5 px-2 sticky left-0 z-30 bg-muted border-r border-border/60" style={{ width: '40px' }}>
                   <Checkbox
                     checked={selectedTasks.length === paginatedTasks.length && paginatedTasks.length > 0}
                     onCheckedChange={toggleAllTasks}
@@ -654,7 +654,8 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                       "text-left py-1.5 px-2 text-xs font-medium text-muted-foreground whitespace-nowrap border-r border-border/60 overflow-hidden text-ellipsis",
                       draggedColumnId === col.id && "opacity-50",
                       dragOverColumnId === col.id && "bg-primary/10 border-l-2 border-primary",
-                      isNameCol && "sticky left-8 z-20 bg-muted"
+                      isNameCol && "sticky z-20 bg-muted",
+                      isNameCol && "left-[40px]"
                     )}
                     draggable
                     onDragStart={(e) => handleColumnDragStart(e, col.id)}
@@ -759,7 +760,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                     )}
                   >
                     <td className={cn(
-                      "py-1 px-2 sticky left-0 z-20 bg-card transition-colors border-r border-border/60",
+                      "py-1 px-2 sticky left-0 z-30 bg-card transition-colors border-r border-border/60",
                       "group-hover/row:bg-muted",
                       overdue && "!bg-red-50 dark:!bg-red-950/50 group-hover/row:!bg-muted",
                       selectedTasks.includes(task.id) && "!bg-blue-50 dark:!bg-blue-950/50 group-hover/row:!bg-muted"
@@ -782,7 +783,7 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                         className={cn(
                           "py-1 px-2 text-xs border-r border-border/60 overflow-hidden text-ellipsis",
                           !shouldWrap && "whitespace-nowrap",
-                          isNameCol && "sticky left-8 z-20 bg-card transition-colors",
+                          isNameCol && "sticky left-[40px] z-20 bg-card transition-colors",
                           isNameCol && "group-hover/row:bg-muted",
                           isNameCol && overdue && "!bg-red-50 dark:!bg-red-950/50 group-hover/row:!bg-muted",
                           isNameCol && selectedTasks.includes(task.id) && "!bg-blue-50 dark:!bg-blue-950/50 group-hover/row:!bg-muted"
