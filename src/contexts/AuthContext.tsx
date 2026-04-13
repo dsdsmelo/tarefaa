@@ -206,7 +206,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Only block UI on fresh sign-in
           setSubscriptionChecked(false);
           fetchProfile(session.user.id);
-          fetchSubscription(true);
+          // Aguarda 500ms para garantir que o token está disponível
+          // antes de chamar a Edge Function (evita race condition 401)
+          setTimeout(() => {
+            if (isMounted) fetchSubscription(true);
+          }, 500);
         } else if (session?.user && event === 'TOKEN_REFRESHED') {
           // Token refresh: update in background without blocking UI
           fetchSubscription(true);

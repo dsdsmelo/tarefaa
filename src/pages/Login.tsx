@@ -247,18 +247,18 @@ const Login = () => {
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             Ainda não tem conta?{' '}
-            <Link to="/" className="text-primary hover:underline font-medium">
+            <a href="https://tarefaa.com.br" className="text-primary hover:underline font-medium">
               Conheça o Tarefaa
-            </Link>
+            </a>
           </p>
 
           <div className="text-center mt-8">
-            <Link
-              to="/"
+            <a
+              href="https://tarefaa.com.br"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               ← Voltar para o site
-            </Link>
+            </a>
           </div>
         </div>
       </div>
