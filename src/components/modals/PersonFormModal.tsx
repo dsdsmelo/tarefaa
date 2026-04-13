@@ -23,11 +23,12 @@ import { useData } from '@/contexts/DataContext';
 import { Person } from '@/lib/types';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { Camera, X, Loader2, UserPlus, Pencil } from 'lucide-react';
+import { Camera, X, Loader2, UserPlus, Pencil, Send } from 'lucide-react';
 import { AvatarCircle } from '@/components/ui/avatar-circle';
 
 const personSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório'),
+  firstName: z.string().min(1, 'Primeiro nome é obrigatório'),
+  lastName: z.string().optional().or(z.literal('')),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   type: z.enum(['internal', 'partner']),
   color: z.string().min(1, 'Cor é obrigatória'),
@@ -62,7 +63,8 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personSchema),
     defaultValues: {
-      name: '',
+      firstName: '',
+      lastName: '',
       email: '',
       type: 'internal',
       color: '#3B82F6',
@@ -72,7 +74,8 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
   useEffect(() => {
     if (person) {
       form.reset({
-        name: person.name,
+        firstName: person.firstName || person.name?.split(' ')[0] || '',
+        lastName: person.lastName || person.name?.split(' ').slice(1).join(' ') || '',
         email: person.email || '',
         type: person.type,
         color: person.color,
@@ -80,7 +83,8 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
       setAvatarUrl(person.avatarUrl);
     } else {
       form.reset({
-        name: '',
+        firstName: '',
+        lastName: '',
         email: '',
         type: 'internal',
         color: '#3B82F6',
@@ -151,10 +155,20 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
   };
 
   const onSubmit = async (data: PersonFormData) => {
+    // Validação extra: email obrigatório para internos
+    if (data.type === 'internal' && !data.email) {
+      form.setError('email', { message: 'Email é obrigatório para participantes internos' });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      const displayName = `${data.firstName} ${data.lastName || ''}`.trim();
+
       const personData = {
-        name: data.name,
+        name: displayName,
+        firstName: data.firstName,
+        lastName: data.lastName || '',
         email: data.email || undefined,
         type: data.type,
         color: data.color,
@@ -166,8 +180,33 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
         await updatePerson(person.id, personData);
         toast.success('Pessoa atualizada com sucesso!');
       } else {
-        await addPerson(personData);
-        toast.success('Pessoa criada com sucesso!');
+        const savedPerson = await addPerson(personData);
+
+        // Se tem email e é interno, enviar convite
+        if (data.email && data.type === 'internal') {
+          try {
+            const { error: inviteError } = await supabase.functions.invoke('invite-participant', {
+              body: {
+                personId: savedPerson.id,
+                email: data.email,
+                firstName: data.firstName,
+                lastName: data.lastName || '',
+              }
+            });
+
+            if (inviteError) {
+              console.error('Erro ao enviar convite:', inviteError);
+              toast.success('Pessoa criada! Convite não pôde ser enviado.');
+            } else {
+              toast.success('Pessoa cadastrada e convite enviado!');
+            }
+          } catch (inviteErr) {
+            console.error('Erro ao enviar convite:', inviteErr);
+            toast.success('Pessoa criada! Erro ao enviar convite.');
+          }
+        } else {
+          toast.success('Pessoa criada com sucesso!');
+        }
       }
       onOpenChange(false);
     } catch (error) {
@@ -178,8 +217,11 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
     }
   };
 
-  const watchedName = form.watch('name') || 'Nome';
+  const watchedFirstName = form.watch('firstName') || '';
+  const watchedLastName = form.watch('lastName') || '';
+  const watchedName = `${watchedFirstName} ${watchedLastName}`.trim() || 'Nome';
   const watchedColor = form.watch('color');
+  const watchedType = form.watch('type');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -202,10 +244,10 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
           {/* Avatar Upload Section */}
           <div className="flex flex-col items-center gap-3">
             <div className="relative group">
-              <AvatarCircle 
-                name={watchedName} 
-                color={watchedColor} 
-                size="xl" 
+              <AvatarCircle
+                name={watchedName}
+                color={watchedColor}
+                size="xl"
                 avatarUrl={avatarUrl}
               />
               <button
@@ -242,20 +284,33 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome *</Label>
-            <Input
-              id="name"
-              {...form.register('name')}
-              placeholder="Nome completo"
-            />
-            {form.formState.errors.name && (
-              <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
-            )}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">Primeiro nome *</Label>
+              <Input
+                id="firstName"
+                {...form.register('firstName')}
+                placeholder="João"
+              />
+              {form.formState.errors.firstName && (
+                <p className="text-sm text-destructive">{form.formState.errors.firstName.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Sobrenome</Label>
+              <Input
+                id="lastName"
+                {...form.register('lastName')}
+                placeholder="Silva"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">
+              Email {watchedType === 'internal' && <span className="text-destructive">*</span>}
+            </Label>
             <Input
               id="email"
               type="email"
@@ -264,6 +319,12 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
             />
             {form.formState.errors.email && (
               <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+            )}
+            {watchedType === 'internal' && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Send className="w-3 h-3" />
+                Um convite de acesso será enviado por email
+              </p>
             )}
           </div>
 

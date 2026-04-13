@@ -65,6 +65,10 @@ export interface Person {
   id: string;
   name: string;
   email?: string;
+  firstName?: string;
+  lastName?: string;
+  inviteStatus?: 'none' | 'pending' | 'accepted';
+  authUserId?: string;
   type: 'internal' | 'partner';
   color: string;
   active: boolean;

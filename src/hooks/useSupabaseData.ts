@@ -897,6 +897,10 @@ function mapPerson(data: any): Person {
     id: data.id,
     name: data.name,
     email: data.email,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    inviteStatus: data.invite_status,
+    authUserId: data.auth_user_id,
     type: data.type,
     color: data.color,
     active: data.active,
@@ -986,6 +990,10 @@ function personToDb(person: Partial<Person>): any {
   const result: any = {};
   if (person.name !== undefined) result.name = person.name;
   if (person.email !== undefined) result.email = person.email;
+  if (person.firstName !== undefined) result.first_name = person.firstName;
+  if (person.lastName !== undefined) result.last_name = person.lastName;
+  if (person.inviteStatus !== undefined) result.invite_status = person.inviteStatus;
+  if (person.authUserId !== undefined) result.auth_user_id = person.authUserId;
   if (person.type !== undefined) result.type = person.type;
   if (person.color !== undefined) result.color = person.color;
   if (person.active !== undefined) result.active = person.active;
