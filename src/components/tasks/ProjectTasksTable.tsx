@@ -43,14 +43,19 @@ import {
 import { useData } from '@/contexts/DataContext';
 import { calculatePercentage, isTaskOverdue } from '@/lib/mockData';
 import { cn } from '@/lib/utils';
-import { Task, CustomColumn } from '@/lib/types';
+import { Task, CustomColumn, TaskStatus, statusLabels } from '@/lib/types';
 import { toast } from 'sonner';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { AvatarCircle } from '@/components/ui/avatar-circle';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -96,6 +101,9 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkResponsibleDialogOpen, setBulkResponsibleDialogOpen] = useState(false);
+  const [bulkResponsibleIds, setBulkResponsibleIds] = useState<string[]>([]);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   // Column editing and drag state
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
@@ -307,6 +315,57 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
       setDeleteDialogOpen(false);
       setTaskToDelete(null);
     }
+  };
+
+  const handleBulkUpdateStatus = async (status: TaskStatus) => {
+    if (selectedTasks.length === 0) return;
+    setIsBulkUpdating(true);
+    const results = await Promise.allSettled(
+      selectedTasks.map((id) => updateTask(id, { status }))
+    );
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    const succeeded = results.length - failed;
+    if (succeeded > 0) {
+      toast.success(`Status alterado para "${statusLabels[status]}" em ${succeeded} ${succeeded === 1 ? 'tarefa' : 'tarefas'}!`);
+    }
+    if (failed > 0) {
+      console.error('Error updating status:', results.filter((r) => r.status === 'rejected'));
+      toast.error(`Erro ao alterar status em ${failed} ${failed === 1 ? 'tarefa' : 'tarefas'}`);
+    }
+    setSelectedTasks([]);
+    setIsBulkUpdating(false);
+  };
+
+  const openBulkResponsibleDialog = () => {
+    setBulkResponsibleIds([]);
+    setBulkResponsibleDialogOpen(true);
+  };
+
+  const toggleBulkResponsible = (personId: string) => {
+    setBulkResponsibleIds((prev) =>
+      prev.includes(personId) ? prev.filter((id) => id !== personId) : [...prev, personId]
+    );
+  };
+
+  const handleConfirmBulkUpdateResponsible = async () => {
+    if (selectedTasks.length === 0) return;
+    setIsBulkUpdating(true);
+    const responsibleIds = bulkResponsibleIds.length > 0 ? bulkResponsibleIds : undefined;
+    const results = await Promise.allSettled(
+      selectedTasks.map((id) => updateTask(id, { responsibleIds }))
+    );
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    const succeeded = results.length - failed;
+    if (succeeded > 0) {
+      toast.success(`Responsáveis atualizados em ${succeeded} ${succeeded === 1 ? 'tarefa' : 'tarefas'}!`);
+    }
+    if (failed > 0) {
+      console.error('Error updating responsible:', results.filter((r) => r.status === 'rejected'));
+      toast.error(`Erro ao atualizar responsáveis em ${failed} ${failed === 1 ? 'tarefa' : 'tarefas'}`);
+    }
+    setSelectedTasks([]);
+    setBulkResponsibleDialogOpen(false);
+    setIsBulkUpdating(false);
   };
 
   const handleConfirmBulkDelete = async () => {
@@ -606,8 +665,31 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem>Alterar Status</DropdownMenuItem>
-                <DropdownMenuItem>Alterar Responsável</DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Alterar Status</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {(['pending', 'in_progress', 'blocked', 'completed', 'cancelled'] as TaskStatus[]).map((s) => (
+                      <DropdownMenuItem
+                        key={s}
+                        disabled={isBulkUpdating}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          handleBulkUpdateStatus(s);
+                        }}
+                      >
+                        <StatusBadge status={s} />
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    openBulkResponsibleDialog();
+                  }}
+                >
+                  Alterar Responsável
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
@@ -922,6 +1004,57 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isBulkDeleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Update Responsible Dialog */}
+      <AlertDialog open={bulkResponsibleDialogOpen} onOpenChange={setBulkResponsibleDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alterar Responsável</AlertDialogTitle>
+            <AlertDialogDescription>
+              Selecione os responsáveis que serão atribuídos às {selectedTasks.length} {selectedTasks.length === 1 ? 'tarefa selecionada' : 'tarefas selecionadas'}. Isto irá substituir os responsáveis atuais. Se nenhum for marcado, os responsáveis serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-64 overflow-y-auto space-y-1 border rounded-md p-2">
+            {(() => {
+              const activePeople = people.filter((p) => {
+                if (!p.active) return false;
+                if (projectMemberIds && projectMemberIds.length > 0) {
+                  return projectMemberIds.includes(p.id);
+                }
+                return true;
+              });
+              if (activePeople.length === 0) {
+                return <p className="text-sm text-muted-foreground text-center py-4">Nenhum membro disponível neste projeto.</p>;
+              }
+              return activePeople.map((person) => (
+                <label
+                  key={person.id}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
+                >
+                  <Checkbox
+                    checked={bulkResponsibleIds.includes(person.id)}
+                    onCheckedChange={() => toggleBulkResponsible(person.id)}
+                  />
+                  <AvatarCircle name={person.name} color={person.color} size="sm" avatarUrl={person.avatarUrl} />
+                  <span className="text-sm">{person.name}</span>
+                </label>
+              ));
+            })()}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkUpdating}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmBulkUpdateResponsible();
+              }}
+              disabled={isBulkUpdating}
+            >
+              {isBulkUpdating ? 'Aplicando...' : 'Aplicar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
