@@ -60,77 +60,81 @@ const priorityColors: Record<string, string> = {
   urgent: '#dc2626',
 }
 
+function renderTaskRow(t: TaskRow): string {
+  const projectName = t.projects?.name ? escapeHtml(t.projects.name) : 'Sem projeto'
+  const pKey = (t.priority ?? 'medium').toLowerCase()
+  const pLabel = priorityLabels[pKey] ?? 'Média'
+  const pColor = priorityColors[pKey] ?? '#2563eb'
+  return [
+    '<tr>',
+    '<td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;vertical-align:top;">',
+    `<div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:2px;">${escapeHtml(t.name)}</div>`,
+    `<div style="font-size:13px;color:#6b7280;">${projectName}</div>`,
+    '</td>',
+    '<td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap;vertical-align:top;">',
+    `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#ffffff;background:${pColor};">${pLabel}</span>`,
+    '</td>',
+    '</tr>',
+  ].join('')
+}
+
+function renderSection(title: string, color: string, tasks: TaskRow[]): string {
+  if (tasks.length === 0) return ''
+  return [
+    `<h2 style="font-size:16px;color:${color};margin:24px 0 10px 0;font-weight:600;">${title} (${tasks.length})</h2>`,
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">',
+    '<tbody>',
+    tasks.map(renderTaskRow).join(''),
+    '</tbody>',
+    '</table>',
+  ].join('')
+}
+
 function renderEmailHtml(
   personName: string,
   tasksToday: TaskRow[],
   tasksTomorrow: TaskRow[]
 ): string {
-  const renderTaskList = (tasks: TaskRow[]) => tasks.map((t) => {
-    const projectName = t.projects?.name ? escapeHtml(t.projects.name) : 'Sem projeto'
-    const pKey = (t.priority ?? 'medium').toLowerCase()
-    const pLabel = priorityLabels[pKey] ?? 'Média'
-    const pColor = priorityColors[pKey] ?? '#2563eb'
-    return `
-      <tr>
-        <td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">
-          <div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:4px;">${escapeHtml(t.name)}</div>
-          <div style="font-size:13px;color:#6b7280;">${projectName}</div>
-        </td>
-        <td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap;">
-          <span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#ffffff;background:${pColor};">${pLabel}</span>
-        </td>
-      </tr>`
-  }).join('')
+  const sections = [
+    renderSection('⚠️ Vencem hoje', '#dc2626', tasksToday),
+    renderSection('🔔 Vencem amanhã', '#d97706', tasksTomorrow),
+  ].filter(Boolean).join('')
 
-  const sectionToday = tasksToday.length > 0 ? `
-    <h2 style="font-size:16px;color:#dc2626;margin:24px 0 8px 0;">⚠️ Vencem hoje (${tasksToday.length})</h2>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-      ${renderTaskList(tasksToday)}
-    </table>` : ''
+  const year = new Date().getFullYear()
+  const firstName = escapeHtml(personName.split(' ')[0] || personName)
 
-  const sectionTomorrow = tasksTomorrow.length > 0 ? `
-    <h2 style="font-size:16px;color:#d97706;margin:24px 0 8px 0;">🔔 Vencem amanhã (${tasksTomorrow.length})</h2>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-      ${renderTaskList(tasksTomorrow)}
-    </table>` : ''
-
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="utf-8"><title>Lembrete de tarefas</title></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-        <tr><td style="padding:32px 32px 16px 32px;">
-          <div style="font-size:22px;font-weight:700;color:#1e40af;margin-bottom:4px;">Tarefaa</div>
-          <div style="font-size:13px;color:#6b7280;">Lembrete de tarefas</div>
-        </td></tr>
-        <tr><td style="padding:0 32px 8px 32px;">
-          <h1 style="font-size:20px;color:#111827;margin:8px 0;">Olá, ${escapeHtml(personName)}!</h1>
-          <p style="font-size:15px;color:#374151;line-height:1.5;margin:0 0 8px 0;">
-            Aqui está o resumo das suas tarefas com prazo próximo:
-          </p>
-        </td></tr>
-        <tr><td style="padding:0 32px;">
-          ${sectionToday}
-          ${sectionTomorrow}
-        </td></tr>
-        <tr><td style="padding:32px;text-align:center;">
-          <a href="${APP_URL}" style="display:inline-block;padding:12px 32px;background:#1e40af;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">
-            Abrir Tarefaa
-          </a>
-        </td></tr>
-        <tr><td style="padding:16px 32px 32px 32px;border-top:1px solid #e5e7eb;">
-          <p style="font-size:12px;color:#9ca3af;margin:0;line-height:1.5;">
-            Você recebeu este email porque está como responsável em tarefas no Tarefaa.<br>
-            © ${new Date().getFullYear()} Tarefaa. Todos os direitos reservados.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`
+  return [
+    '<!DOCTYPE html>',
+    '<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lembrete de tarefas</title></head>',
+    '<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">',
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">',
+    '<tr><td align="center">',
+    '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">',
+    '<tr><td style="padding:32px 32px 8px 32px;">',
+    '<div style="font-size:22px;font-weight:700;color:#1e40af;line-height:1;">Tarefaa</div>',
+    '<div style="font-size:13px;color:#6b7280;margin-top:4px;">Lembrete de tarefas</div>',
+    '</td></tr>',
+    '<tr><td style="padding:16px 32px 0 32px;">',
+    `<h1 style="font-size:20px;color:#111827;margin:0 0 8px 0;font-weight:700;">Olá, ${firstName}!</h1>`,
+    '<p style="font-size:15px;color:#374151;line-height:1.5;margin:0;">Aqui está o resumo das suas tarefas com prazo próximo:</p>',
+    '</td></tr>',
+    '<tr><td style="padding:0 32px;">',
+    sections,
+    '</td></tr>',
+    '<tr><td style="padding:32px;text-align:center;">',
+    `<a href="${APP_URL}" style="display:inline-block;padding:12px 32px;background:#1e40af;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">Abrir Tarefaa</a>`,
+    '</td></tr>',
+    '<tr><td style="padding:16px 32px 24px 32px;border-top:1px solid #e5e7eb;">',
+    '<p style="font-size:12px;color:#9ca3af;margin:0;line-height:1.5;">',
+    'Você recebeu este email porque está como responsável em tarefas no Tarefaa.<br>',
+    `© ${year} Tarefaa. Todos os direitos reservados.`,
+    '</p>',
+    '</td></tr>',
+    '</table>',
+    '</td></tr>',
+    '</table>',
+    '</body></html>',
+  ].join('')
 }
 
 function renderEmailText(personName: string, tasksToday: TaskRow[], tasksTomorrow: TaskRow[]): string {
