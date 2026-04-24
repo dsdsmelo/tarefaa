@@ -94,6 +94,8 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
   const [editingTask, setEditingTask] = useState<Task | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Column editing and drag state
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
@@ -305,6 +307,24 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
       setDeleteDialogOpen(false);
       setTaskToDelete(null);
     }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedTasks.length === 0) return;
+    setIsBulkDeleting(true);
+    const results = await Promise.allSettled(selectedTasks.map((id) => deleteTask(id)));
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    const succeeded = results.length - failed;
+    if (succeeded > 0) {
+      toast.success(`${succeeded} ${succeeded === 1 ? 'tarefa excluída' : 'tarefas excluídas'} com sucesso!`);
+    }
+    if (failed > 0) {
+      console.error('Error deleting tasks:', results.filter((r) => r.status === 'rejected'));
+      toast.error(`Erro ao excluir ${failed} ${failed === 1 ? 'tarefa' : 'tarefas'}`);
+    }
+    setSelectedTasks([]);
+    setBulkDeleteDialogOpen(false);
+    setIsBulkDeleting(false);
   };
 
   const handleDuplicateTask = async (task: Task) => {
@@ -589,7 +609,15 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
                 <DropdownMenuItem>Alterar Status</DropdownMenuItem>
                 <DropdownMenuItem>Alterar Responsável</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">Excluir Selecionados</DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setBulkDeleteDialogOpen(true);
+                  }}
+                >
+                  Excluir Selecionados
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -869,6 +897,31 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão em lote</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {selectedTasks.length} {selectedTasks.length === 1 ? 'tarefa selecionada' : 'tarefas selecionadas'}? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmBulkDelete();
+              }}
+              disabled={isBulkDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isBulkDeleting ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
