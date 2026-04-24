@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
-import { 
-  Plus, 
-  Search, 
+import {
+  Plus,
+  Search,
   Edit,
-  UserX,
-  UserCheck,
+  Trash2,
   CheckSquare
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
@@ -18,13 +17,26 @@ import { personTypeLabels, Person } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 const People = () => {
-  const { people = [], tasks = [], updatePerson, loading, error } = useData();
+  const { people = [], tasks = [], deletePerson, loading, error } = useData();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | undefined>();
+  const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Ensure arrays are always defined
   const safePeople = people || [];
@@ -49,13 +61,22 @@ const People = () => {
     return safeTasks.filter(t => t.responsibleIds?.includes(personId) && t.status === 'completed').length;
   };
 
-  const toggleActive = async (personId: string) => {
-    const person = safePeople.find(p => p.id === personId);
-    if (!person) return;
+  const handleDeleteClick = (person: Person) => {
+    setPersonToDelete(person);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!personToDelete) return;
+    setIsDeleting(true);
     try {
-      await updatePerson(personId, { active: !person.active });
+      await deletePerson(personToDelete.id);
+      toast.success(`"${personToDelete.name}" excluído(a) com sucesso!`);
+      setPersonToDelete(null);
     } catch (err) {
-      console.error('Error toggling person status:', err);
+      console.error('Error deleting person:', err);
+      toast.error('Erro ao excluir pessoa');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -179,23 +200,14 @@ const People = () => {
                     <Edit className="w-4 h-4 mr-2" />
                     Editar
                   </Button>
-                  <Button 
-                    variant={person.active ? "outline" : "default"} 
+                  <Button
+                    variant="outline"
                     size="sm"
-                    onClick={() => toggleActive(person.id)}
-                    className={cn(!person.active && "gradient-primary text-white")}
+                    onClick={() => handleDeleteClick(person)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
-                    {person.active ? (
-                      <>
-                        <UserX className="w-4 h-4 mr-2" />
-                        Desativar
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck className="w-4 h-4 mr-2" />
-                        Ativar
-                      </>
-                    )}
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Excluir
                   </Button>
                 </div>
               </div>
@@ -224,6 +236,46 @@ const People = () => {
         onOpenChange={setModalOpen}
         person={editingPerson}
       />
+
+      {/* Delete Person Confirmation Dialog */}
+      <AlertDialog open={!!personToDelete} onOpenChange={(open) => !open && setPersonToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir pessoa</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  Tem certeza que deseja excluir <strong>{personToDelete?.name}</strong>? Esta ação não pode ser desfeita.
+                </p>
+                {personToDelete && (() => {
+                  const affectedTasks = safeTasks.filter(t => t.responsibleIds?.includes(personToDelete.id)).length;
+                  if (affectedTasks > 0) {
+                    return (
+                      <p className="text-sm">
+                        <strong>{affectedTasks}</strong> {affectedTasks === 1 ? 'tarefa terá' : 'tarefas terão'} esta pessoa removida da lista de responsáveis.
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

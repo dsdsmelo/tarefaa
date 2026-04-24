@@ -52,7 +52,8 @@ export type AuditLogAction =
   | 'phase_deleted'
   | 'milestone_created'
   | 'milestone_completed'
-  | 'milestone_deleted';
+  | 'milestone_deleted'
+  | 'person_deleted';
 
 export type EntityType =
   | 'subscription'
@@ -61,7 +62,8 @@ export type EntityType =
   | 'project'
   | 'task'
   | 'phase'
-  | 'milestone';
+  | 'milestone'
+  | 'person';
 
 interface AuditLogEntry {
   user_id?: string;

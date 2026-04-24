@@ -167,9 +167,64 @@ export function useSupabaseData() {
   };
 
   const deletePerson = async (id: string) => {
+    const person = people.find(p => p.id === id);
+
+    // 1) Remove o ID da pessoa dos arrays responsibleIds das tarefas afetadas
+    const affectedTasks = tasks.filter(t => t.responsibleIds?.includes(id));
+    for (const task of affectedTasks) {
+      const newIds = (task.responsibleIds || []).filter(rid => rid !== id);
+      const { error: taskError } = await supabase
+        .from('tasks')
+        .update({ responsible_ids: newIds.length > 0 ? newIds : null })
+        .eq('id', task.id);
+      if (taskError) throw taskError;
+    }
+
+    // 2) Remove entradas de project_members para essa pessoa
+    const { error: pmError } = await supabase
+      .from('project_members')
+      .delete()
+      .eq('person_id', id);
+    if (pmError) throw pmError;
+
+    // 3) Remove a pessoa dos arrays participants de meeting_notes
+    const { data: notesWithPerson } = await supabase
+      .from('meeting_notes')
+      .select('id, participants')
+      .contains('participants', [id]);
+    if (notesWithPerson && notesWithPerson.length > 0) {
+      for (const note of notesWithPerson) {
+        const newParticipants = (note.participants || []).filter((pid: string) => pid !== id);
+        const { error: noteError } = await supabase
+          .from('meeting_notes')
+          .update({ participants: newParticipants })
+          .eq('id', note.id);
+        if (noteError) throw noteError;
+      }
+    }
+
+    // 4) Finalmente deleta a pessoa
     const { error } = await supabase.from('people').delete().eq('id', id);
     if (error) throw error;
+
+    // 5) Atualiza estado local: remove pessoa + reflete limpeza nas tarefas
     setPeople(prev => prev.filter(p => p.id !== id));
+    if (affectedTasks.length > 0) {
+      setTasks(prev => prev.map(t => {
+        if (!t.responsibleIds?.includes(id)) return t;
+        const newIds = t.responsibleIds.filter(rid => rid !== id);
+        return { ...t, responsibleIds: newIds.length > 0 ? newIds : undefined };
+      }));
+    }
+
+    logAuditEvent({
+      action: 'person_deleted',
+      entity_type: 'person',
+      entity_id: id,
+      entity_name: person?.name,
+      level: 'warning',
+      details: `Pessoa "${person?.name || id}" excluída`,
+    });
   };
 
   // CRUD operations for Projects
