@@ -21,6 +21,8 @@ SELECT cron.unschedule('send-task-reminders-daily')
 WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'send-task-reminders-daily');
 
 -- Agenda nova execução diária às 11:00 UTC (8:00 BRT)
+-- timeout_milliseconds := 60000 porque o envio SMTP leva ~5s; o default
+-- do pg_net é 5000ms o que causaria timeout mesmo em execuções bem-sucedidas.
 SELECT cron.schedule(
   'send-task-reminders-daily',
   '0 11 * * *',
@@ -31,7 +33,8 @@ SELECT cron.schedule(
       'Content-Type', 'application/json',
       'x-cron-secret', '<CRON_SECRET>'
     ),
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    timeout_milliseconds := 60000
   ) AS request_id;
   $$
 );
