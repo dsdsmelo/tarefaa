@@ -972,6 +972,7 @@ function mapProject(data: any): Project {
     endDate: data.end_date,
     status: data.status,
     coverColor: data.cover_color,
+    imageUrl: data.image_url,
   };
 }
 
@@ -1064,6 +1065,7 @@ function projectToDb(project: Partial<Project>): any {
   if (project.endDate !== undefined) result.end_date = project.endDate;
   if (project.status !== undefined) result.status = project.status;
   if (project.coverColor !== undefined) result.cover_color = project.coverColor;
+  if (project.imageUrl !== undefined) result.image_url = project.imageUrl;
   return result;
 }
 

@@ -220,6 +220,7 @@ const Projects = () => {
               const coverSolid = project.coverColor && isHexColor(project.coverColor)
                 ? project.coverColor
                 : null;
+              const hasImage = !!project.imageUrl;
 
               return (
                 <div
@@ -227,64 +228,91 @@ const Projects = () => {
                   onClick={() => navigate(`/projects/${project.id}`)}
                   className="bg-card rounded-lg border border-border hover:border-primary/40 shadow-soft hover:shadow-medium transition-all duration-200 animate-fade-in overflow-hidden group relative cursor-pointer"
                 >
-                  {/* Color strip */}
+                  {/* Subtle full-card gradient derived from the cover color */}
                   {coverGradient && (
-                    <div className={cn("h-2 w-full bg-gradient-to-r", coverGradient.class)} />
+                    <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br opacity-[0.07]", coverGradient.class)} />
                   )}
                   {coverSolid && (
-                    <div className="h-2 w-full" style={{ backgroundColor: coverSolid }} />
+                    <div
+                      className="pointer-events-none absolute inset-0"
+                      style={{ background: `linear-gradient(135deg, ${coverSolid}1f 0%, transparent 60%)` }}
+                    />
                   )}
 
+                  {/* Color strip */}
+                  {coverGradient && (
+                    <div className={cn("relative h-2 w-full bg-gradient-to-r", coverGradient.class)} />
+                  )}
+                  {coverSolid && (
+                    <div className="relative h-2 w-full" style={{ backgroundColor: coverSolid }} />
+                  )}
+
+                  {/* Project / client image - absolutely positioned so it never changes card size */}
+                  {hasImage && (
+                    <div className="pointer-events-none absolute top-3 right-3 z-10 w-16 h-16 rounded-full overflow-hidden ring-2 ring-background shadow-medium border border-border/60 bg-muted">
+                      <img
+                        src={project.imageUrl!}
+                        alt={project.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
+                  {/* Actions (hover) - top-right corner, above the image */}
+                  <div
+                    className="absolute top-1.5 right-1.5 z-20 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity rounded-md bg-card/70 backdrop-blur-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => handleEdit(project)}
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                          <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Ver Detalhes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(project)}>
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(project.id)}>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
                   {/* Content Section */}
-                  <div className="p-4">
-                    {/* Header: Status + Actions */}
-                    <div className="flex items-center justify-between mb-2">
+                  <div className="relative p-4">
+                    {/* Header: Status */}
+                    <div className={cn("flex items-center min-h-7 mb-2", hasImage && "pr-20")}>
                       <div className="flex items-center gap-2">
                         <div className={cn('w-2 h-2 rounded-full', statusColors[project.status])} />
                         <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
                           {projectStatusLabels[project.status]}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleEdit(project)}
-                        >
-                          <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Ver Detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(project)}>
-                              <Pencil className="w-4 h-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(project.id)}>
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
                     </div>
 
                     {/* Project name */}
-                    <h3 className="text-sm font-semibold truncate group-hover:text-primary transition-colors">
+                    <h3 className={cn("text-sm font-semibold truncate group-hover:text-primary transition-colors", hasImage && "pr-20")}>
                       {project.name}
                     </h3>
 
                     {/* Meta info inline */}
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                    <div className={cn("flex items-center gap-3 mt-2 text-xs text-muted-foreground", hasImage && "pr-20")}>
                       <span>{phaseCount} fases</span>
                       <span className="text-border">•</span>
                       <span>{taskCount} tarefas</span>

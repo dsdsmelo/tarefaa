@@ -83,6 +83,7 @@ export interface Project {
   endDate?: string;
   status: 'planning' | 'active' | 'paused' | 'completed' | 'cancelled';
   coverColor?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface Phase {

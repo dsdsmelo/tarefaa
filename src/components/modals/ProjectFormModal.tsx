@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -31,8 +31,12 @@ import {
 import { useData } from '@/contexts/DataContext';
 import { Project, CustomColumn } from '@/lib/types';
 import { toast } from 'sonner';
-import { Columns3, Plus, Edit, Trash2, GripVertical, X, FolderKanban, Pencil, Palette, Eye, EyeOff, Users } from 'lucide-react';
+import { Columns3, Plus, Edit, Trash2, GripVertical, X, FolderKanban, Pencil, Palette, Eye, EyeOff, Users, Camera, Loader2, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+
+// Storage bucket dedicated to project/client images
+const PROJECT_IMAGES_BUCKET = 'project-images';
 
 const projectSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -86,6 +90,11 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
   // Cover state
   const [coverColor, setCoverColor] = useState<string | null>(null);
   const [customColors, setCustomColors] = useState<string[]>([]);
+
+  // Project image state
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Members state
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
@@ -141,6 +150,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
         status: project.status,
       });
       setCoverColor(project.coverColor || null);
+      setImageUrl(project.imageUrl || null);
       // If project has a custom hex color, add it to customColors
       if (project.coverColor && isHexColor(project.coverColor) && !customColors.includes(project.coverColor)) {
         setCustomColors(prev => [...prev, project.coverColor!]);
@@ -157,6 +167,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
         status: 'planning',
       });
       setCoverColor(null);
+      setImageUrl(null);
       setPendingColumns([]);
       setSelectedMemberIds([]);
     }
@@ -410,6 +421,63 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
     setCoverColor(coverColor === gradientId ? null : gradientId);
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, selecione uma imagem válida');
+      return;
+    }
+
+    // Max 5MB (same limit as the bucket)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 5MB');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `covers/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(PROJECT_IMAGES_BUCKET)
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from(PROJECT_IMAGES_BUCKET)
+        .getPublicUrl(filePath);
+
+      setImageUrl(urlData.publicUrl);
+      toast.success('Imagem enviada com sucesso!');
+    } catch (error) {
+      console.error('Error uploading project image:', error);
+      toast.error('Erro ao enviar imagem');
+    } finally {
+      setIsUploadingImage(false);
+      // Allow re-selecting the same file
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    if (imageUrl) {
+      const urlParts = imageUrl.split(`/${PROJECT_IMAGES_BUCKET}/`);
+      if (urlParts.length > 1) {
+        try {
+          await supabase.storage.from(PROJECT_IMAGES_BUCKET).remove([urlParts[1]]);
+        } catch (error) {
+          console.error('Error removing project image from storage:', error);
+        }
+      }
+    }
+    setImageUrl(null);
+  };
+
   // Default columns that are created for every new project
   const DEFAULT_COLUMNS: Array<{
     name: string;
@@ -441,6 +509,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
         endDate: data.endDate || undefined,
         status: data.status,
         coverColor: coverColor || undefined,
+        imageUrl: imageUrl || undefined,
       };
 
       const newProject = await addProject(projectData);
@@ -507,6 +576,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
         endDate: data.endDate || undefined,
         status: data.status,
         coverColor: coverColor || null,
+        imageUrl: imageUrl || null,
       });
 
       // Atualizar membros do projeto
@@ -525,9 +595,67 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
   const handleClose = () => {
     setPendingColumns([]);
     setCoverColor(null);
+    setImageUrl(null);
     setSelectedMemberIds([]);
     onOpenChange(false);
   };
+
+  // Project image upload component
+  const ImageSection = () => (
+    <div className="space-y-3">
+      <Label className="flex items-center gap-2">
+        <ImageIcon className="w-4 h-4" />
+        Imagem do Projeto / Cliente
+      </Label>
+      <div className="flex items-center gap-4">
+        <div className="relative group">
+          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-border bg-muted flex items-center justify-center shrink-0">
+            {imageUrl ? (
+              <img src={imageUrl} alt="Imagem do projeto" className="w-full h-full object-cover" />
+            ) : (
+              <ImageIcon className="w-7 h-7 text-muted-foreground/60" />
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingImage}
+            className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          >
+            {isUploadingImage ? (
+              <Loader2 className="w-6 h-6 text-white animate-spin" />
+            ) : (
+              <Camera className="w-6 h-6 text-white" />
+            )}
+          </button>
+          {imageUrl && !isUploadingImage && (
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-white hover:bg-destructive/80 transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">
+            {imageUrl ? 'Imagem adicionada' : 'Adicione uma imagem'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Aparece no canto do card. PNG, JPG, WebP ou GIF, até 5MB.
+          </p>
+        </div>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+    </div>
+  );
 
   // Cover color selection component
   const CoverSection = () => (
@@ -835,6 +963,8 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
                   </div>
                 </div>
 
+                <ImageSection />
+
                 <CoverSection />
 
                 <MembersSection />
@@ -909,6 +1039,8 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
                   <Input id="endDate" type="date" {...form.register('endDate')} />
                 </div>
               </div>
+
+              <ImageSection />
 
               <CoverSection />
 
