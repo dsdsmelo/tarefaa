@@ -65,14 +65,14 @@ const typeLabels: Record<CustomColumn['type'], string> = {
 
 // Cover gradient options - exported for use in Projects page
 export const COVER_GRADIENTS = [
-  { id: 'blue', name: 'Azul', class: 'from-blue-500 to-cyan-400' },
-  { id: 'purple', name: 'Roxo', class: 'from-purple-500 to-pink-500' },
-  { id: 'green', name: 'Verde', class: 'from-green-500 to-emerald-400' },
-  { id: 'orange', name: 'Laranja', class: 'from-orange-500 to-amber-400' },
-  { id: 'red', name: 'Vermelho', class: 'from-red-500 to-rose-400' },
-  { id: 'indigo', name: 'Indigo', class: 'from-indigo-500 to-violet-500' },
-  { id: 'teal', name: 'Teal', class: 'from-teal-500 to-cyan-500' },
-  { id: 'pink', name: 'Rosa', class: 'from-pink-500 to-fuchsia-500' },
+  { id: 'blue', name: 'Azul', class: 'from-blue-500 to-cyan-400', color: '#3b82f6' },
+  { id: 'purple', name: 'Roxo', class: 'from-purple-500 to-pink-500', color: '#a855f7' },
+  { id: 'green', name: 'Verde', class: 'from-green-500 to-emerald-400', color: '#22c55e' },
+  { id: 'orange', name: 'Laranja', class: 'from-orange-500 to-amber-400', color: '#f97316' },
+  { id: 'red', name: 'Vermelho', class: 'from-red-500 to-rose-400', color: '#ef4444' },
+  { id: 'indigo', name: 'Indigo', class: 'from-indigo-500 to-violet-500', color: '#6366f1' },
+  { id: 'teal', name: 'Teal', class: 'from-teal-500 to-cyan-500', color: '#14b8a6' },
+  { id: 'pink', name: 'Rosa', class: 'from-pink-500 to-fuchsia-500', color: '#ec4899' },
 ];
 
 // Helper function to check if a color value is a hex color

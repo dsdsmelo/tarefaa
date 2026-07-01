@@ -220,6 +220,7 @@ const Projects = () => {
               const coverSolid = project.coverColor && isHexColor(project.coverColor)
                 ? project.coverColor
                 : null;
+              const glowColor = coverGradient?.color ?? coverSolid;
               const hasImage = !!project.imageUrl;
 
               return (
@@ -228,14 +229,11 @@ const Projects = () => {
                   onClick={() => navigate(`/projects/${project.id}`)}
                   className="bg-card rounded-lg border border-border hover:border-primary/40 shadow-soft hover:shadow-medium transition-all duration-200 animate-fade-in overflow-hidden group relative cursor-pointer"
                 >
-                  {/* Subtle full-card gradient derived from the cover color */}
-                  {coverGradient && (
-                    <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br opacity-[0.07]", coverGradient.class)} />
-                  )}
-                  {coverSolid && (
+                  {/* Modern gradient: soft colored glow coming from the top-right corner */}
+                  {glowColor && (
                     <div
                       className="pointer-events-none absolute inset-0"
-                      style={{ background: `linear-gradient(135deg, ${coverSolid}1f 0%, transparent 60%)` }}
+                      style={{ background: `radial-gradient(115% 90% at 100% 0%, ${glowColor}26 0%, ${glowColor}0d 34%, transparent 64%)` }}
                     />
                   )}
 
@@ -247,13 +245,13 @@ const Projects = () => {
                     <div className="relative h-2 w-full" style={{ backgroundColor: coverSolid }} />
                   )}
 
-                  {/* Project / client image - absolutely positioned so it never changes card size */}
+                  {/* Project / client image - rounded thumbnail, absolutely positioned so it never changes card size */}
                   {hasImage && (
-                    <div className="pointer-events-none absolute top-3 right-3 z-10 w-16 h-16 rounded-full overflow-hidden ring-2 ring-background shadow-medium border border-border/60 bg-muted">
+                    <div className="pointer-events-none absolute top-3 right-3 z-10 w-16 h-16 rounded-xl overflow-hidden bg-white ring-1 ring-border shadow-medium flex items-center justify-center p-1.5">
                       <img
                         src={project.imageUrl!}
                         alt={project.name}
-                        className="w-full h-full object-cover"
+                        className="max-w-full max-h-full object-contain"
                       />
                     </div>
                   )}
