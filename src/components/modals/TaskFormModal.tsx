@@ -84,6 +84,8 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
     }
     return true;
   });
+  // Quando o projeto só tem um responsável possível, ele vira o padrão
+  const soleResponsibleId = activePeople.length === 1 ? activePeople[0].id : null;
 
   const toggleResponsible = (personId: string) => {
     const current = form.getValues('responsibleIds') || [];
@@ -117,6 +119,17 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
       });
     }
   }, [task, defaultProjectId, defaultResponsibleIds, form, open]);
+
+  // Ao criar tarefa: se o projeto tem apenas um responsável possível, já o define
+  // como padrão, sem o usuário precisar escolher. Não sobrescreve edição nem uma
+  // seleção já existente (incluindo defaultResponsibleIds).
+  useEffect(() => {
+    if (task) return;
+    if (!selectedProjectId || !soleResponsibleId) return;
+    const current = form.getValues('responsibleIds') || [];
+    if (current.length > 0) return;
+    form.setValue('responsibleIds', [soleResponsibleId]);
+  }, [task, selectedProjectId, soleResponsibleId, open, form]);
 
   const onSubmit = async (data: TaskFormData) => {
     setIsSubmitting(true);
