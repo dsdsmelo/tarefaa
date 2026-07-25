@@ -53,6 +53,9 @@ interface TaskFormModalProps {
   defaultResponsibleIds?: string[];
 }
 
+// Data de hoje no formato YYYY-MM-DD (fuso local), para usar em <input type="date">
+const getTodayStr = () => new Date().toLocaleDateString('sv-SE');
+
 export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defaultResponsibleIds }: TaskFormModalProps) {
   const { projects, people, addTask, updateTask, getProjectMemberIds } = useData();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,7 +68,7 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
       description: '',
       projectId: defaultProjectId || '',
       responsibleIds: defaultResponsibleIds || [],
-      startDate: '',
+      startDate: getTodayStr(),
       endDate: '',
       priority: 'medium',
     },
@@ -113,7 +116,7 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
         description: '',
         projectId: defaultProjectId || '',
         responsibleIds: defaultResponsibleIds || [],
-        startDate: '',
+        startDate: getTodayStr(),
         endDate: '',
         priority: 'medium',
       });
