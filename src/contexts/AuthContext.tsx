@@ -27,6 +27,7 @@ interface AuthContextType {
   profile: Profile | null;
   subscription: Subscription | null;
   isAdmin: boolean;
+  isParticipant: boolean;
   isLoading: boolean;
   subscriptionChecked: boolean;
   isAuthenticated: boolean;
@@ -47,6 +48,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [profile, setProfile] = useState<Profile | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isParticipant, setIsParticipant] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [subscriptionChecked, setSubscriptionChecked] = useState(false);
 
@@ -114,6 +116,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (data) {
         setSubscription(data.subscription);
         setIsAdmin(data.isAdmin);
+        setIsParticipant(!!data.isParticipant);
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
@@ -269,10 +272,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setProfile(null);
     setSubscription(null);
     setIsAdmin(false);
+    setIsParticipant(false);
     setSubscriptionChecked(true);
   };
 
-  const hasActiveSubscription = subscription?.status === 'active' || subscription?.status === 'trialing' || isAdmin;
+  const hasActiveSubscription = subscription?.status === 'active' || subscription?.status === 'trialing' || isAdmin || isParticipant;
 
   return (
     <AuthContext.Provider value={{
@@ -281,6 +285,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       profile,
       subscription,
       isAdmin,
+      isParticipant,
       isLoading,
       subscriptionChecked,
       isAuthenticated: !!user,

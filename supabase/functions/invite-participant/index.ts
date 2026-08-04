@@ -90,7 +90,15 @@ serve(async (req) => {
       })
     }
 
-    // Atualizar people com email, first_name, last_name e invite_status
+    // ID do usuário de auth recém-criado pelo convite. É o ELO que o RLS
+    // usa para reconhecer o convidado (people.auth_user_id = auth.uid()).
+    const invitedAuthUserId = inviteData?.user?.id
+    if (!invitedAuthUserId) {
+      console.error('Convite enviado mas sem user.id retornado', inviteData)
+    }
+
+    // Atualizar people com email, first_name, last_name, invite_status
+    // e o vínculo auth_user_id (essencial para o acesso do convidado)
     const { error: updateError } = await supabaseAdmin
       .from('people')
       .update({
@@ -98,6 +106,7 @@ serve(async (req) => {
         first_name: firstName,
         last_name: lastName || '',
         invite_status: 'pending',
+        auth_user_id: invitedAuthUserId ?? null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', personId)

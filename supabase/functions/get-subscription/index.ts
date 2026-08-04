@@ -122,13 +122,24 @@ serve(async (req) => {
     const isAdmin = !!roleData;
     const hasActiveSubscription = ["active", "trialing"].includes(subscription?.status || "");
 
-    logStep("Access check complete", { isAdmin, hasActiveSubscription });
+    // Convidado (participante): tem vínculo em people.auth_user_id.
+    // Não precisa de assinatura própria — o acesso dele é escopo do projeto.
+    const { data: participantPerson } = await supabaseAdmin
+      .from("people")
+      .select("id")
+      .eq("auth_user_id", userId)
+      .maybeSingle();
+
+    const isParticipant = !!participantPerson;
+
+    logStep("Access check complete", { isAdmin, hasActiveSubscription, isParticipant });
 
     return new Response(
       JSON.stringify({
         subscription,
         isAdmin,
-        hasAccess: hasActiveSubscription || isAdmin,
+        isParticipant,
+        hasAccess: hasActiveSubscription || isAdmin || isParticipant,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
