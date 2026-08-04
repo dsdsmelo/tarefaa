@@ -15,7 +15,8 @@ import {
   Plus,
   ClipboardList,
   Layers,
-  StickyNote
+  StickyNote,
+  FileDown
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -34,6 +35,7 @@ import { PhaseFormModal } from '@/components/modals/PhaseFormModal';
 import { ProjectTasksTable } from '@/components/tasks/ProjectTasksTable';
 import { PhaseManagerSheet } from '@/components/phases/PhaseManagerSheet';
 import { AnnotationsTab } from '@/components/annotations/AnnotationsTab';
+import { ProjectReport } from '@/components/reports/ProjectReport';
 import { Phase } from '@/lib/types';
 import { 
   BarChart, 
@@ -75,6 +77,7 @@ const ProjectDetail = () => {
   const [phaseModalOpen, setPhaseModalOpen] = useState(false);
   const [editingPhase, setEditingPhase] = useState<Phase | undefined>(undefined);
   const [phaseManagerOpen, setPhaseManagerOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   // Ensure arrays are always defined
   const safeProjects = projects || [];
@@ -250,6 +253,10 @@ const ProjectDetail = () => {
               </div>
             )}
 {/* Botão Fases removido conforme solicitado */}
+            <Button variant="outline" onClick={() => setReportOpen(true)}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Exportar relatório
+            </Button>
             {activeTab !== 'gantt' && activeTab !== 'meetings' && (
               <Button className="gradient-primary text-white" onClick={() => setTaskModalOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -731,6 +738,17 @@ const ProjectDetail = () => {
         onOpenChange={setPhaseManagerOpen}
         projectId={projectId || ''}
       />
+
+      {reportOpen && (
+        <ProjectReport
+          project={project}
+          tasks={projectTasks}
+          phases={projectPhases}
+          milestones={safeMilestones.filter(m => m.projectId === projectId)}
+          people={safePeople}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
     </MainLayout>
     </TooltipProvider>
   );
