@@ -195,14 +195,20 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
             });
 
             if (inviteError) {
-              console.error('Erro ao enviar convite:', inviteError);
-              toast.success('Pessoa criada! Convite não pôde ser enviado.');
+              // Extrai a mensagem real retornada pela Edge Function (fica no corpo da resposta)
+              let detail = inviteError.message || 'erro desconhecido';
+              try {
+                const body = await (inviteError as { context?: Response }).context?.json?.();
+                if (body?.error) detail = body.error;
+              } catch { /* corpo não-JSON: mantém a mensagem padrão */ }
+              console.error('Erro ao enviar convite:', detail, inviteError);
+              toast.error(`Pessoa criada, mas o convite falhou: ${detail}`);
             } else {
               toast.success('Pessoa cadastrada e convite enviado!');
             }
           } catch (inviteErr) {
             console.error('Erro ao enviar convite:', inviteErr);
-            toast.success('Pessoa criada! Erro ao enviar convite.');
+            toast.error(`Pessoa criada, mas o convite falhou: ${inviteErr instanceof Error ? inviteErr.message : 'erro desconhecido'}`);
           }
         } else {
           toast.success('Pessoa criada com sucesso!');
