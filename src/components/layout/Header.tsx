@@ -21,7 +21,17 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'Usuário';
+  // Primeiro nome, na ordem de melhor fonte disponível:
+  // perfil -> metadados do convite/cadastro -> (último recurso) prefixo do e-mail
+  const meta = (user?.user_metadata ?? {}) as { first_name?: string; full_name?: string; name?: string };
+  const nameSource =
+    profile?.full_name?.trim() ||
+    meta.first_name?.trim() ||
+    meta.full_name?.trim() ||
+    meta.name?.trim() ||
+    user?.email?.split('@')[0] ||
+    'Usuário';
+  const displayName = nameSource.split(/\s+/)[0];
 
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6">
