@@ -1,26 +1,40 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# =========================================================
+# Deploy do Tarefaa no VPS
+# =========================================================
+# Uso (na raiz do repo no VPS):  bash deploy.sh
+#
+# Trata automaticamente:
+#  - "drift" local de package.json/package-lock.json que trava o git pull
+#    (o npm reescreve o lock; descartamos e usamos a versão do repo)
+#  - binário nativo do @swc por plataforma: faz install limpo no Linux
+#    (evita o erro "Failed to load native binding" ao usar lock do macOS)
+# =========================================================
+set -euo pipefail
 
-# Script de deploy para Tarefaa
-# Uso: ./deploy.sh
+REPO_DIR="/opt/repos/tarefaa"
+WEB_DIR="/var/www/tarefaa"
+SERVICE="tarefaa_tarefaa"
 
-set -e
+cd "$REPO_DIR"
 
-echo "=== Atualizando código do repositório ==="
+echo "==> Descartando alterações locais em package.json / package-lock.json (se houver)"
+git checkout -- package.json package-lock.json 2>/dev/null || true
+
+echo "==> git pull origin main"
 git pull origin main
 
-echo "=== Instalando dependências ==="
+echo "==> Instalação limpa de dependências (resolve binários nativos do Linux)"
+rm -rf node_modules package-lock.json
 npm install
 
-echo "=== Gerando build de produção ==="
+echo "==> Build de produção"
 npm run build
 
-echo "=== Atualizando configuração do Nginx ==="
-sudo cp nginx.conf /etc/nginx/sites-available/tarefaa
+echo "==> Publicando dist em $WEB_DIR"
+cp -r dist "$WEB_DIR/"
 
-echo "=== Testando configuração do Nginx ==="
-sudo nginx -t
+echo "==> Reiniciando serviço $SERVICE"
+docker service update --force "$SERVICE"
 
-echo "=== Recarregando Nginx ==="
-sudo systemctl reload nginx
-
-echo "=== Deploy concluído com sucesso! ==="
+echo "==> Deploy concluído com sucesso ✅"
