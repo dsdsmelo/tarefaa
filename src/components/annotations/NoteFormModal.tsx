@@ -76,11 +76,11 @@ export function NoteFormModal({
   const [meetingDateOpen, setMeetingDateOpen] = useState(false);
   const [templateData, setTemplateData] = useState<GeneralTemplateData>(createDefaultGeneralData());
   const [isSaving, setIsSaving] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  // O editor de anotações abre sempre em tela cheia (sem passo extra de expandir)
+  const expanded = true;
 
   useEffect(() => {
     if (open) {
-      setExpanded(false);
       if (editingNote) {
         setTitle(editingNote.title);
         setMeetingDate(new Date(editingNote.meetingDate));
@@ -221,7 +221,6 @@ export function NoteFormModal({
               data={templateData}
               onChange={(data) => setTemplateData(data as GeneralTemplateData)}
               isExpanded={expanded}
-              onToggleExpand={() => setExpanded((v) => !v)}
             />
           </div>
         </div>
