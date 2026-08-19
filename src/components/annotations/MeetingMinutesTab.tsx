@@ -331,7 +331,7 @@ function MinuteFormModal({ projectId, userId, open, onOpenChange, editing, onSav
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-meeting-minutes', {
-        body: { transcript, title: title.trim() || undefined, meetingDate },
+        body: { transcript, title: title.trim() || undefined, meetingDate, projectId },
       });
       if (error) {
         let detail = error.message || 'erro desconhecido';

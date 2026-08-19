@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { logAuditEvent } from '@/lib/auditLog';
 import {
   Sun,
@@ -18,7 +18,11 @@ import {
   AlertTriangle,
   Calendar,
   ExternalLink,
-  XCircle
+  XCircle,
+  Sparkles,
+  Eye,
+  EyeOff,
+  KeyRound
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -56,6 +60,42 @@ const Settings = () => {
   const [isReactivating, setIsReactivating] = useState(false);
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // IA / OpenAI key
+  const [openaiKey, setOpenaiKey] = useState('');
+  const [showKey, setShowKey] = useState(false);
+  const [isSavingKey, setIsSavingKey] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('user_ai_settings')
+        .select('openai_key')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (active && data?.openai_key) setOpenaiKey(data.openai_key);
+    })();
+    return () => { active = false; };
+  }, [user]);
+
+  const handleSaveKey = async () => {
+    if (!user) return;
+    setIsSavingKey(true);
+    try {
+      const { error } = await supabase
+        .from('user_ai_settings')
+        .upsert({ user_id: user.id, openai_key: openaiKey.trim() || null, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      toast({ title: 'Chave salva', description: 'A chave da OpenAI foi salva com sucesso.' });
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Erro', description: 'Não foi possível salvar a chave.', variant: 'destructive' });
+    } finally {
+      setIsSavingKey(false);
+    }
+  };
 
   // Sync fullName with profile when it changes
   useState(() => {
@@ -427,6 +467,10 @@ const Settings = () => {
               <CreditCard className="w-4 h-4" />
               Assinatura
             </TabsTrigger>
+            <TabsTrigger value="ai" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              IA
+            </TabsTrigger>
             <TabsTrigger value="appearance" className="gap-2">
               <Palette className="w-4 h-4" />
               Aparência
@@ -727,6 +771,59 @@ const Settings = () => {
           </TabsContent>
 
           {/* Appearance Tab */}
+          <TabsContent value="ai" className="space-y-6">
+            <div className="bg-card rounded-xl border border-border p-6 shadow-soft max-w-2xl">
+              <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Inteligência Artificial
+              </h3>
+              <p className="text-sm text-muted-foreground mb-5">
+                Usada para gerar as atas de reunião a partir das transcrições (aba Anotações → ATA de Reuniões).
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="openai-key" className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4" />
+                  Chave da API OpenAI
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="openai-key"
+                    type={showKey ? 'text' : 'password'}
+                    placeholder="sk-..."
+                    value={openaiKey}
+                    onChange={(e) => setOpenaiKey(e.target.value)}
+                    className="pr-10 font-mono text-sm"
+                    autoComplete="off"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showKey ? 'Ocultar' : 'Mostrar'}
+                  >
+                    {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A chave fica guardada com segurança e nunca é exposta no navegador de outros usuários.
+                  Modelo utilizado: <span className="font-medium">gpt-4o-mini</span>. Crie sua chave em{' '}
+                  <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-primary underline">
+                    platform.openai.com/api-keys
+                  </a>.
+                </p>
+              </div>
+
+              <Button onClick={handleSaveKey} disabled={isSavingKey} className="mt-4">
+                {isSavingKey ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</>
+                ) : (
+                  <><Save className="w-4 h-4 mr-2" /> Salvar chave</>
+                )}
+              </Button>
+            </div>
+          </TabsContent>
+
           <TabsContent value="appearance" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-card rounded-xl border border-border p-6 shadow-soft">

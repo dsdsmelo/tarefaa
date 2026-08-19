@@ -7,7 +7,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
-import { Image } from '@tiptap/extension-image';
+import { ResizableImage } from './ResizableImage';
 import {
   Bold,
   Italic,
@@ -333,7 +333,7 @@ export function RichTextEditor({
       Color,
       TaskList,
       TaskItem.configure({ nested: true }),
-      Image.configure({ HTMLAttributes: { class: 'rounded-md max-w-full h-auto' } }),
+      ResizableImage.configure({ HTMLAttributes: { class: 'rounded-md max-w-full h-auto' } }),
     ],
     content,
     editable,

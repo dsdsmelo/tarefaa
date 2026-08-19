@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const MODEL = Deno.env.get('OPENAI_MODEL') ?? 'gpt-4o'
+const MODEL = Deno.env.get('OPENAI_MODEL') ?? 'gpt-4o-mini'
 const MAX_TRANSCRIPT_CHARS = 120_000
 
 const SYSTEM_PROMPT = `Você redige atas de reunião corporativas em português do Brasil, a partir de transcrições/legendas.
@@ -53,14 +53,41 @@ serve(async (req) => {
       })
     }
 
-    const apiKey = Deno.env.get('OPENAI_API_KEY')
+    const { transcript, title, meetingDate, projectId } = await req.json()
+
+    // Resolve a chave da OpenAI do DONO do projeto (informada em Configurações).
+    // O acesso ao projeto é validado pelo RLS: se o requester não puder ver o
+    // projeto, o select retorna vazio. Fallback: secret OPENAI_API_KEY do ambiente.
+    let apiKey = Deno.env.get('OPENAI_API_KEY') ?? ''
+    if (projectId) {
+      const { data: proj } = await supabaseClient
+        .from('projects')
+        .select('user_id')
+        .eq('id', projectId)
+        .maybeSingle()
+      if (!proj) {
+        return new Response(JSON.stringify({ error: 'Sem acesso ao projeto' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      )
+      const { data: aiSettings } = await supabaseAdmin
+        .from('user_ai_settings')
+        .select('openai_key')
+        .eq('user_id', proj.user_id)
+        .maybeSingle()
+      if (aiSettings?.openai_key) apiKey = aiSettings.openai_key
+    }
+
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'OPENAI_API_KEY não configurada' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      return new Response(JSON.stringify({ error: 'Nenhuma chave da OpenAI configurada. Adicione em Configurações → IA.' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    const { transcript, title, meetingDate } = await req.json()
     if (!transcript || typeof transcript !== 'string' || transcript.trim().length < 20) {
       return new Response(JSON.stringify({ error: 'Transcrição muito curta ou ausente' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
