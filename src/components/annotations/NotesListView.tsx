@@ -47,12 +47,15 @@ const stripHtml = (html: string): string => {
   return doc.body.textContent || '';
 };
 
-// Get content preview from note
+// Get content preview from note (plain text)
 const getPreview = (note: MeetingNote): string => {
-  if (note.templateData) {
-    const data = note.templateData as any;
-    return data.content ? stripHtml(data.content) : '';
-  }
+  return stripHtml(getContentHtml(note));
+};
+
+// Get the rich HTML content from note
+const getContentHtml = (note: MeetingNote): string => {
+  const data = note.templateData as { content?: string } | undefined;
+  if (data && typeof data.content === 'string') return data.content;
   return note.content || '';
 };
 
@@ -123,7 +126,7 @@ export function NotesListView({ projectId }: NotesListViewProps) {
   };
 
   const handleExportPDF = (note: MeetingNote) => {
-    const preview = getPreview(note);
+    const contentHtml = getContentHtml(note);
     const printContent = `
       <!DOCTYPE html>
       <html><head><title>${note.title}</title>
@@ -133,14 +136,21 @@ export function NotesListView({ projectId }: NotesListViewProps) {
         .meta { background: #f5f5f5; padding: 15px 20px; border-radius: 8px; margin-bottom: 25px; }
         .meta p { margin: 5px 0; color: #666; }
         .meta strong { color: #333; }
-        .content { white-space: pre-wrap; background: #fafafa; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; }
+        .content { padding: 4px 0; }
+        .content img { max-width: 100%; height: auto; border-radius: 6px; }
+        .content table { border-collapse: collapse; width: 100%; }
+        .content th, .content td { border: 1px solid #e5e5e5; padding: 6px 10px; text-align: left; }
+        .content blockquote { border-left: 4px solid #3b82f6; background: #f8fafc; margin: 12px 0; padding: 4px 14px; color: #475569; }
+        .content pre { background: #f1f5f9; padding: 12px; border-radius: 8px; overflow: auto; }
+        .content ul[data-type="taskList"] { list-style: none; padding-left: 0; }
+        .content ul[data-type="taskList"] li { display: flex; gap: 8px; align-items: flex-start; }
         .footer { margin-top: 30px; font-size: 12px; color: #999; border-top: 1px solid #e5e5e5; padding-top: 15px; }
       </style></head><body>
         <h1>${note.title}</h1>
         <div class="meta">
           <p><strong>Data:</strong> ${format(new Date(note.meetingDate), 'dd/MM/yyyy', { locale: ptBR })}</p>
         </div>
-        <div class="content">${preview}</div>
+        <div class="content">${contentHtml}</div>
         <div class="footer">Criado em: ${format(new Date(note.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</div>
       </body></html>`;
     const printWindow = window.open('', '_blank');

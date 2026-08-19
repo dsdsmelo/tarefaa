@@ -76,9 +76,11 @@ export function NoteFormModal({
   const [meetingDateOpen, setMeetingDateOpen] = useState(false);
   const [templateData, setTemplateData] = useState<GeneralTemplateData>(createDefaultGeneralData());
   const [isSaving, setIsSaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (open) {
+      setExpanded(false);
       if (editingNote) {
         setTitle(editingNote.title);
         setMeetingDate(new Date(editingNote.meetingDate));
@@ -143,7 +145,14 @@ export function NoteFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className={cn(
+          'flex flex-col gap-0 overflow-hidden',
+          expanded
+            ? 'max-w-[96vw] w-[96vw] h-[94vh] sm:max-w-[96vw]'
+            : 'max-w-2xl max-h-[90vh]'
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {editingNote ? (
@@ -160,61 +169,64 @@ export function NoteFormModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium">Título</Label>
-            <Input
-              id="title"
-              placeholder="Ex: Definição de escopo, Brainstorm ideias, Lembrar de..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
+        <div className={cn('flex flex-col min-h-0 py-2', expanded ? 'flex-1 gap-4' : 'gap-5 overflow-y-auto')}>
+          {/* Title + Date */}
+          <div className={cn('grid gap-4', expanded ? 'sm:grid-cols-2' : 'grid-cols-1')}>
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-sm font-medium">Título</Label>
+              <Input
+                id="title"
+                placeholder="Ex: Definição de escopo, Brainstorm ideias, Lembrar de..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
 
-          {/* Date */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Data</Label>
-            <Popover open={meetingDateOpen} onOpenChange={setMeetingDateOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'w-full justify-start text-left font-normal',
-                    !meetingDate && 'text-muted-foreground'
-                  )}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {meetingDate
-                    ? format(meetingDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR })
-                    : 'Selecionar data...'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={meetingDate}
-                  onSelect={(date) => {
-                    setMeetingDate(date);
-                    setMeetingDateOpen(false);
-                  }}
-                  locale={ptBR}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Data</Label>
+              <Popover open={meetingDateOpen} onOpenChange={setMeetingDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !meetingDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {meetingDate
+                      ? format(meetingDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR })
+                      : 'Selecionar data...'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={meetingDate}
+                    onSelect={(date) => {
+                      setMeetingDate(date);
+                      setMeetingDateOpen(false);
+                    }}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           {/* Template Content */}
-          <div className="border-t pt-4">
+          <div className={cn('flex flex-col min-h-0', expanded ? 'flex-1' : 'border-t pt-4')}>
             <GeneralTemplate
               data={templateData}
               onChange={(data) => setTemplateData(data as GeneralTemplateData)}
+              isExpanded={expanded}
+              onToggleExpand={() => setExpanded((v) => !v)}
             />
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 pt-3 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
