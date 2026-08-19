@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const MODEL = Deno.env.get('OPENAI_MODEL') ?? 'gpt-4o-mini'
+const MODEL = Deno.env.get('OPENAI_MODEL') ?? 'gpt-4o'
 const MAX_TRANSCRIPT_CHARS = 120_000
 
 const SYSTEM_PROMPT = `Você redige ATAS DE REUNIÃO corporativas em português do Brasil, a partir de transcrições/legendas. Produza uma ata DETALHADA, completa e bem organizada, capturando todos os temas discutidos com profundidade.

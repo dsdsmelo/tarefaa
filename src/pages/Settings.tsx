@@ -807,7 +807,7 @@ const Settings = () => {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   A chave fica guardada com segurança e nunca é exposta no navegador de outros usuários.
-                  Modelo utilizado: <span className="font-medium">gpt-4o-mini</span>. Crie sua chave em{' '}
+                  Modelo utilizado: <span className="font-medium">gpt-4o</span>. Crie sua chave em{' '}
                   <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-primary underline">
                     platform.openai.com/api-keys
                   </a>.
