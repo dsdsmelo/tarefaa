@@ -31,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { marked } from 'marked';
 import { RichTextEditor } from './RichTextEditor';
 import {
   ScrollText, Plus, Upload, Sparkles, Loader2, Copy, Download, Mail,
@@ -342,10 +343,13 @@ function MinuteFormModal({ projectId, userId, open, onOpenChange, editing, onSav
         toast.error(`Falha ao gerar ata: ${detail}`);
         return;
       }
-      if (data?.html) {
-        setContent(data.html);
+      if (data?.markdown) {
+        const html = marked.parse(data.markdown, { async: false }) as string;
+        setContent(html);
         if (data.truncated) toast.warning('A transcrição era longa e foi truncada para gerar a ata.');
         toast.success('Ata gerada! Revise antes de salvar.');
+      } else {
+        toast.error('A IA não retornou conteúdo.');
       }
     } catch (err) {
       console.error(err);

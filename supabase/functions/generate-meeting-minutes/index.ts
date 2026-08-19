@@ -9,24 +9,41 @@ const corsHeaders = {
 const MODEL = Deno.env.get('OPENAI_MODEL') ?? 'gpt-4o-mini'
 const MAX_TRANSCRIPT_CHARS = 120_000
 
-const SYSTEM_PROMPT = `Você redige atas de reunião corporativas em português do Brasil, a partir de transcrições/legendas.
+const SYSTEM_PROMPT = `Você redige ATAS DE REUNIÃO corporativas em português do Brasil, a partir de transcrições/legendas. Produza uma ata DETALHADA, completa e bem organizada, capturando todos os temas discutidos com profundidade.
 
 Regras obrigatórias:
-- Linguagem formal e corporativa. NUNCA use emojis.
-- Não invente informações que não estejam na transcrição. Quando não houver dado para uma seção, escreva "Não identificado na transcrição".
-- Seja objetivo e organizado. Não copie a transcrição literalmente; sintetize.
-- Identifique participantes, decisões, responsáveis e prazos somente se aparecerem na transcrição.
+- Saída em MARKDOWN. NUNCA use emojis. Linguagem formal e corporativa.
+- Não invente informações. Use apenas o que consta na transcrição. Quando um dado não existir, escreva "Não identificado na transcrição".
+- Seja minucioso: para cada tema relevante, registre os pontos discutidos, as definições/decisões e os próximos passos. Não resuma em excesso; preserve detalhes técnicos, nomes de pessoas, sistemas, equipamentos, prazos e responsáveis mencionados.
+- Identifique participantes, responsáveis e prazos somente se aparecerem na transcrição.
 
-Estruture a ata exatamente nesta ordem, usando os títulos indicados:
-- Um parágrafo inicial com "Data e horário" e "Participantes".
-- "1. Objetivo / Pauta"
-- "2. Resumo da discussão" (organizado por tópicos)
-- "3. Decisões tomadas"
-- "4. Ações e responsáveis" (inclua prazos quando houver)
-- "5. Pendências / Próximos passos"
-- "6. Observações"
+Estrutura obrigatória (siga exatamente este formato markdown):
 
-Formato de saída: APENAS o HTML do corpo da ata, usando somente as tags <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>. Não use markdown, não use blocos de código, não inclua <html>, <head> ou <body>, não repita o título principal (ele já é exibido à parte).`
+# ATA DE REUNIÃO
+
+**{Título da reunião}**
+**Data:** {data}
+**Participantes:** {nomes identificados; se muitos, liste os principais e finalize com "entre outros"}
+**Duração aproximada:** {se identificável; senão "Não identificado na transcrição"}
+**Objetivo:** {objetivo geral da reunião}
+
+Depois, uma seção "## N. {Tema}" para CADA tema relevante discutido (quantas forem necessárias), e dentro de cada uma, nesta ordem:
+
+**Tópicos abordados**
+- {pontos discutidos, em detalhe}
+
+**Definições**
+- {decisões e definições tomadas}
+
+**Próximos Passos**
+- {ações, com responsável e prazo quando houver}
+
+Ao final, uma seção:
+
+## Resumo Executivo
+- {principais conclusões da reunião, em tópicos}
+
+Não use blocos de código nem escreva nada fora da ata. Comece diretamente pelo título "# ATA DE REUNIÃO".`
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -135,17 +152,17 @@ serve(async (req) => {
     }
 
     const data = await openaiRes.json()
-    let html: string = data?.choices?.[0]?.message?.content ?? ''
-    // Remove eventuais cercas de código markdown que o modelo possa incluir
-    html = html.replace(/^```(?:html)?/i, '').replace(/```$/i, '').trim()
+    let markdown: string = data?.choices?.[0]?.message?.content ?? ''
+    // Remove eventuais cercas de código que o modelo possa incluir
+    markdown = markdown.replace(/^```(?:markdown|md)?/i, '').replace(/```$/i, '').trim()
 
-    if (!html) {
+    if (!markdown) {
       return new Response(JSON.stringify({ error: 'A IA não retornou conteúdo' }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    return new Response(JSON.stringify({ html, truncated }), {
+    return new Response(JSON.stringify({ markdown, truncated }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
