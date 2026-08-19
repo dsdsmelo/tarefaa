@@ -64,6 +64,7 @@
     "hot-formula-parser": "^4.0.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
+    "marked": "^12.0.2",
     "next-themes": "^0.3.0",
     "otpauth": "^9.4.1",
     "qrcode.react": "^4.2.0",

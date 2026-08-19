@@ -47,9 +47,24 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { useEffect, useRef, useState } from 'react';
+import { marked } from 'marked';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const NOTE_IMAGES_BUCKET = 'note-images';
+
+// Heurística: o texto colado "parece" markdown? (evita converter texto comum)
+const looksLikeMarkdown = (t: string): boolean => {
+  return (
+    /(^|\n)\s*#{1,6}\s+\S/.test(t) ||        // títulos
+    /(^|\n)\s*[-*+]\s+\S/.test(t) ||         // lista com marcadores
+    /(^|\n)\s*\d+\.\s+\S/.test(t) ||         // lista numerada
+    /(^|\n)\s*>\s+\S/.test(t) ||             // citação
+    /```[\s\S]*```/.test(t) ||               // bloco de código
+    /(^|\n)\s*(-{3,}|\*{3,})\s*(\n|$)/.test(t) || // linha horizontal
+    /\*\*[^*\n]+\*\*/.test(t) ||             // negrito
+    /\[[^\]\n]+\]\([^)\n]+\)/.test(t)        // link
+  );
+};
 
 const TEXT_COLORS = [
   { name: 'Padrão', value: null },
@@ -343,9 +358,7 @@ export function RichTextEditor({
     }
   }, [content, editor]);
 
-  const handleImageSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const uploadImage = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Selecione uma imagem válida');
       return;
@@ -356,7 +369,7 @@ export function RichTextEditor({
     }
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split('.').pop() || 'png';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `notes/${fileName}`;
       const { error: uploadError } = await supabase.storage.from(NOTE_IMAGES_BUCKET).upload(filePath, file);
@@ -368,9 +381,41 @@ export function RichTextEditor({
       toast.error('Erro ao enviar imagem');
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  }, [editor]);
+
+  const handleImageSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) void uploadImage(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // Colar: imagem (Ctrl+V) faz upload; texto em markdown é convertido em documento formatado
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom as HTMLElement;
+    const onPaste = (e: ClipboardEvent) => {
+      const cd = e.clipboardData;
+      if (!cd) return;
+
+      const imageFile = Array.from(cd.files).find((f) => f.type.startsWith('image/'));
+      if (imageFile) {
+        e.preventDefault();
+        void uploadImage(imageFile);
+        return;
+      }
+
+      const html = cd.getData('text/html');
+      const text = cd.getData('text/plain');
+      if (!html && text && looksLikeMarkdown(text)) {
+        e.preventDefault();
+        const converted = marked.parse(text, { async: false }) as string;
+        editor.chain().focus().insertContent(converted).run();
+      }
+    };
+    dom.addEventListener('paste', onPaste);
+    return () => dom.removeEventListener('paste', onPaste);
+  }, [editor, uploadImage]);
 
   const wordCount = editor ? editor.getText().trim().split(/\s+/).filter(Boolean).length : 0;
 
@@ -385,10 +430,8 @@ export function RichTextEditor({
           onToggleExpand={onToggleExpand}
         />
       )}
-      <div className={cn('flex-1 overflow-y-auto', isExpanded && 'flex justify-center')}>
-        <div className={cn(isExpanded && 'w-full max-w-3xl')}>
-          <EditorContent editor={editor} />
-        </div>
+      <div className="flex-1 overflow-y-auto">
+        <EditorContent editor={editor} />
       </div>
       {editable && (
         <div className="flex items-center justify-end px-3 py-1 border-t border-border bg-muted/20 text-[11px] text-muted-foreground rounded-b-md">
@@ -406,6 +449,14 @@ export function RichTextEditor({
         }
         .ProseMirror:focus { outline: none; }
         .ProseMirror a { color: hsl(var(--primary)); text-decoration: underline; }
+        /* Garante marcadores de lista (o reset do Tailwind os remove) */
+        .ProseMirror ul { list-style: disc outside; padding-left: 1.5rem; }
+        .ProseMirror ol { list-style: decimal outside; padding-left: 1.5rem; }
+        .ProseMirror li { margin: 0.15rem 0; }
+        .ProseMirror li p { margin: 0; }
+        .ProseMirror h1 { font-size: 1.6em; font-weight: 700; margin: 0.6em 0 0.3em; }
+        .ProseMirror h2 { font-size: 1.35em; font-weight: 700; margin: 0.6em 0 0.3em; }
+        .ProseMirror h3 { font-size: 1.15em; font-weight: 600; margin: 0.5em 0 0.25em; }
         .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0; }
         .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
         .ProseMirror ul[data-type="taskList"] li > label { margin-top: 0.2rem; }
