@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Turnstile, type TurnstileHandle } from '@/components/auth/Turnstile';
 import { 
   FolderKanban, 
   CheckCircle2, 
@@ -80,6 +81,7 @@ const Landing = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [priceAmount, setPriceAmount] = useState<number | null>(null);
   const [priceLoading, setPriceLoading] = useState(true);
+  const captchaRef = useRef<TurnstileHandle>(null);
   const { toast } = useToast();
 
   const subscriptionRequired = searchParams.get('subscription') === 'required';
@@ -122,7 +124,11 @@ const Landing = () => {
     // Cria checkout session via edge function (guest checkout - não requer autenticação)
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-guest-checkout');
+      // Verificação anti-bot (Turnstile) antes de criar o checkout
+      const captchaToken = await captchaRef.current?.getToken();
+      const { data, error } = await supabase.functions.invoke('create-guest-checkout', {
+        body: { captchaToken },
+      });
 
       if (error) throw error;
 
@@ -222,6 +228,8 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
+      {/* Turnstile invisível: gera o token do checkout de convidado sob demanda */}
+      <Turnstile ref={captchaRef} action="guest_checkout" execution="execute" appearance="interaction-only" />
       {/* Header */}
       <motion.header 
         initial={{ y: -20, opacity: 0 }}

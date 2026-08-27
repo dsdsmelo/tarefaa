@@ -12,6 +12,7 @@ declare global {
       render: (el: HTMLElement, opts: Record<string, any>) => string;
       reset: (id?: string) => void;
       remove: (id?: string) => void;
+      execute: (id?: string, opts?: Record<string, any>) => void;
     };
   }
 }
@@ -19,18 +20,25 @@ declare global {
 
 export interface TurnstileHandle {
   reset: () => void;
+  // Executa o desafio (modo invisível) e resolve com o token (ou null)
+  getToken: () => Promise<string | null>;
 }
 
 interface TurnstileProps {
-  onVerify: (token: string) => void;
+  onVerify?: (token: string) => void;
   onExpire?: () => void;
   action?: string;
+  // 'render' (visível, resolve no load) | 'execute' (invisível, sob demanda)
+  execution?: 'render' | 'execute';
+  appearance?: 'always' | 'execute' | 'interaction-only';
 }
 
 export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(
-  ({ onVerify, onExpire, action = 'auth' }, ref) => {
+  ({ onVerify, onExpire, action = 'auth', execution = 'render', appearance = 'always' }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIdRef = useRef<string | null>(null);
+    const tokenRef = useRef<string | null>(null);
+    const resolverRef = useRef<((t: string | null) => void) | null>(null);
     const onVerifyRef = useRef(onVerify);
     const onExpireRef = useRef(onExpire);
     onVerifyRef.current = onVerify;
@@ -38,28 +46,48 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(
 
     useImperativeHandle(ref, () => ({
       reset: () => {
+        tokenRef.current = null;
         if (widgetIdRef.current && window.turnstile) {
           try { window.turnstile.reset(widgetIdRef.current); } catch { /* noop */ }
         }
       },
+      getToken: () =>
+        new Promise((resolve) => {
+          if (tokenRef.current) return resolve(tokenRef.current);
+          resolverRef.current = resolve;
+          if (window.turnstile && widgetIdRef.current) {
+            try { window.turnstile.execute(widgetIdRef.current); } catch { /* noop */ }
+          }
+          // fallback: não trava a UI se o widget não responder
+          setTimeout(() => {
+            if (resolverRef.current) { resolverRef.current = null; resolve(tokenRef.current); }
+          }, 8000);
+        }),
     }));
 
     useEffect(() => {
       let cancelled = false;
       let poll: ReturnType<typeof setInterval> | null = null;
 
+      const handleToken = (token: string) => {
+        tokenRef.current = token;
+        onVerifyRef.current?.(token);
+        if (resolverRef.current) { resolverRef.current(token); resolverRef.current = null; }
+      };
+
       const render = () => {
         if (cancelled || !containerRef.current || !window.turnstile || widgetIdRef.current) return;
-        // Combina com o tema do app (claro/escuro)
         const isDark = document.documentElement.classList.contains('dark');
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: SITE_KEY,
           action,
           theme: isDark ? 'dark' : 'light',
           size: 'flexible',
-          callback: (token: string) => onVerifyRef.current(token),
-          'expired-callback': () => onExpireRef.current?.(),
-          'error-callback': () => onExpireRef.current?.(),
+          execution,
+          appearance,
+          callback: (token: string) => handleToken(token),
+          'expired-callback': () => { tokenRef.current = null; onExpireRef.current?.(); },
+          'error-callback': () => { tokenRef.current = null; onExpireRef.current?.(); },
         });
       };
 
@@ -91,7 +119,7 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(
           widgetIdRef.current = null;
         }
       };
-    }, [action]);
+    }, [action, execution, appearance]);
 
     return <div ref={containerRef} className="w-full" />;
   }

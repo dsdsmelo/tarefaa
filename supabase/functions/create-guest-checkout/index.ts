@@ -21,6 +21,43 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
+    // Verificação anti-bot (Cloudflare Turnstile) — server-side siteverify.
+    // Só é exigida quando TURNSTILE_SECRET está configurado (evita quebrar
+    // antes da configuração). Valida o token e o hostname de origem.
+    const turnstileSecret = Deno.env.get("TURNSTILE_SECRET");
+    if (turnstileSecret) {
+      let captchaToken: string | undefined;
+      try {
+        const body = await req.json();
+        captchaToken = body?.captchaToken;
+      } catch {
+        captchaToken = undefined;
+      }
+      if (!captchaToken) {
+        logStep("Missing captcha token");
+        return new Response(JSON.stringify({ error: "Verificação de segurança ausente." }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
+        });
+      }
+      const form = new URLSearchParams({ secret: turnstileSecret, response: captchaToken });
+      const ip = req.headers.get("CF-Connecting-IP");
+      if (ip) form.set("remoteip", ip);
+      const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form,
+      });
+      const outcome = await verifyRes.json();
+      const hostOk = !outcome.hostname || String(outcome.hostname).endsWith("tarefaa.com.br");
+      if (!outcome.success || !hostOk) {
+        logStep("Captcha verification failed", { errors: outcome["error-codes"], hostname: outcome.hostname });
+        return new Response(JSON.stringify({ error: "Falha na verificação de segurança." }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403,
+        });
+      }
+      logStep("Captcha verified", { hostname: outcome.hostname });
+    }
+
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
       throw new Error("STRIPE_SECRET_KEY is not set");
