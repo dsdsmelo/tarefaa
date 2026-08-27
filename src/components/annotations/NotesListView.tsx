@@ -77,6 +77,12 @@ const extractLinks = (note: MeetingNote): { href: string; label: string }[] => {
   return links;
 };
 
+// Mostra uma parte do endereço (sem protocolo/www), comprimido
+const formatLinkLabel = (href: string): string => {
+  const s = href.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+  return s.length > 26 ? s.slice(0, 26) + '…' : s;
+};
+
 export function NotesListView({ projectId }: NotesListViewProps) {
   const { meetingNotes, deleteMeetingNote } = useData();
 
@@ -266,51 +272,56 @@ export function NotesListView({ projectId }: NotesListViewProps) {
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm text-foreground truncate">{note.title}</div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium text-sm text-foreground truncate">{note.title}</span>
+
+                    {/* Links à direita do título — clique direto sem abrir a anotação */}
+                    {links.length > 0 && (
+                      <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {links.length <= 5 ? (
+                          links.map((l, i) => (
+                            <a
+                              key={i}
+                              href={l.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={l.href}
+                              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-primary hover:bg-primary/10 transition-colors max-w-[140px]"
+                            >
+                              <Link2 className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">{formatLinkLabel(l.href)}</span>
+                            </a>
+                          ))
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                title="Abrir links desta anotação"
+                                className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-primary hover:bg-primary/10 transition-colors"
+                              >
+                                <Link2 className="w-3 h-3" />
+                                {links.length} links
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="max-w-xs">
+                              {links.map((l, i) => (
+                                <DropdownMenuItem key={i} asChild>
+                                  <a href={l.href} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                                    <ExternalLink className="w-4 h-4 mr-2 flex-shrink-0" />
+                                    <span className="truncate">{formatLinkLabel(l.href)}</span>
+                                  </a>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   {displayPreview && (
                     <div className="text-xs text-muted-foreground truncate mt-0.5">{displayPreview}</div>
                   )}
                 </div>
-
-                {/* Links — clique direto sem abrir a anotação */}
-                {links.length > 0 && (
-                  <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    {links.length === 1 ? (
-                      <a
-                        href={links[0].href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={links[0].href}
-                        className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-primary hover:bg-primary/10 transition-colors max-w-[160px]"
-                      >
-                        <Link2 className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate">{links[0].label}</span>
-                      </a>
-                    ) : (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            title="Abrir links desta anotação"
-                            className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-primary hover:bg-primary/10 transition-colors"
-                          >
-                            <Link2 className="w-3 h-3" />
-                            {links.length}
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="max-w-xs">
-                          {links.map((l, i) => (
-                            <DropdownMenuItem key={i} asChild>
-                              <a href={l.href} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
-                                <ExternalLink className="w-4 h-4 mr-2 flex-shrink-0" />
-                                <span className="truncate">{l.label}</span>
-                              </a>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                )}
 
                 {/* Date */}
                 <div className="text-xs text-muted-foreground flex-shrink-0 mt-0.5">
