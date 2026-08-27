@@ -18,6 +18,8 @@ import {
   Share2,
   Copy,
   ChevronRight,
+  Link2,
+  ExternalLink,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -57,6 +59,22 @@ const getContentHtml = (note: MeetingNote): string => {
   const data = note.templateData as { content?: string } | undefined;
   if (data && typeof data.content === 'string') return data.content;
   return note.content || '';
+};
+
+// Extrai os links (<a href>) do conteúdo da anotação
+const extractLinks = (note: MeetingNote): { href: string; label: string }[] => {
+  const html = getContentHtml(note);
+  if (!html || !html.includes('<a')) return [];
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const seen = new Set<string>();
+  const links: { href: string; label: string }[] = [];
+  doc.querySelectorAll('a[href]').forEach((a) => {
+    const href = (a.getAttribute('href') || '').trim();
+    if (!href || href.startsWith('javascript:') || seen.has(href)) return;
+    seen.add(href);
+    links.push({ href, label: (a.textContent || href).trim() || href });
+  });
+  return links;
 };
 
 export function NotesListView({ projectId }: NotesListViewProps) {
@@ -235,6 +253,7 @@ export function NotesListView({ projectId }: NotesListViewProps) {
           {filteredNotes.map((note) => {
             const preview = getPreview(note);
             const displayPreview = preview.length > 120 ? preview.slice(0, 120) + '...' : preview;
+            const links = extractLinks(note);
 
             return (
               <div
@@ -252,6 +271,46 @@ export function NotesListView({ projectId }: NotesListViewProps) {
                     <div className="text-xs text-muted-foreground truncate mt-0.5">{displayPreview}</div>
                   )}
                 </div>
+
+                {/* Links — clique direto sem abrir a anotação */}
+                {links.length > 0 && (
+                  <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {links.length === 1 ? (
+                      <a
+                        href={links[0].href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={links[0].href}
+                        className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-primary hover:bg-primary/10 transition-colors max-w-[160px]"
+                      >
+                        <Link2 className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{links[0].label}</span>
+                      </a>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            title="Abrir links desta anotação"
+                            className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-primary hover:bg-primary/10 transition-colors"
+                          >
+                            <Link2 className="w-3 h-3" />
+                            {links.length}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="max-w-xs">
+                          {links.map((l, i) => (
+                            <DropdownMenuItem key={i} asChild>
+                              <a href={l.href} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                                <ExternalLink className="w-4 h-4 mr-2 flex-shrink-0" />
+                                <span className="truncate">{l.label}</span>
+                              </a>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                )}
 
                 {/* Date */}
                 <div className="text-xs text-muted-foreground flex-shrink-0 mt-0.5">
