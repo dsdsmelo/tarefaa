@@ -32,8 +32,8 @@ interface AuthContextType {
   subscriptionChecked: boolean;
   isAuthenticated: boolean;
   hasActiveSubscription: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName?: string, captchaToken?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -234,16 +234,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, captchaToken?: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
+      options: captchaToken ? { captchaToken } : undefined,
     });
 
     return { error: error ? new Error(error.message) : null };
   };
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, fullName?: string, captchaToken?: string) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
 
     const { error } = await supabase.auth.signUp({
@@ -254,6 +255,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         data: {
           full_name: fullName,
         },
+        captchaToken,
       },
     });
 

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Turnstile, type TurnstileHandle } from '@/components/auth/Turnstile';
 import { FolderKanban, Mail, Lock, Loader2, User, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,9 +31,16 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const resetCaptcha = () => {
+    turnstileRef.current?.reset();
+    setCaptchaToken(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +59,7 @@ const Auth = () => {
           return;
         }
 
-        const { error } = await signIn(email, password);
+        const { error } = await signIn(email, password, captchaToken ?? undefined);
         if (error) {
           let message = 'Email ou senha incorretos.';
           let reason = error.message;
@@ -61,11 +69,14 @@ const Auth = () => {
           } else if (error.message.includes('Email not confirmed')) {
             message = 'Por favor, confirme seu email antes de fazer login.';
             reason = 'Email não confirmado';
+          } else if (error.message.toLowerCase().includes('captcha')) {
+            message = 'Falha na verificação de segurança. Tente novamente.';
           }
 
           // Log failed login attempt
           await auditLog.loginFailed(email, reason);
 
+          resetCaptcha();
           toast({
             title: 'Erro no login',
             description: message,
@@ -93,18 +104,21 @@ const Auth = () => {
           return;
         }
 
-        const { error } = await signUp(email, password, fullName);
+        const { error } = await signUp(email, password, fullName, captchaToken ?? undefined);
         if (error) {
           let message = 'Erro ao criar conta.';
           let reason = error.message;
           if (error.message.includes('already registered')) {
             message = 'Este email já está cadastrado.';
             reason = 'Email já registrado';
+          } else if (error.message.toLowerCase().includes('captcha')) {
+            message = 'Falha na verificação de segurança. Tente novamente.';
           }
 
           // Log failed signup attempt
           await auditLog.signupFailed(email, reason);
 
+          resetCaptcha();
           toast({
             title: 'Erro no cadastro',
             description: message,
@@ -213,10 +227,17 @@ const Auth = () => {
               </div>
             </div>
 
+            <Turnstile
+              ref={turnstileRef}
+              action={mode}
+              onVerify={setCaptchaToken}
+              onExpire={() => setCaptchaToken(null)}
+            />
+
             <Button
               type="submit"
               className="w-full h-12 gradient-primary text-white font-semibold shadow-md hover:shadow-lg transition-all"
-              disabled={isLoading}
+              disabled={isLoading || !captchaToken}
             >
               {isLoading ? (
                 <>

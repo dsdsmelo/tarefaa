@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { Turnstile, type TurnstileHandle } from '@/components/auth/Turnstile';
 import { z } from 'zod';
 import logoIcon from '@/assets/logo-icon.png';
 
@@ -17,11 +18,13 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('form');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const validation = emailSchema.safeParse(email);
     if (!validation.success) {
       toast({
@@ -35,21 +38,17 @@ const ForgotPassword = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      // Não revela se o e-mail existe (anti-enumeração): sempre mostra "enviado".
+      await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
+        captchaToken: captchaToken ?? undefined,
       });
-
-      if (error) throw error;
-
-      setViewMode('sent');
-    } catch (error: any) {
-      console.error('Password reset error:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível enviar o email de recuperação. Tente novamente.',
-        variant: 'destructive',
-      });
+    } catch (error) {
+      console.error('Password reset error');
     } finally {
+      turnstileRef.current?.reset();
+      setCaptchaToken(null);
+      setViewMode('sent');
       setIsLoading(false);
     }
   };
@@ -93,10 +92,17 @@ const ForgotPassword = () => {
                   </div>
                 </div>
 
+                <Turnstile
+                  ref={turnstileRef}
+                  action="recover"
+                  onVerify={setCaptchaToken}
+                  onExpire={() => setCaptchaToken(null)}
+                />
+
                 <Button
                   type="submit"
                   className="w-full h-12 gradient-primary text-white font-semibold shadow-md hover:shadow-lg transition-all"
-                  disabled={isLoading}
+                  disabled={isLoading || !captchaToken}
                 >
                   {isLoading ? (
                     <>

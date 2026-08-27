@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Turnstile, type TurnstileHandle } from '@/components/auth/Turnstile';
 import { z } from 'zod';
 import logoIcon from '@/assets/logo-icon.png';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  password: z.string().min(1, 'Informe a senha'),
 });
 
 const Login = () => {
@@ -19,6 +20,8 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const { signIn, isAuthenticated, hasActiveSubscription, subscriptionChecked } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -62,19 +65,23 @@ const Login = () => {
         return;
       }
 
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(email, password, captchaToken ?? undefined);
       if (error) {
         let message = 'Email ou senha incorretos.';
         if (error.message.includes('Invalid login credentials')) {
           message = 'Email ou senha incorretos.';
         } else if (error.message.includes('Email not confirmed')) {
           message = 'Por favor, confirme seu email antes de fazer login.';
+        } else if (error.message.toLowerCase().includes('captcha')) {
+          message = 'Falha na verificação de segurança. Tente novamente.';
         }
         toast({
           title: 'Erro no login',
           description: message,
           variant: 'destructive',
         });
+        turnstileRef.current?.reset();
+        setCaptchaToken(null);
         setIsLoading(false);
       } else {
         toast({
@@ -225,10 +232,17 @@ const Login = () => {
                 </div>
               </div>
 
+              <Turnstile
+                ref={turnstileRef}
+                action="login"
+                onVerify={setCaptchaToken}
+                onExpire={() => setCaptchaToken(null)}
+              />
+
               <Button
                 type="submit"
                 className="w-full h-12 gradient-primary text-white font-semibold shadow-md hover:shadow-lg transition-all group"
-                disabled={isLoading}
+                disabled={isLoading || !captchaToken}
               >
                 {isLoading ? (
                   <>
