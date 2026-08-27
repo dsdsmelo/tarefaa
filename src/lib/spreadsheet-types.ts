@@ -115,6 +115,8 @@ export interface ReminderTemplateData {
 
 export interface GeneralTemplateData {
   content: string;            // Conteúdo (rich text HTML with full formatting)
+  lastEditedByName?: string;  // Quem editou por último (nome exibido)
+  lastEditedAt?: string;      // Quando foi a última edição (ISO)
 }
 
 export type NoteTemplateData =

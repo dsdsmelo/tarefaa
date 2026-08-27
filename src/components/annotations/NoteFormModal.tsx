@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { MeetingNote } from '@/lib/types';
 import {
   GeneralTemplateData,
@@ -15,7 +16,6 @@ import { ptBR } from 'date-fns/locale';
 import {
   Pencil,
   NotebookPen,
-  Calendar,
 } from 'lucide-react';
 import {
   Dialog,
@@ -24,12 +24,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { GeneralTemplate } from './templates/GeneralTemplate';
 
@@ -70,10 +64,19 @@ export function NoteFormModal({
   onSuccess,
 }: NoteFormModalProps) {
   const { addMeetingNote, updateMeetingNote } = useData();
+  const { user, profile } = useAuth();
+
+  const meta = (user?.user_metadata ?? {}) as { first_name?: string; full_name?: string; name?: string };
+  const currentUserName =
+    profile?.full_name?.trim() ||
+    meta.full_name?.trim() ||
+    meta.first_name?.trim() ||
+    meta.name?.trim() ||
+    user?.email?.split('@')[0] ||
+    'Usuário';
 
   const [title, setTitle] = useState('');
-  const [meetingDate, setMeetingDate] = useState<Date | undefined>(new Date());
-  const [meetingDateOpen, setMeetingDateOpen] = useState(false);
+  const [meetingDate, setMeetingDate] = useState<Date>(new Date());
   const [templateData, setTemplateData] = useState<GeneralTemplateData>(createDefaultGeneralData());
   const [isSaving, setIsSaving] = useState(false);
   // O editor de anotações abre sempre em tela cheia (sem passo extra de expandir)
@@ -103,15 +106,19 @@ export function NoteFormModal({
       toast.error('Título é obrigatório');
       return;
     }
-    if (!meetingDate) {
-      toast.error('Data é obrigatória');
-      return;
-    }
 
     setIsSaving(true);
     try {
       const content = templateData.content || '';
       const participants: string[] = ['cat:general'];
+
+      // Metadados de edição (guardados no templateData, sem migração)
+      const templateWithMeta: GeneralTemplateData = {
+        ...templateData,
+        content,
+        lastEditedByName: currentUserName,
+        lastEditedAt: new Date().toISOString(),
+      };
 
       const noteData = {
         title: title.trim(),
@@ -119,7 +126,7 @@ export function NoteFormModal({
         meetingDate: meetingDate.toISOString().split('T')[0],
         participants,
         category: 'general' as const,
-        templateData: templateData as NoteTemplateData,
+        templateData: templateWithMeta as NoteTemplateData,
       };
 
       if (editingNote) {
@@ -170,49 +177,26 @@ export function NoteFormModal({
         </DialogHeader>
 
         <div className={cn('flex flex-col min-h-0 py-2', expanded ? 'flex-1 gap-4' : 'gap-5 overflow-y-auto')}>
-          {/* Title + Date */}
-          <div className={cn('grid gap-4', expanded ? 'sm:grid-cols-2' : 'grid-cols-1')}>
-            <div className="space-y-2">
-              <Label htmlFor="title" className="text-sm font-medium">Título</Label>
-              <Input
-                id="title"
-                placeholder="Ex: Definição de escopo, Brainstorm ideias, Lembrar de..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Data</Label>
-              <Popover open={meetingDateOpen} onOpenChange={setMeetingDateOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !meetingDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {meetingDate
-                      ? format(meetingDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR })
-                      : 'Selecionar data...'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={meetingDate}
-                    onSelect={(date) => {
-                      setMeetingDate(date);
-                      setMeetingDateOpen(false);
-                    }}
-                    locale={ptBR}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+          {/* Title */}
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-sm font-medium">Título</Label>
+            <Input
+              id="title"
+              placeholder="Ex: Definição de escopo, Brainstorm ideias, Lembrar de..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            {editingNote && (
+              <p className="text-xs text-muted-foreground">
+                Criado em {format(new Date(editingNote.createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                {templateData.lastEditedByName && templateData.lastEditedAt && (
+                  <>
+                    {' · '}Última edição por <span className="font-medium">{templateData.lastEditedByName}</span>
+                    {' em '}{format(new Date(templateData.lastEditedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </>
+                )}
+              </p>
+            )}
           </div>
 
           {/* Template Content */}
