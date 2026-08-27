@@ -62,10 +62,11 @@ const Settings = () => {
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // IA / OpenAI key
+  // IA / OpenAI key — write-only: o cliente nunca lê o valor da chave
   const [openaiKey, setOpenaiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [isSavingKey, setIsSavingKey] = useState(false);
+  const [hasKey, setHasKey] = useState(false);
 
   // CAPTCHA para trocar senha
   const [changePwCaptcha, setChangePwCaptcha] = useState<string | null>(null);
@@ -75,12 +76,8 @@ const Settings = () => {
     if (!user) return;
     let active = true;
     (async () => {
-      const { data } = await supabase
-        .from('user_ai_settings')
-        .select('openai_key')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if (active && data?.openai_key) setOpenaiKey(data.openai_key);
+      const { data } = await supabase.rpc('has_openai_key');
+      if (active) setHasKey(!!data);
     })();
     return () => { active = false; };
   }, [user]);
@@ -89,10 +86,10 @@ const Settings = () => {
     if (!user) return;
     setIsSavingKey(true);
     try {
-      const { error } = await supabase
-        .from('user_ai_settings')
-        .upsert({ user_id: user.id, openai_key: openaiKey.trim() || null, updated_at: new Date().toISOString() });
+      const { error } = await supabase.rpc('set_openai_key', { p_key: openaiKey.trim() });
       if (error) throw error;
+      setHasKey(!!openaiKey.trim());
+      setOpenaiKey('');
       toast({ title: 'Chave salva', description: 'A chave da OpenAI foi salva com sucesso.' });
     } catch (err) {
       console.error(err);
@@ -794,12 +791,17 @@ const Settings = () => {
                 <Label htmlFor="openai-key" className="flex items-center gap-2">
                   <KeyRound className="w-4 h-4" />
                   Chave da API OpenAI
+                  {hasKey && (
+                    <span className="ml-1 inline-flex items-center gap-1 text-xs font-normal text-emerald-600">
+                      <Sparkles className="w-3 h-3" /> configurada
+                    </span>
+                  )}
                 </Label>
                 <div className="relative">
                   <Input
                     id="openai-key"
                     type={showKey ? 'text' : 'password'}
-                    placeholder="sk-..."
+                    placeholder={hasKey ? '•••••••••••• (deixe em branco para manter)' : 'sk-...'}
                     value={openaiKey}
                     onChange={(e) => setOpenaiKey(e.target.value)}
                     className="pr-10 font-mono text-sm"
@@ -815,8 +817,8 @@ const Settings = () => {
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  A chave fica guardada com segurança e nunca é exposta no navegador de outros usuários.
-                  Modelo utilizado: <span className="font-medium">gpt-4o</span>. Crie sua chave em{' '}
+                  A chave é <strong>write-only</strong>: fica guardada com segurança no servidor e nunca
+                  é devolvida ao navegador. Modelo utilizado: <span className="font-medium">gpt-4o</span>. Crie sua chave em{' '}
                   <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-primary underline">
                     platform.openai.com/api-keys
                   </a>.
