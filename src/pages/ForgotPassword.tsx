@@ -102,7 +102,7 @@ const ForgotPassword = () => {
                 <Button
                   type="submit"
                   className="w-full h-12 gradient-primary text-white font-semibold shadow-md hover:shadow-lg transition-all"
-                  disabled={isLoading || !captchaToken}
+                  disabled={isLoading}
                 >
                   {isLoading ? (
                     <>
