@@ -16,6 +16,7 @@ import { ptBR } from 'date-fns/locale';
 import {
   Pencil,
   NotebookPen,
+  Calendar,
 } from 'lucide-react';
 import {
   Dialog,
