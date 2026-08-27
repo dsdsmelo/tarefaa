@@ -14,6 +14,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/auditLog';
+import { useRef } from 'react';
+import { Turnstile, type TurnstileHandle } from '@/components/auth/Turnstile';
 
 interface PasswordChangeCardProps {
   userEmail: string;
@@ -23,6 +25,8 @@ export const PasswordChangeCard = ({ userEmail }: PasswordChangeCardProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<TurnstileHandle>(null);
   const { toast } = useToast();
 
   const handleRequestPasswordChange = async () => {
@@ -50,9 +54,13 @@ export const PasswordChangeCard = ({ userEmail }: PasswordChangeCardProps) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
         redirectTo: `${window.location.origin}/admin/reset-password`,
+        captchaToken: captchaToken ?? undefined,
       });
 
       if (error) throw error;
+
+      captchaRef.current?.reset();
+      setCaptchaToken(null);
 
       // Log the password reset request
       await logAuditEvent({
@@ -134,6 +142,13 @@ export const PasswordChangeCard = ({ userEmail }: PasswordChangeCardProps) => {
                 Digite exatamente <strong>{userEmail}</strong> para prosseguir
               </p>
             </div>
+
+            <Turnstile
+              ref={captchaRef}
+              action="admin_change_password"
+              onVerify={setCaptchaToken}
+              onExpire={() => setCaptchaToken(null)}
+            />
 
             <Button
               onClick={handleRequestPasswordChange}

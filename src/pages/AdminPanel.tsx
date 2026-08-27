@@ -8,8 +8,9 @@ import { AdminStatsCards } from '@/components/admin/AdminStatsCards';
 import { AdminUsersTab, UserWithSubscription } from '@/components/admin/AdminUsersTab';
 import { AdminLogsTab } from '@/components/admin/AdminLogsTab';
 import { AdminInfraTab } from '@/components/admin/AdminInfraTab';
-import { TwoFactorSetup } from '@/components/admin/TwoFactorSetup';
 import { PasswordChangeCard } from '@/components/admin/PasswordChangeCard';
+import { useAuth } from '@/contexts/AuthContext';
+import { ShieldCheck } from 'lucide-react';
 
 const AdminPanel = () => {
   const [users, setUsers] = useState<UserWithSubscription[]>([]);
@@ -27,25 +28,21 @@ const AdminPanel = () => {
   });
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, isAuthenticated, isAdmin, aalCurrent, mfaChecked, subscriptionChecked, isLoading: authLoading } = useAuth();
 
-  // Check admin session and get email
+  // Gate real: sessão válida + papel admin + 2FA (AAL2). Sem sessionStorage.
   useEffect(() => {
-    const adminAuth = sessionStorage.getItem('adminAuthenticated');
-    if (!adminAuth) {
+    if (authLoading || !mfaChecked || !subscriptionChecked) return; // aguarda checagens
+    if (!isAuthenticated || !isAdmin || aalCurrent !== 'aal2') {
       navigate('/admin/login');
       return;
     }
-    
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email) {
-        setAdminEmail(data.user.email);
-      }
-    });
-  }, [navigate]);
+    setAdminEmail(user?.email ?? '');
+    fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, mfaChecked, subscriptionChecked, isAuthenticated, isAdmin, aalCurrent]);
 
   const handleLogout = async () => {
-    sessionStorage.removeItem('adminAuthenticated');
-    sessionStorage.removeItem('adminUserId');
     await supabase.auth.signOut();
     toast({
       title: 'Logout realizado',
@@ -101,13 +98,6 @@ const AdminPanel = () => {
     }
   };
 
-  useEffect(() => {
-    const adminAuth = sessionStorage.getItem('adminAuthenticated');
-    if (adminAuth) {
-      fetchUsers();
-    }
-  }, []);
-
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -127,10 +117,17 @@ const AdminPanel = () => {
         return (
           <div className="space-y-6">
             <PasswordChangeCard userEmail={adminEmail} />
-            <TwoFactorSetup 
-              userId={sessionStorage.getItem('adminUserId') || ''} 
-              userEmail={adminEmail}
-            />
+            <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
+              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                Autenticação em duas etapas (2FA)
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                O 2FA é <strong>nativo e obrigatório</strong>: todo acesso ao painel exige a verificação
+                em duas etapas (você já a completou para entrar aqui). Para redefinir o 2FA de um usuário
+                que perdeu o autenticador, remova o fator MFA dele no Supabase → Authentication → Users.
+              </p>
+            </div>
           </div>
         );
       default:

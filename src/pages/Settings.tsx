@@ -34,6 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { Turnstile, type TurnstileHandle } from '@/components/auth/Turnstile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
@@ -65,6 +66,10 @@ const Settings = () => {
   const [openaiKey, setOpenaiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [isSavingKey, setIsSavingKey] = useState(false);
+
+  // CAPTCHA para trocar senha
+  const [changePwCaptcha, setChangePwCaptcha] = useState<string | null>(null);
+  const changePwCaptchaRef = useRef<TurnstileHandle>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -308,9 +313,13 @@ const Settings = () => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
         redirectTo: `${window.location.origin}/reset-password`,
+        captchaToken: changePwCaptcha ?? undefined,
       });
 
       if (error) throw error;
+
+      changePwCaptchaRef.current?.reset();
+      setChangePwCaptcha(null);
 
       await logAuditEvent({
         action: 'password_reset_request',
@@ -905,6 +914,12 @@ const Settings = () => {
                   <p className="text-sm text-muted-foreground">
                     Para alterar sua senha, enviaremos um link de verificação para o seu email <span className="font-medium text-foreground">{user?.email}</span>.
                   </p>
+                  <Turnstile
+                    ref={changePwCaptchaRef}
+                    action="change_password"
+                    onVerify={setChangePwCaptcha}
+                    onExpire={() => setChangePwCaptcha(null)}
+                  />
                   <Button onClick={handleChangePassword} className="w-full" disabled={isChangingPassword}>
                     {isChangingPassword ? (
                       <>
