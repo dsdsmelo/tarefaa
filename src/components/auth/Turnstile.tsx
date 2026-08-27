@@ -50,9 +50,13 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(
 
       const render = () => {
         if (cancelled || !containerRef.current || !window.turnstile || widgetIdRef.current) return;
+        // Combina com o tema do app (claro/escuro)
+        const isDark = document.documentElement.classList.contains('dark');
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: SITE_KEY,
           action,
+          theme: isDark ? 'dark' : 'light',
+          size: 'flexible',
           callback: (token: string) => onVerifyRef.current(token),
           'expired-callback': () => onExpireRef.current?.(),
           'error-callback': () => onExpireRef.current?.(),
@@ -89,7 +93,7 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(
       };
     }, [action]);
 
-    return <div ref={containerRef} className="flex justify-center" />;
+    return <div ref={containerRef} className="w-full" />;
   }
 );
 
