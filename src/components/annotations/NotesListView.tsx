@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { NoteFormModal } from './NoteFormModal';
+import { sanitizeHtml, escapeHtml } from '@/lib/sanitize';
 
 interface NotesListViewProps {
   projectId: string;
@@ -150,10 +151,11 @@ export function NotesListView({ projectId }: NotesListViewProps) {
   };
 
   const handleExportPDF = (note: MeetingNote) => {
-    const contentHtml = getContentHtml(note);
+    const contentHtml = sanitizeHtml(getContentHtml(note));
+    const safeTitle = escapeHtml(note.title);
     const printContent = `
       <!DOCTYPE html>
-      <html><head><title>${note.title}</title>
+      <html><head><title>${safeTitle}</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #333; line-height: 1.6; }
         h1 { color: #1a1a1a; margin-bottom: 8px; }
@@ -170,7 +172,7 @@ export function NotesListView({ projectId }: NotesListViewProps) {
         .content ul[data-type="taskList"] li { display: flex; gap: 8px; align-items: flex-start; }
         .footer { margin-top: 30px; font-size: 12px; color: #999; border-top: 1px solid #e5e5e5; padding-top: 15px; }
       </style></head><body>
-        <h1>${note.title}</h1>
+        <h1>${safeTitle}</h1>
         <div class="meta">
           <p><strong>Data:</strong> ${format(new Date(note.meetingDate), 'dd/MM/yyyy', { locale: ptBR })}</p>
         </div>

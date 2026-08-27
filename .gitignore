@@ -25,3 +25,8 @@ dist-ssr
 
 # Supabase CLI local state
 supabase/.temp/
+
+# Env files (segredos não devem ser versionados)
+.env
+.env.*
+!.env.example

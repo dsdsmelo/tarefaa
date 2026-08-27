@@ -324,46 +324,19 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      // First check if this email belongs to an admin
-      const { data: userData } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (userData) {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userData.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-
-        if (!roleData) {
-          throw new Error('Este email não pertence a um administrador.');
-        }
-      }
-
-      // Send password reset email
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      // Dispara o e-mail de recuperação sem revelar se o e-mail existe/é admin
+      // (evita enumeração de contas). A resposta é sempre genérica.
+      await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/admin/reset-password`,
       });
-
-      if (error) throw error;
-
+    } catch (error) {
+      console.error('Password reset error');
+    } finally {
       setViewMode('reset-sent');
       toast({
-        title: 'Email enviado!',
+        title: 'Se o e-mail existir, enviaremos as instruções',
         description: 'Verifique sua caixa de entrada para redefinir a senha.',
       });
-    } catch (error: any) {
-      console.error('Password reset error:', error);
-      toast({
-        title: 'Erro',
-        description: error.message || 'Não foi possível enviar o email de recuperação.',
-        variant: 'destructive',
-      });
-    } finally {
       setIsLoading(false);
     }
   };

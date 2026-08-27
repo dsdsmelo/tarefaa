@@ -92,23 +92,18 @@ serve(async (req) => {
       case "resetPassword": {
         // Get user email first
         const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
-        
+
         if (userError || !userData?.user) {
           throw new Error("User not found");
         }
 
-        // Send password reset email
-        const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-          type: "recovery",
-          email: userData.user.email!,
-        });
+        // Gera uma senha temporária ALEATÓRIA e FORTE (não previsível).
+        // Complexidade garantida (maiúscula, minúscula, número e símbolo).
+        const bytes = new Uint8Array(18);
+        crypto.getRandomValues(bytes);
+        const rand = btoa(String.fromCharCode(...bytes)).replace(/[^a-zA-Z0-9]/g, '');
+        const tempPassword = `Aa1!${rand.slice(0, 16)}`;
 
-        if (resetError) {
-          throw resetError;
-        }
-
-        // Alternatively, set a temporary password
-        const tempPassword = `Temp${Date.now()}!`;
         const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
           password: tempPassword,
         });
@@ -117,9 +112,11 @@ serve(async (req) => {
           throw updateError;
         }
 
+        // A senha só volta ao admin (canal autenticado/HTTPS) para repasse.
+        // Nunca é registrada em log.
         result = {
           success: true,
-          message: `Senha temporária definida: ${tempPassword}. O usuário deve alterar na primeira utilização.`,
+          message: `Senha temporária definida: ${tempPassword}. Peça ao usuário para alterá-la no primeiro acesso.`,
         };
         break;
       }

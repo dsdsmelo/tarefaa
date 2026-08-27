@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/auditLog';
+import { strongPasswordSchema } from '@/lib/passwordSchema';
 import { z } from 'zod';
 import logoIcon from '@/assets/logo-icon.png';
 
 const passwordSchema = z.object({
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  password: strongPasswordSchema,
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem',

@@ -159,11 +159,11 @@ serve(async (req) => {
   }
 
   try {
-    // Proteção: exige header x-cron-secret OU chamada autenticada
+    // Proteção (fail-closed): exige SEMPRE o segredo de cron correto.
+    // Sem CRON_SECRET configurado, ou com segredo ausente/errado, rejeita.
     const cronSecret = Deno.env.get('CRON_SECRET')
     const providedSecret = req.headers.get('x-cron-secret')
-    const authHeader = req.headers.get('Authorization')
-    if (cronSecret && providedSecret !== cronSecret && !authHeader) {
+    if (!cronSecret || providedSecret !== cronSecret) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })

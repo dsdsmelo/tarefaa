@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { marked } from 'marked';
 import { RichTextEditor } from './RichTextEditor';
+import { sanitizeHtml, escapeHtml } from '@/lib/sanitize';
 import {
   ScrollText, Plus, Upload, Sparkles, Loader2, Copy, Download, Mail,
   Pencil, Trash2, MoreVertical,
@@ -130,7 +131,9 @@ export function MeetingMinutesTab({ projectId }: MeetingMinutesTabProps) {
   };
 
   const handleExportPDF = (m: MeetingMinute) => {
-    const printContent = `<!DOCTYPE html><html><head><title>${m.title}</title>
+    const safeTitle = escapeHtml(m.title);
+    const safeContent = sanitizeHtml(m.content || '');
+    const printContent = `<!DOCTYPE html><html><head><title>${safeTitle}</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #333; line-height: 1.6; }
         h1 { color: #1a1a1a; margin-bottom: 4px; }
@@ -139,9 +142,9 @@ export function MeetingMinutesTab({ projectId }: MeetingMinutesTabProps) {
         .content h3 { font-size: 15px; margin: 14px 0 4px; }
         .content ul, .content ol { padding-left: 22px; }
       </style></head><body>
-      <h1>${m.title}</h1>
+      <h1>${safeTitle}</h1>
       <div class="meta">Data da reunião: ${format(new Date(m.meeting_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}</div>
-      <div class="content">${m.content || ''}</div>
+      <div class="content">${safeContent}</div>
       </body></html>`;
     const w = window.open('', '_blank');
     if (w) {

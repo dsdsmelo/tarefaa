@@ -7,16 +7,17 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { auditLog } from '@/lib/auditLog';
+import { strongPasswordSchema } from '@/lib/passwordSchema';
 import { z } from 'zod';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  password: z.string().min(1, 'Informe a senha'),
 });
 
 const signupSchema = z.object({
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  password: strongPasswordSchema,
   fullName: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
 });
 
