@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
+import { MfaGate } from "@/components/auth/MfaGate";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Auth from "./pages/Auth";
@@ -58,7 +59,8 @@ const ProtectedRoute = ({ children, requireSubscription = true }: { children: Re
     return <Navigate to="/?subscription=required" replace />;
   }
 
-  return <>{children}</>;
+  // 2FA obrigatório: bloqueia o app até o usuário configurar/confirmar o 2FA
+  return <MfaGate>{children}</MfaGate>;
 };
 
 // Redirect to external URL (full page navigation)

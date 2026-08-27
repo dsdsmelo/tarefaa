@@ -32,6 +32,12 @@ interface AuthContextType {
   subscriptionChecked: boolean;
   isAuthenticated: boolean;
   hasActiveSubscription: boolean;
+  // MFA (2FA) — nativo do Supabase
+  mfaChecked: boolean;
+  hasVerifiedFactor: boolean;
+  aalCurrent: string | null;
+  aalNext: string | null;
+  refreshMfa: () => Promise<void>;
   signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName?: string, captchaToken?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -51,6 +57,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isParticipant, setIsParticipant] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [subscriptionChecked, setSubscriptionChecked] = useState(false);
+  const [mfaChecked, setMfaChecked] = useState(false);
+  const [hasVerifiedFactor, setHasVerifiedFactor] = useState(false);
+  const [aalCurrent, setAalCurrent] = useState<string | null>(null);
+  const [aalNext, setAalNext] = useState<string | null>(null);
+
+  const refreshMfa = async () => {
+    try {
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      const { data: factorsData } = await supabase.auth.mfa.listFactors();
+      const verified = !!factorsData?.totp?.some((f) => f.status === 'verified');
+      setAalCurrent(aalData?.currentLevel ?? null);
+      setAalNext(aalData?.nextLevel ?? null);
+      setHasVerifiedFactor(verified);
+    } catch (error) {
+      console.error('Error checking MFA:', error);
+    } finally {
+      setMfaChecked(true);
+    }
+  };
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -177,9 +202,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           fetchProfile(session.user.id);
           // Fetch subscription - this will set subscriptionChecked when done
           fetchSubscription();
+          // Verifica estado do MFA (2FA)
+          refreshMfa();
         } else {
           // No user, mark subscription as checked
           setSubscriptionChecked(true);
+          setMfaChecked(true);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -208,20 +236,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (session?.user && event === 'SIGNED_IN') {
           // Only block UI on fresh sign-in
           setSubscriptionChecked(false);
+          setMfaChecked(false);
           fetchProfile(session.user.id);
           // Aguarda 500ms para garantir que o token está disponível
           // antes de chamar a Edge Function (evita race condition 401)
           setTimeout(() => {
-            if (isMounted) fetchSubscription(true);
+            if (isMounted) {
+              fetchSubscription(true);
+              refreshMfa();
+            }
           }, 500);
         } else if (session?.user && event === 'TOKEN_REFRESHED') {
           // Token refresh: update in background without blocking UI
           fetchSubscription(true);
+          refreshMfa();
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
           setSubscription(null);
           setIsAdmin(false);
           setSubscriptionChecked(true);
+          setHasVerifiedFactor(false);
+          setAalCurrent(null);
+          setAalNext(null);
+          setMfaChecked(true);
         }
 
         setIsLoading(false);
@@ -276,6 +313,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsAdmin(false);
     setIsParticipant(false);
     setSubscriptionChecked(true);
+    setHasVerifiedFactor(false);
+    setAalCurrent(null);
+    setAalNext(null);
+    setMfaChecked(true);
   };
 
   const hasActiveSubscription = subscription?.status === 'active' || subscription?.status === 'trialing' || isAdmin || isParticipant;
@@ -292,6 +333,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       subscriptionChecked,
       isAuthenticated: !!user,
       hasActiveSubscription,
+      mfaChecked,
+      hasVerifiedFactor,
+      aalCurrent,
+      aalNext,
+      refreshMfa,
       signIn,
       signUp,
       signOut,
