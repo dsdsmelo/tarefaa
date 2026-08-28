@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/auditLog';
@@ -184,6 +184,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Guarda o último usuário para distinguir um login REAL de re-emissões do
+  // evento SIGNED_IN (ex.: ao voltar o foco da aba), evitando piscar/remontar
+  // a tela (o que fazia perder a edição em andamento).
+  const prevUserIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -196,6 +201,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         setSession(session);
         setUser(session?.user ?? null);
+        prevUserIdRef.current = session?.user?.id ?? null;
 
         if (session?.user) {
           // Fetch profile in background
@@ -233,24 +239,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(session);
         setUser(session?.user ?? null);
 
+        const newUserId = session?.user?.id ?? null;
+        // Login REAL = evento SIGNED_IN com um usuário diferente do anterior.
+        // Re-emissões (foco de aba, mesmo usuário) NÃO bloqueiam a tela.
+        const isFreshSignIn = event === 'SIGNED_IN' && !!newUserId && newUserId !== prevUserIdRef.current;
+        prevUserIdRef.current = newUserId;
+
         if (session?.user && event === 'SIGNED_IN') {
-          // Only block UI on fresh sign-in
-          setSubscriptionChecked(false);
-          setMfaChecked(false);
           fetchProfile(session.user.id);
-          // Aguarda 500ms para garantir que o token está disponível
-          // antes de chamar a Edge Function (evita race condition 401)
-          setTimeout(() => {
-            if (isMounted) {
-              fetchSubscription(true);
-              refreshMfa();
-            }
-          }, 500);
+          if (isFreshSignIn) {
+            // Login de verdade: pode bloquear a UI enquanto checa assinatura/2FA
+            setSubscriptionChecked(false);
+            setMfaChecked(false);
+            // Aguarda 500ms para garantir que o token está disponível
+            // antes de chamar a Edge Function (evita race condition 401)
+            setTimeout(() => {
+              if (isMounted) {
+                fetchSubscription(true);
+                refreshMfa();
+              }
+            }, 500);
+          } else {
+            // Re-emissão do mesmo usuário: atualiza em background, sem piscar a tela
+            fetchSubscription(true);
+            refreshMfa();
+          }
         } else if (session?.user && event === 'TOKEN_REFRESHED') {
-          // Token refresh: update in background without blocking UI
+          // Token refresh: atualiza em background, sem bloquear a UI
           fetchSubscription(true);
-          refreshMfa();
         } else if (event === 'SIGNED_OUT') {
+          prevUserIdRef.current = null;
           setProfile(null);
           setSubscription(null);
           setIsAdmin(false);
