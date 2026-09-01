@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
+import { VaultProvider } from "@/contexts/VaultContext";
 import { MfaGate } from "@/components/auth/MfaGate";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -18,6 +19,7 @@ import Tasks from "./pages/Tasks";
 import Gantt from "./pages/Gantt";
 import People from "./pages/People";
 import Settings from "./pages/Settings";
+import Vault from "./pages/Vault";
 import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
 import AdminResetPassword from "./pages/AdminResetPassword";
@@ -137,6 +139,7 @@ const AppRoutes = () => {
         <Route path="/tasks" element={<ExternalRedirect to="https://app.tarefaa.com.br/tasks" />} />
         <Route path="/gantt" element={<ExternalRedirect to="https://app.tarefaa.com.br/gantt" />} />
         <Route path="/people" element={<ExternalRedirect to="https://app.tarefaa.com.br/people" />} />
+        <Route path="/vault" element={<ExternalRedirect to="https://app.tarefaa.com.br/vault" />} />
         <Route path="/settings" element={<ExternalRedirect to="https://app.tarefaa.com.br/settings" />} />
 
         {/* Admin routes redirect to admin subdomain */}
@@ -167,6 +170,7 @@ const AppRoutes = () => {
         <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
         <Route path="/gantt" element={<ProtectedRoute><Gantt /></ProtectedRoute>} />
         <Route path="/people" element={<ProtectedRoute><People /></ProtectedRoute>} />
+        <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
         {/* Admin routes redirect to admin subdomain */}
@@ -228,6 +232,7 @@ const AppRoutes = () => {
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
       <Route path="/gantt" element={<ProtectedRoute><Gantt /></ProtectedRoute>} />
       <Route path="/people" element={<ProtectedRoute><People /></ProtectedRoute>} />
+      <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
       <Route path="*" element={<NotFound />} />
@@ -239,13 +244,15 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <DataProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </DataProvider>
+        <VaultProvider>
+          <DataProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </DataProvider>
+        </VaultProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

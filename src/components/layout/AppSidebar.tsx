@@ -4,6 +4,7 @@ import {
   FolderKanban,
   GanttChart,
   Users,
+  Vault,
   Settings,
   LogOut,
   ChevronsLeft,
@@ -34,6 +35,7 @@ const mainNavItems = [
   { icon: FolderKanban, label: 'Projetos', path: '/projects' },
   { icon: GanttChart, label: 'Gantt', path: '/gantt' },
   { icon: Users, label: 'Pessoas', path: '/people' },
+  { icon: Vault, label: 'Cofre', path: '/vault' },
 ];
 
 const settingsNavItems = [
