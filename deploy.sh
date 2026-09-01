@@ -31,8 +31,17 @@ npm install
 echo "==> Build de produção"
 npm run build
 
-echo "==> Publicando dist em $WEB_DIR"
-cp -r dist "$WEB_DIR/"
+echo "==> Publicando dist em $WEB_DIR/dist (limpo, sem acumular bundles antigos)"
+# valida que a build gerou saída
+if [ ! -f dist/index.html ]; then
+  echo "ERRO: dist/index.html não encontrado — a build falhou. Abortando." >&2
+  exit 1
+fi
+mkdir -p "$WEB_DIR/dist"
+# mantém o diretório (montado no container), só troca o conteúdo — evita
+# aninhar dist/dist e remove bundles hasheados antigos
+rm -rf "$WEB_DIR"/dist/*
+cp -r dist/. "$WEB_DIR"/dist/
 
 echo "==> Reiniciando serviço $SERVICE"
 docker service update --force "$SERVICE"
