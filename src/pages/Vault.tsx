@@ -17,6 +17,7 @@ import {
   Trash2, Loader2, RefreshCw, Search, Download, AlertTriangle, Vault as VaultIcon,
   Check,
 } from 'lucide-react';
+import { TablePagination } from '@/components/ui/table-pagination';
 import { useVault, type VaultItem } from '@/contexts/VaultContext';
 import { generatePassword } from '@/lib/vaultCrypto';
 
@@ -258,11 +259,23 @@ function UnlockedView() {
   const [toDelete, setToDelete] = useState<VaultItem | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [justCopied, setJustCopied] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return items.filter((i) => i.title.toLowerCase().includes(q) || i.username.toLowerCase().includes(q) || i.url.toLowerCase().includes(q));
   }, [items, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged = useMemo(
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize]
+  );
+
+  // Volta para a 1ª página ao buscar e mantém a página válida ao excluir itens
+  useEffect(() => { setPage(1); }, [search, pageSize]);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const toggleReveal = (id: string) => setRevealed((prev) => {
     const n = new Set(prev);
@@ -309,62 +322,76 @@ function UnlockedView() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((it) => (
-            <div key={it.id} className="group bg-card border border-border rounded-xl p-4 shadow-soft hover:shadow-medium hover:border-primary/30 transition-all">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
-                  style={{ backgroundColor: colorFromString(it.title) }}>
-                  {(it.title[0] || '?').toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm truncate">{it.title}</div>
-                  {it.url && <div className="text-xs text-muted-foreground truncate">{prettyHost(it.url)}</div>}
-                </div>
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Editar" onClick={() => setEditing(it)}>
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" title="Excluir" onClick={() => setToDelete(it)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mt-3 space-y-2">
-                {it.username && (
-                  <div className="flex items-center justify-between gap-2 text-sm bg-muted/40 rounded-lg px-3 py-1.5">
-                    <span className="truncate text-muted-foreground">{it.username}</span>
-                    <button className="text-muted-foreground hover:text-primary flex-shrink-0" title="Copiar usuário"
-                      onClick={() => copy(it.id + 'u', it.username, 'Usuário')}>
-                      {justCopied === it.id + 'u' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+            {paged.map((it) => (
+              <div key={it.id} className="group bg-card border border-border rounded-lg p-3 shadow-soft hover:shadow-medium hover:border-primary/30 transition-all">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                    style={{ backgroundColor: colorFromString(it.title) }}>
+                    {(it.title[0] || '?').toUpperCase()}
                   </div>
-                )}
-                {it.password && (
-                  <div className="flex items-center justify-between gap-2 text-sm bg-muted/40 rounded-lg px-3 py-1.5">
-                    <span className="truncate font-mono">{revealed.has(it.id) ? it.password : '•'.repeat(10)}</span>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button className="text-muted-foreground hover:text-foreground" title="Mostrar/ocultar" onClick={() => toggleReveal(it.id)}>
-                        {revealed.has(it.id) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                      <button className="text-muted-foreground hover:text-primary" title="Copiar senha"
-                        onClick={() => copy(it.id + 'p', it.password, 'Senha')}>
-                        {justCopied === it.id + 'p' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate leading-tight">{it.title}</div>
+                    {it.url && <div className="text-xs text-muted-foreground truncate leading-tight">{prettyHost(it.url)}</div>}
+                  </div>
+                  <div className="flex items-center flex-shrink-0">
+                    {it.url && (
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Abrir site" onClick={() => openUrl(it.url)}>
+                        <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Editar" onClick={() => setEditing(it)}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" title="Excluir" onClick={() => setToDelete(it)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-2 space-y-1">
+                  {it.username && (
+                    <div className="flex items-center justify-between gap-2 text-sm bg-muted/40 rounded-md px-2.5 py-1">
+                      <span className="truncate text-muted-foreground">{it.username}</span>
+                      <button className="text-muted-foreground hover:text-primary flex-shrink-0" title="Copiar usuário"
+                        onClick={() => copy(it.id + 'u', it.username, 'Usuário')}>
+                        {justCopied === it.id + 'u' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                       </button>
                     </div>
-                  </div>
-                )}
+                  )}
+                  {it.password && (
+                    <div className="flex items-center justify-between gap-2 text-sm bg-muted/40 rounded-md px-2.5 py-1">
+                      <span className="truncate font-mono">{revealed.has(it.id) ? it.password : '•'.repeat(10)}</span>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button className="text-muted-foreground hover:text-foreground" title="Mostrar/ocultar" onClick={() => toggleReveal(it.id)}>
+                          {revealed.has(it.id) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        <button className="text-muted-foreground hover:text-primary" title="Copiar senha"
+                          onClick={() => copy(it.id + 'p', it.password, 'Senha')}>
+                          {justCopied === it.id + 'p' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
+            ))}
+          </div>
 
-              {it.url && (
-                <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => openUrl(it.url)}>
-                  <ExternalLink className="w-4 h-4 mr-2" /> Abrir site
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
+          {totalPages > 1 && (
+            <TablePagination
+              currentPage={page}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={filtered.length}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={[12, 24, 48, 96]}
+              className="border-t border-border"
+            />
+          )}
+        </>
       )}
 
       {editing && (
