@@ -1,5 +1,4 @@
-import { Search, User, Settings, LogOut } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { User, Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -41,16 +40,6 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar..."
-            className="pl-9 bg-secondary/50 border-0 focus-visible:ring-1"
-          />
-        </div>
-
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

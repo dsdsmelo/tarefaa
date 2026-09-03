@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import {
   Lock, ShieldCheck, KeyRound, Plus, Eye, EyeOff, Copy, ExternalLink, Pencil,
   Trash2, Loader2, RefreshCw, Search, Download, AlertTriangle, Vault as VaultIcon,
+  Check,
 } from 'lucide-react';
 import { useVault, type VaultItem } from '@/contexts/VaultContext';
 import { generatePassword } from '@/lib/vaultCrypto';
@@ -35,9 +36,20 @@ const copyWithAutoClear = async (value: string, label: string) => {
   }
 };
 
+// Cor estável a partir do título (avatar do item) — sem fetch externo (privacidade)
+const colorFromString = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
+  return `hsl(${Math.abs(h) % 360} 60% 45%)`;
+};
+const prettyHost = (url: string) => {
+  if (!url) return '';
+  try { return new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).hostname.replace(/^www\./, ''); }
+  catch { return url; }
+};
+
 export default function Vault() {
   const vault = useVault();
-
   useEffect(() => { vault.refreshStatus(); }, [vault.refreshStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -73,8 +85,7 @@ function SetupView() {
     if (!matches) { toast.error('As senhas não coincidem'); return; }
     setSaving(true);
     try {
-      const code = await setupVault(pw);
-      setRecoveryCode(code);
+      setRecoveryCode(await setupVault(pw));
     } catch (e) {
       console.error(e);
       toast.error('Erro ao criar o cofre');
@@ -85,14 +96,14 @@ function SetupView() {
 
   if (recoveryCode) {
     return (
-      <div className="max-w-lg mx-auto bg-card border border-border rounded-2xl p-8 shadow-soft">
+      <AuthCard>
         <div className="flex items-center gap-2 mb-2">
           <KeyRound className="w-5 h-5 text-amber-500" />
           <h2 className="text-xl font-bold">Guarde seu código de recuperação</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Este é o <strong>único</strong> jeito de recuperar o cofre se você esquecer a senha mestra.
-          Guarde-o em um lugar seguro (fora do sistema). <strong>Ele não será mostrado de novo.</strong>
+          É o <strong>único</strong> jeito de recuperar o cofre se você esquecer a senha mestra.
+          Guarde-o em um lugar seguro. <strong>Ele não será mostrado de novo.</strong>
         </p>
         <div className="font-mono text-lg tracking-wider bg-muted rounded-lg p-4 text-center select-all break-all">
           {recoveryCode}
@@ -111,12 +122,12 @@ function SetupView() {
         <Button className="w-full mt-4 gradient-primary text-white" onClick={() => setRecoveryCode(null)}>
           Guardei em local seguro, continuar
         </Button>
-      </div>
+      </AuthCard>
     );
   }
 
   return (
-    <div className="max-w-lg mx-auto bg-card border border-border rounded-2xl p-8 shadow-soft">
+    <AuthCard>
       <div className="text-center mb-6">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary mb-3">
           <VaultIcon className="w-7 h-7" />
@@ -138,13 +149,13 @@ function SetupView() {
         </div>
         <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-700 dark:text-amber-400">
           <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          Se você esquecer a senha mestra, só o código de recuperação (mostrado a seguir) abre o cofre. Não há outra forma.
+          Se você esquecer a senha mestra, só o código de recuperação (mostrado a seguir) abre o cofre.
         </div>
         <Button className="w-full gradient-primary text-white" onClick={handleCreate} disabled={saving || !strongEnough || !matches}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar cofre'}
         </Button>
       </div>
-    </div>
+    </AuthCard>
   );
 }
 
@@ -159,33 +170,26 @@ function LockedView() {
 
   const doUnlock = async () => {
     setBusy(true);
-    try {
-      const ok = await unlock(pw);
-      if (!ok) toast.error('Senha mestra incorreta');
-    } finally { setBusy(false); setPw(''); }
+    try { if (!(await unlock(pw))) toast.error('Senha mestra incorreta'); }
+    finally { setBusy(false); setPw(''); }
   };
-
   const doRecover = async () => {
     setBusy(true);
     try {
-      const ok = await unlockWithRecovery(code);
-      if (ok) { setMode('reset'); toast.success('Recuperação ok — defina uma nova senha mestra'); }
+      if (await unlockWithRecovery(code)) { setMode('reset'); toast.success('Recuperação ok — defina uma nova senha mestra'); }
       else toast.error('Código de recuperação inválido');
     } finally { setBusy(false); }
   };
-
   const doReset = async () => {
     if (newPw.length < 10) { toast.error('A nova senha mestra deve ter no mínimo 10 caracteres'); return; }
     setBusy(true);
-    try {
-      await resetMasterPassword(newPw);
-      toast.success('Senha mestra redefinida!');
-    } catch { toast.error('Erro ao redefinir'); }
+    try { await resetMasterPassword(newPw); toast.success('Senha mestra redefinida!'); }
+    catch { toast.error('Erro ao redefinir'); }
     finally { setBusy(false); setNewPw(''); }
   };
 
   return (
-    <div className="max-w-md mx-auto bg-card border border-border rounded-2xl p-8 shadow-soft">
+    <AuthCard>
       <div className="text-center mb-6">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary mb-3">
           <Lock className="w-7 h-7" />
@@ -197,8 +201,7 @@ function LockedView() {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Senha mestra</Label>
-            <Input type="password" value={pw} autoFocus
-              onChange={(e) => setPw(e.target.value)}
+            <Input type="password" value={pw} autoFocus onChange={(e) => setPw(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && doUnlock()} placeholder="sua senha mestra" />
           </div>
           <Button className="w-full gradient-primary text-white" onClick={doUnlock} disabled={busy || !pw}>
@@ -219,9 +222,7 @@ function LockedView() {
           <Button className="w-full gradient-primary text-white" onClick={doRecover} disabled={busy || !code}>
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Recuperar acesso'}
           </Button>
-          <button className="w-full text-center text-sm text-muted-foreground hover:text-primary" onClick={() => setMode('unlock')}>
-            Voltar
-          </button>
+          <button className="w-full text-center text-sm text-muted-foreground hover:text-primary" onClick={() => setMode('unlock')}>Voltar</button>
         </div>
       )}
 
@@ -234,17 +235,29 @@ function LockedView() {
           </Button>
         </div>
       )}
+    </AuthCard>
+  );
+}
+
+/* Cartão centralizado para as telas de setup/desbloqueio */
+function AuthCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 shadow-medium">
+        {children}
+      </div>
     </div>
   );
 }
 
-/* ---------------- Unlocked (lista + CRUD) ---------------- */
+/* ---------------- Unlocked (grade de cartões) ---------------- */
 function UnlockedView() {
   const { items, addItem, updateItem, deleteItem, lock } = useVault();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<VaultItem | 'new' | null>(null);
   const [toDelete, setToDelete] = useState<VaultItem | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [justCopied, setJustCopied] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -256,17 +269,22 @@ function UnlockedView() {
     if (n.has(id)) n.delete(id); else n.add(id);
     return n;
   });
+  const copy = (id: string, value: string, label: string) => {
+    copyWithAutoClear(value, label);
+    setJustCopied(id); setTimeout(() => setJustCopied((c) => (c === id ? null : c)), 1200);
+  };
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto">
+    <div className="space-y-5">
+      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-emerald-600">
+        <div className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">
           <ShieldCheck className="w-4 h-4" /> Cofre aberto · {items.length} {items.length === 1 ? 'senha' : 'senhas'}
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64">
+          <div className="relative flex-1 sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Buscar por título, usuário ou site..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
           <Button className="gradient-primary text-white" onClick={() => setEditing('new')}>
             <Plus className="w-4 h-4 mr-2" /> Nova senha
@@ -276,49 +294,74 @@ function UnlockedView() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-16 bg-muted/20 rounded-xl border-2 border-dashed border-border">
-          <VaultIcon className="w-10 h-10 text-muted-foreground opacity-50 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">{items.length === 0 ? 'Nenhuma senha guardada ainda.' : 'Nada encontrado.'}</p>
+        <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed border-border">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <VaultIcon className="w-8 h-8 text-primary opacity-70" />
+          </div>
+          <p className="text-base font-medium mb-1">{items.length === 0 ? 'Seu cofre está vazio' : 'Nada encontrado'}</p>
+          <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
+            {items.length === 0 ? 'Guarde suas senhas de forma criptografada e acesse os sites com um clique.' : 'Tente outro termo de busca.'}
+          </p>
+          {items.length === 0 && (
+            <Button className="gradient-primary text-white" onClick={() => setEditing('new')}>
+              <Plus className="w-4 h-4 mr-2" /> Adicionar primeira senha
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((it) => (
-            <div key={it.id} className="group flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-muted/30">
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm truncate">{it.title}</div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {it.username}
-                  {it.password && <> · <span className="font-mono">{revealed.has(it.id) ? it.password : '••••••••'}</span></>}
+            <div key={it.id} className="group bg-card border border-border rounded-xl p-4 shadow-soft hover:shadow-medium hover:border-primary/30 transition-all">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                  style={{ backgroundColor: colorFromString(it.title) }}>
+                  {(it.title[0] || '?').toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm truncate">{it.title}</div>
+                  {it.url && <div className="text-xs text-muted-foreground truncate">{prettyHost(it.url)}</div>}
+                </div>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Editar" onClick={() => setEditing(it)}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" title="Excluir" onClick={() => setToDelete(it)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-0.5 flex-shrink-0">
-                {it.password && (
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Mostrar/ocultar" onClick={() => toggleReveal(it.id)}>
-                    {revealed.has(it.id) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                )}
+
+              <div className="mt-3 space-y-2">
                 {it.username && (
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Copiar usuário" onClick={() => copyWithAutoClear(it.username, 'Usuário')}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center justify-between gap-2 text-sm bg-muted/40 rounded-lg px-3 py-1.5">
+                    <span className="truncate text-muted-foreground">{it.username}</span>
+                    <button className="text-muted-foreground hover:text-primary flex-shrink-0" title="Copiar usuário"
+                      onClick={() => copy(it.id + 'u', it.username, 'Usuário')}>
+                      {justCopied === it.id + 'u' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
                 )}
                 {it.password && (
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Copiar senha" onClick={() => copyWithAutoClear(it.password, 'Senha')}>
-                    <KeyRound className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center justify-between gap-2 text-sm bg-muted/40 rounded-lg px-3 py-1.5">
+                    <span className="truncate font-mono">{revealed.has(it.id) ? it.password : '•'.repeat(10)}</span>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button className="text-muted-foreground hover:text-foreground" title="Mostrar/ocultar" onClick={() => toggleReveal(it.id)}>
+                        {revealed.has(it.id) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                      <button className="text-muted-foreground hover:text-primary" title="Copiar senha"
+                        onClick={() => copy(it.id + 'p', it.password, 'Senha')}>
+                        {justCopied === it.id + 'p' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
                 )}
-                {it.url && (
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Abrir site" onClick={() => openUrl(it.url)}>
-                    <ExternalLink className="w-4 h-4 text-primary" />
-                  </Button>
-                )}
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Editar" onClick={() => setEditing(it)}>
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" title="Excluir" onClick={() => setToDelete(it)}>
-                  <Trash2 className="w-4 h-4" />
-                </Button>
               </div>
+
+              {it.url && (
+                <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => openUrl(it.url)}>
+                  <ExternalLink className="w-4 h-4 mr-2" /> Abrir site
+                </Button>
+              )}
             </div>
           ))}
         </div>
@@ -371,9 +414,8 @@ function ItemDialog({ item, onClose, onSave }: {
   const save = async () => {
     if (!title.trim()) { toast.error('Informe um título'); return; }
     setSaving(true);
-    try {
-      await onSave({ title: title.trim(), username: username.trim(), password, url: url.trim() });
-    } catch { toast.error('Erro ao salvar'); }
+    try { await onSave({ title: title.trim(), username: username.trim(), password, url: url.trim() }); }
+    catch { toast.error('Erro ao salvar'); }
     finally { setSaving(false); }
   };
 
@@ -381,12 +423,15 @@ function ItemDialog({ item, onClose, onSave }: {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{item ? 'Editar senha' : 'Nova senha'}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <KeyRound className="w-5 h-5 text-primary" />
+            {item ? 'Editar senha' : 'Nova senha'}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label>Título *</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Gmail, AWS, Cliente X" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Gmail, AWS, Cliente X" autoFocus />
           </div>
           <div className="space-y-2">
             <Label>Usuário / e-mail</Label>
