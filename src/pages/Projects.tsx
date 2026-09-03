@@ -209,7 +209,7 @@ const Projects = () => {
 
         {/* Projects Grid/Table */}
         {view === 'cards' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
             {filteredProjects.map(project => {
               const progress = getProjectProgress(project.id);
               const taskCount = getProjectTaskCount(project.id);
@@ -243,17 +243,6 @@ const Projects = () => {
                   )}
                   {coverSolid && (
                     <div className="relative h-2 w-full" style={{ backgroundColor: coverSolid }} />
-                  )}
-
-                  {/* Project / client image - rounded thumbnail, absolutely positioned so it never changes card size */}
-                  {hasImage && (
-                    <div className="pointer-events-none absolute top-3 right-3 z-10 w-16 h-16 rounded-xl overflow-hidden bg-white ring-1 ring-border shadow-medium flex items-center justify-center p-1.5">
-                      <img
-                        src={project.imageUrl!}
-                        alt={project.name}
-                        className="max-w-full max-h-full object-contain"
-                      />
-                    </div>
                   )}
 
                   {/* Actions (hover) - top-right corner, above the image */}
@@ -292,53 +281,67 @@ const Projects = () => {
                     </DropdownMenu>
                   </div>
 
-                  {/* Content Section */}
-                  <div className="relative p-4">
-                    {/* Header: Status */}
-                    <div className={cn("flex items-center min-h-7 mb-2", hasImage && "pr-20")}>
-                      <div className="flex items-center gap-2">
-                        <div className={cn('w-2 h-2 rounded-full', statusColors[project.status])} />
-                        <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                          {projectStatusLabels[project.status]}
+                  {/* Content Section
+                      A imagem fica em fluxo (flex) e não mais absoluta: assim o card
+                      pode encurtar sem que o conteúdo colida com a miniatura, e some
+                      o pr-20 que roubava largura do nome. */}
+                  <div className="relative p-3 flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      {/* Project name */}
+                      <h3 className="text-sm font-semibold truncate group-hover:text-primary transition-colors" title={project.name}>
+                        {project.name}
+                      </h3>
+
+                      {/* Meta info inline: status + contadores + data.
+                          flex-wrap para nunca cortar informação em cards estreitos. */}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <span className={cn('w-2 h-2 rounded-full', statusColors[project.status])} />
+                          <span className="text-[11px] font-medium uppercase tracking-wide">
+                            {projectStatusLabels[project.status]}
+                          </span>
+                        </span>
+                        <span className="text-border">•</span>
+                        <span>{phaseCount} fases</span>
+                        <span className="text-border">•</span>
+                        <span>{taskCount} tarefas</span>
+                        {project.startDate && (
+                          <>
+                            <span className="text-border">•</span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(project.startDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Progress bar inline */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="flex-1">
+                          <ProgressBar
+                            value={progress}
+                            size="sm"
+                            color={coverSolid || undefined}
+                            gradientClass={coverGradient?.class}
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-muted-foreground min-w-[32px] text-right">
+                          {progress}%
                         </span>
                       </div>
                     </div>
 
-                    {/* Project name */}
-                    <h3 className={cn("text-sm font-semibold truncate group-hover:text-primary transition-colors", hasImage && "pr-20")}>
-                      {project.name}
-                    </h3>
-
-                    {/* Meta info inline */}
-                    <div className={cn("flex items-center gap-3 mt-2 text-xs text-muted-foreground", hasImage && "pr-20")}>
-                      <span>{phaseCount} fases</span>
-                      <span className="text-border">•</span>
-                      <span>{taskCount} tarefas</span>
-                      {project.startDate && (
-                        <>
-                          <span className="text-border">•</span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(project.startDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Progress bar inline */}
-                    <div className="flex items-center gap-2 mt-3">
-                      <div className="flex-1">
-                        <ProgressBar
-                          value={progress}
-                          size="sm"
-                          color={coverSolid || undefined}
-                          gradientClass={coverGradient?.class}
+                    {/* Project / client image - miniatura arredondada no canto superior direito */}
+                    {hasImage && (
+                      <div className="pointer-events-none w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden bg-white ring-1 ring-border shadow-medium flex items-center justify-center p-1.5">
+                        <img
+                          src={project.imageUrl!}
+                          alt={project.name}
+                          className="max-w-full max-h-full object-contain"
                         />
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground min-w-[32px] text-right">
-                        {progress}%
-                      </span>
-                    </div>
+                    )}
                   </div>
                 </div>
               );
