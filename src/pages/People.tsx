@@ -160,7 +160,7 @@ const People = () => {
         </Tabs>
 
         {/* People Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
           {filteredPeople.map(person => {
             const activeTasks = getTaskCount(person.id);
             const completedTasks = getCompletedTaskCount(person.id);
@@ -169,46 +169,52 @@ const People = () => {
               <div
                 key={person.id}
                 className={cn(
-                  "bg-card rounded-xl border border-border p-6 shadow-soft hover:shadow-medium transition-all duration-200 animate-fade-in",
+                  "group bg-card rounded-lg border border-border p-3 shadow-soft hover:shadow-medium hover:border-primary/30 transition-all duration-200 animate-fade-in",
                   !person.active && "opacity-60"
                 )}
               >
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-2.5">
                   <AvatarCircle name={person.name} color={person.color} size="lg" avatarUrl={person.avatarUrl} />
+
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold truncate leading-tight" title={person.name}>{person.name}</h3>
+                    {person.email && (
+                      <p className="text-sm text-muted-foreground truncate leading-tight" title={person.email}>{person.email}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Editar"
+                      onClick={() => handleEdit(person)}
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Excluir"
+                      onClick={() => handleDeleteClick(person)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                   <Badge variant={person.type === 'internal' ? 'default' : 'secondary'}>
                     {personTypeLabels[person.type]}
                   </Badge>
-                </div>
-
-                <h3 className="text-lg font-semibold mb-1">{person.name}</h3>
-                {person.email && (
-                  <p className="text-sm text-muted-foreground mb-4">{person.email}</p>
-                )}
-
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                  <div className="flex items-center gap-1">
-                    <CheckSquare className="w-4 h-4" />
-                    <span>{activeTasks} ativas</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span>{completedTasks} concluídas</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(person)}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteClick(person)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Excluir
-                  </Button>
+                  <span className="flex items-center gap-1">
+                    <CheckSquare className="w-3.5 h-3.5" />
+                    {activeTasks} ativas
+                  </span>
+                  <span className="text-border">•</span>
+                  <span>{completedTasks} concluídas</span>
                 </div>
               </div>
             );
