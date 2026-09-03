@@ -17,24 +17,53 @@ import {
   Trash2, Loader2, RefreshCw, Search, Download, AlertTriangle, Vault as VaultIcon,
   Check,
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useVault, type VaultItem } from '@/contexts/VaultContext';
 import { generatePassword } from '@/lib/vaultCrypto';
 
-const openUrl = (raw: string) => {
-  if (!raw) return;
-  const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-  window.open(url, '_blank', 'noopener,noreferrer');
-};
-
-const copyWithAutoClear = async (value: string, label: string) => {
+const copyWithAutoClear = async (value: string, label: string, message?: string) => {
   try {
     await navigator.clipboard.writeText(value);
-    toast.success(`${label} copiado — o clipboard será limpo em 30s`);
+    toast.success(message ?? `${label} copiado — o clipboard será limpo em 30s`);
     setTimeout(() => { navigator.clipboard.writeText('').catch(() => {}); }, 30000);
   } catch {
     toast.error('Não foi possível copiar');
   }
+};
+
+// Apps de MFA mais comuns (o valor salvo é o próprio rótulo)
+const MFA_OPTIONS = [
+  'Google Authenticator',
+  'Microsoft Authenticator',
+  'Duo',
+  'Authy',
+  'SMS',
+  'E-mail',
+  'Chave de segurança (FIDO2)',
+  'Token do banco',
+];
+
+/**
+ * "Acessar": copia a senha e abre o portal de login numa nova aba.
+ *
+ * Não existe preenchimento automático a partir de uma aba web — o navegador
+ * impede que uma página escreva em campos de outro domínio (same-origin).
+ * Por isso copiamos a senha para colar no destino, que é o que os cofres
+ * web (ex.: Bitwarden) fazem.
+ *
+ * As duas chamadas ficam no MESMO bloco síncrono do clique de propósito:
+ * copiar antes garante que o documento ainda está focado (senão o Chrome
+ * lança "Document is not focused"), e abrir logo em seguida mantém o gesto
+ * do usuário válido (senão o bloqueador de pop-up barra).
+ */
+const launchItem = (it: VaultItem) => {
+  if (!it.url) return;
+  if (it.password) {
+    copyWithAutoClear(it.password, 'Senha', 'Senha copiada — cole no portal (Ctrl+V). Limpa em 30s');
+  }
+  const url = /^https?:\/\//i.test(it.url) ? it.url : `https://${it.url}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
 };
 
 // Cor estável a partir do título (avatar do item) — sem fetch externo (privacidade)
@@ -264,7 +293,12 @@ function UnlockedView() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return items.filter((i) => i.title.toLowerCase().includes(q) || i.username.toLowerCase().includes(q) || i.url.toLowerCase().includes(q));
+    return items.filter((i) =>
+      i.title.toLowerCase().includes(q) ||
+      i.username.toLowerCase().includes(q) ||
+      i.url.toLowerCase().includes(q) ||
+      (i.mfa ?? '').toLowerCase().includes(q)
+    );
   }, [items, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -337,7 +371,13 @@ function UnlockedView() {
                   </div>
                   <div className="flex items-center flex-shrink-0">
                     {it.url && (
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="Abrir site" onClick={() => openUrl(it.url)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        title={it.password ? 'Acessar: copia a senha e abre o site' : 'Abrir site'}
+                        onClick={() => launchItem(it)}
+                      >
                         <ExternalLink className="w-3.5 h-3.5 text-primary" />
                       </Button>
                     )}
@@ -372,6 +412,14 @@ function UnlockedView() {
                           {justCopied === it.id + 'p' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
+                    </div>
+                  )}
+                  {it.mfa && (
+                    <div className="flex items-center gap-1.5 px-0.5 pt-0.5 text-xs">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                      <span className="text-muted-foreground truncate" title={`MFA: ${it.mfa}`}>
+                        MFA: <span className="text-foreground font-medium">{it.mfa}</span>
+                      </span>
                     </div>
                   )}
                 </div>
@@ -438,10 +486,20 @@ function ItemDialog({ item, onClose, onSave }: {
   const [show, setShow] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // MFA: os conhecidos viram opção direta; qualquer outro valor cai em "Outro"
+  const savedMfa = item?.mfa ?? '';
+  const [mfaChoice, setMfaChoice] = useState(
+    !savedMfa ? 'none' : MFA_OPTIONS.includes(savedMfa) ? savedMfa : 'other'
+  );
+  const [mfaOther, setMfaOther] = useState(
+    savedMfa && !MFA_OPTIONS.includes(savedMfa) ? savedMfa : ''
+  );
+  const mfa = mfaChoice === 'none' ? '' : mfaChoice === 'other' ? mfaOther.trim() : mfaChoice;
+
   const save = async () => {
     if (!title.trim()) { toast.error('Informe um título'); return; }
     setSaving(true);
-    try { await onSave({ title: title.trim(), username: username.trim(), password, url: url.trim() }); }
+    try { await onSave({ title: title.trim(), username: username.trim(), password, url: url.trim(), mfa }); }
     catch { toast.error('Erro ao salvar'); }
     finally { setSaving(false); }
   };
@@ -481,6 +539,23 @@ function ItemDialog({ item, onClose, onSave }: {
           <div className="space-y-2">
             <Label>URL de login</Label>
             <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://site.com/login" />
+          </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              Autenticação em dois fatores (MFA)
+            </Label>
+            <Select value={mfaChoice} onValueChange={setMfaChoice}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Não informado / sem MFA</SelectItem>
+                {MFA_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                <SelectItem value="other">Outro...</SelectItem>
+              </SelectContent>
+            </Select>
+            {mfaChoice === 'other' && (
+              <Input value={mfaOther} onChange={(e) => setMfaOther(e.target.value)} placeholder="Qual aplicativo/método?" />
+            )}
           </div>
         </div>
         <DialogFooter>

@@ -15,6 +15,8 @@ export interface VaultItem {
   username: string;
   password: string;
   url: string;
+  /** App de MFA usado nesse login (ex.: "Duo"). Vazio/ausente = não informado. */
+  mfa?: string;
 }
 type ItemData = Omit<VaultItem, 'id'>;
 
