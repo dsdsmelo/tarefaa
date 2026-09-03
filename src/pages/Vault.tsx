@@ -323,7 +323,7 @@ function UnlockedView() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
             {paged.map((it) => (
               <div key={it.id} className="group bg-card border border-border rounded-lg p-3 shadow-soft hover:shadow-medium hover:border-primary/30 transition-all">
                 <div className="flex items-center gap-2.5">
@@ -332,8 +332,8 @@ function UnlockedView() {
                     {(it.title[0] || '?').toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm truncate leading-tight">{it.title}</div>
-                    {it.url && <div className="text-xs text-muted-foreground truncate leading-tight">{prettyHost(it.url)}</div>}
+                    <div className="font-semibold text-sm truncate leading-tight" title={it.title}>{it.title}</div>
+                    {it.url && <div className="text-xs text-muted-foreground truncate leading-tight" title={it.url}>{prettyHost(it.url)}</div>}
                   </div>
                   <div className="flex items-center flex-shrink-0">
                     {it.url && (
