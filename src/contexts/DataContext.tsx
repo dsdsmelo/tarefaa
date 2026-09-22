@@ -1,8 +1,17 @@
 import { createContext, useContext, ReactNode } from 'react';
-import { Person, Project, Phase, Cell, Task, CustomColumn, Milestone, MeetingNote, Spreadsheet, SpreadsheetColumn, SpreadsheetRow, SpreadsheetCell } from '@/lib/types';
+import { Person, Project, Phase, Cell, Task, CustomColumn, Milestone, MeetingNote, Spreadsheet, SpreadsheetSheet, SpreadsheetColumn, SpreadsheetRow, SpreadsheetCell, SpreadsheetMerge, Workspace } from '@/lib/types';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 interface DataContextType {
+  workspaces: Workspace[];
+  activeWorkspaceId: string | null;
+  activeWorkspace: Workspace | null;
+  workspaceProjectCounts: Record<string, number>;
+  setActiveWorkspace: (workspaceId: string) => Promise<void>;
+  activateWorkspaceForProject: (projectId: string) => Promise<boolean>;
+  addWorkspace: (workspace: Omit<Workspace, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'isDefault'>) => Promise<Workspace>;
+  updateWorkspace: (id: string, updates: Partial<Pick<Workspace, 'name' | 'kind' | 'color'>>) => Promise<void>;
+  deleteWorkspace: (id: string) => Promise<void>;
   people: Person[];
   setPeople: React.Dispatch<React.SetStateAction<Person[]>>;
   projects: Project[];
@@ -31,6 +40,8 @@ interface DataContextType {
   addProject: (project: Omit<Project, 'id'>) => Promise<Project>;
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
+  getProjectMemberIds: (projectId: string) => string[];
+  updateProjectMembers: (projectId: string, memberIds: string[]) => Promise<void>;
   addPhase: (phase: Omit<Phase, 'id'>) => Promise<Phase>;
   updatePhase: (id: string, updates: Partial<Phase>) => Promise<void>;
   deletePhase: (id: string) => Promise<void>;
@@ -55,15 +66,20 @@ interface DataContextType {
   deleteSpreadsheet: (id: string) => Promise<void>;
   duplicateSpreadsheet: (spreadsheet: Spreadsheet) => Promise<Spreadsheet>;
   fetchSpreadsheetData: (spreadsheetId: string) => Promise<{
+    sheets: SpreadsheetSheet[];
+    activeSheetId?: string;
     columns: SpreadsheetColumn[];
     rows: SpreadsheetRow[];
     cells: SpreadsheetCell[];
+    merges: SpreadsheetMerge[];
   }>;
   saveSpreadsheetData: (
     spreadsheetId: string,
     columns: SpreadsheetColumn[],
     rows: SpreadsheetRow[],
-    cells: SpreadsheetCell[]
+    cells: SpreadsheetCell[],
+    sheetId?: string,
+    merges?: SpreadsheetMerge[]
   ) => Promise<void>;
   addSpreadsheetColumn: (column: Omit<SpreadsheetColumn, 'id' | 'createdAt'>) => Promise<SpreadsheetColumn>;
   updateSpreadsheetColumn: (id: string, updates: Partial<SpreadsheetColumn>) => Promise<void>;
@@ -71,6 +87,12 @@ interface DataContextType {
   addSpreadsheetRow: (row: Omit<SpreadsheetRow, 'id' | 'createdAt'>) => Promise<SpreadsheetRow>;
   deleteSpreadsheetRow: (id: string) => Promise<void>;
   upsertSpreadsheetCell: (cell: Omit<SpreadsheetCell, 'id'> & { id?: string }) => Promise<SpreadsheetCell>;
+  addSheet: (sheet: Omit<SpreadsheetSheet, 'id' | 'createdAt'>) => Promise<SpreadsheetSheet>;
+  updateSheet: (id: string, updates: Partial<SpreadsheetSheet>) => Promise<void>;
+  deleteSheet: (id: string) => Promise<void>;
+  addMerge: (merge: Omit<SpreadsheetMerge, 'id'>) => Promise<SpreadsheetMerge>;
+  deleteMerge: (id: string) => Promise<void>;
+  deleteMergesInRange: (spreadsheetId: string, sheetId: string | undefined, startRow: number, startCol: number, endRow: number, endCol: number) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);

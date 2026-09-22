@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft,
@@ -68,7 +68,7 @@ const statusColors = {
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { projects = [], tasks = [], people = [], phases = [], cells = [], customColumns = [], milestones = [], deleteMilestone, updateMilestone, deletePhase, updatePhase, loading, error } = useData();
+  const { projects = [], tasks = [], people = [], phases = [], cells = [], customColumns = [], milestones = [], deleteMilestone, updateMilestone, deletePhase, updatePhase, loading, error, activateWorkspaceForProject } = useData();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskDefaultResponsibleIds, setTaskDefaultResponsibleIds] = useState<string[] | undefined>(undefined);
@@ -78,6 +78,7 @@ const ProjectDetail = () => {
   const [editingPhase, setEditingPhase] = useState<Phase | undefined>(undefined);
   const [phaseManagerOpen, setPhaseManagerOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const attemptedProjectWorkspaceRef = useRef<string | null>(null);
 
   // Ensure arrays are always defined
   const safeProjects = projects || [];
@@ -91,6 +92,16 @@ const ProjectDetail = () => {
   const project = useMemo(() => {
     return safeProjects.find(p => p.id === projectId);
   }, [safeProjects, projectId]);
+
+  // Links diretos continuam funcionando mesmo quando o último workspace
+  // selecionado era outro. A troca só ocorre após a validação de acesso no
+  // banco, feita por activateWorkspaceForProject.
+  useEffect(() => {
+    if (!loading && !project && projectId && attemptedProjectWorkspaceRef.current !== projectId) {
+      attemptedProjectWorkspaceRef.current = projectId;
+      void activateWorkspaceForProject(projectId);
+    }
+  }, [loading, project, projectId, activateWorkspaceForProject]);
 
   const projectTasks = useMemo(() => {
     return safeTasks.filter(t => t.projectId === projectId);

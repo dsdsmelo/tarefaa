@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -9,9 +9,21 @@ import {
   LogOut,
   ChevronsLeft,
   ChevronsRight,
+  BriefcaseBusiness,
+  UserRound,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Sidebar,
   SidebarContent,
@@ -44,11 +56,21 @@ const settingsNavItems = [
 
 export const AppSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { workspaces, activeWorkspace, setActiveWorkspace } = useData();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === 'collapsed';
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleWorkspaceChange = async (workspaceId: string) => {
+    try {
+      await setActiveWorkspace(workspaceId);
+    } catch (error) {
+      console.error('Erro ao trocar workspace:', error);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -104,6 +126,48 @@ export const AppSidebar = () => {
             >
               <ChevronsRight className="w-4 h-4" />
             </button>
+          </div>
+        )}
+
+        {!isCollapsed && activeWorkspace && (
+          <div className="px-2 pb-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-full flex items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-2.5 py-2 text-left hover:bg-sidebar-accent transition-colors">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: activeWorkspace.color }}
+                  />
+                  {activeWorkspace.kind === 'personal' ? (
+                    <UserRound className="w-3.5 h-3.5 text-sidebar-foreground/70" />
+                  ) : (
+                    <BriefcaseBusiness className="w-3.5 h-3.5 text-sidebar-foreground/70" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{activeWorkspace.name}</span>
+                  <ChevronsUpDown className="w-3.5 h-3.5 text-sidebar-foreground/60" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {workspaces.map((workspace) => (
+                  <DropdownMenuItem
+                    key={workspace.id}
+                    onClick={() => handleWorkspaceChange(workspace.id)}
+                    className={cn(workspace.id === activeWorkspace.id && 'bg-accent')}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: workspace.color }} />
+                    {workspace.kind === 'personal' ? <UserRound className="w-4 h-4 mr-2" /> : <BriefcaseBusiness className="w-4 h-4 mr-2" />}
+                    <span className="truncate">{workspace.name}</span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/settings')}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Gerenciar workspaces
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </SidebarHeader>

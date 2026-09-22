@@ -21,7 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 const Dashboard = () => {
-  const { projects = [], tasks = [], people = [], loading, error } = useData();
+  const { projects = [], tasks = [], people = [], loading, error, activeWorkspace } = useData();
 
   // Ensure arrays are always defined
   const safeProjects = projects || [];
@@ -112,7 +112,7 @@ const Dashboard = () => {
   if (loading && !hasData) {
     return (
       <MainLayout>
-        <Header title="Dashboard" subtitle="Visão geral do workspace" />
+        <Header title="Dashboard" subtitle={activeWorkspace ? `Visão geral: ${activeWorkspace.name}` : 'Visão geral do workspace'} />
         <div className="p-6 space-y-6">
           {/* KPI Cards Skeleton */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -177,7 +177,7 @@ const Dashboard = () => {
   if (error) {
     return (
       <MainLayout>
-        <Header title="Dashboard" subtitle="Visão geral do workspace" />
+        <Header title="Dashboard" subtitle={activeWorkspace ? `Visão geral: ${activeWorkspace.name}` : 'Visão geral do workspace'} />
         <div className="flex items-center justify-center h-96">
           <div className="text-center text-destructive">
             <p className="font-medium mb-2">Erro ao carregar dados</p>
@@ -190,7 +190,7 @@ const Dashboard = () => {
 
   return (
     <MainLayout>
-      <Header title="Dashboard" subtitle="Visão geral do workspace" />
+      <Header title="Dashboard" subtitle={activeWorkspace ? `Visão geral: ${activeWorkspace.name}` : 'Visão geral do workspace'} />
       
       <div className="p-6 space-y-6">
         {/* KPIs - 4 cards iguais */}

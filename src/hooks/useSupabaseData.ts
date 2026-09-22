@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/auditLog';
-import { Person, Project, Phase, Cell, Task, CustomColumn, Milestone, MeetingNote, Spreadsheet, SpreadsheetSheet, SpreadsheetColumn, SpreadsheetRow, SpreadsheetCell, SpreadsheetMerge } from '@/lib/types';
+import { Person, Project, Phase, Cell, Task, CustomColumn, Milestone, MeetingNote, Spreadsheet, SpreadsheetSheet, SpreadsheetColumn, SpreadsheetRow, SpreadsheetCell, SpreadsheetMerge, Workspace } from '@/lib/types';
 
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string | null> {
@@ -10,6 +10,9 @@ async function getCurrentUserId(): Promise<string | null> {
 }
 
 export function useSupabaseData() {
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const activeWorkspaceIdRef = useRef<string | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
@@ -24,6 +27,14 @@ export function useSupabaseData() {
   const [loading, setLoading] = useState(true);
   const initialLoadDone = useRef(false);
   const [error, setError] = useState<string | null>(null);
+
+  const workspaceStorageKey = (userId: string) => `tarefaa.active-workspace:${userId}`;
+
+  const persistActiveWorkspace = (userId: string, workspaceId: string) => {
+    activeWorkspaceIdRef.current = workspaceId;
+    setActiveWorkspaceId(workspaceId);
+    window.localStorage.setItem(workspaceStorageKey(userId), workspaceId);
+  };
 
   // Fetch all data
   const fetchData = useCallback(async () => {
@@ -42,6 +53,36 @@ export function useSupabaseData() {
     setError(null);
 
     try {
+      // O banco cria Pessoal e Corporativo para contas antigas e novas. Esta
+      // chamada também torna o primeiro acesso após a migration determinístico.
+      const { error: defaultsError } = await supabase.rpc('ensure_default_workspaces');
+      if (defaultsError) throw defaultsError;
+
+      const { data: workspacesData, error: workspacesError } = await supabase
+        .from('workspaces')
+        .select('*')
+        .order('is_default', { ascending: false })
+        .order('name');
+      if (workspacesError) throw workspacesError;
+
+      const mappedWorkspaces = Array.isArray(workspacesData)
+        ? workspacesData.map(mapWorkspace)
+        : [];
+      setWorkspaces(mappedWorkspaces);
+
+      const preferredWorkspaceId = activeWorkspaceIdRef.current
+        || window.localStorage.getItem(workspaceStorageKey(session.user.id));
+      const selectedWorkspace = mappedWorkspaces.find(w => w.id === preferredWorkspaceId)
+        || mappedWorkspaces.find(w => w.kind === 'personal' && w.isDefault)
+        || mappedWorkspaces[0];
+
+      if (selectedWorkspace) {
+        persistActiveWorkspace(session.user.id, selectedWorkspace.id);
+      } else {
+        activeWorkspaceIdRef.current = null;
+        setActiveWorkspaceId(null);
+      }
+
       const [
         { data: peopleData, error: peopleError },
         { data: projectsData, error: projectsError },
@@ -130,6 +171,9 @@ export function useSupabaseData() {
         setMeetingNotes([]);
         setSpreadsheets([]);
         setProjectMembers({});
+        setWorkspaces([]);
+        activeWorkspaceIdRef.current = null;
+        setActiveWorkspaceId(null);
         setLoading(false);
         initialLoadDone.current = false;
       }
@@ -139,6 +183,77 @@ export function useSupabaseData() {
       subscription.unsubscribe();
     };
   }, [fetchData]);
+
+  const setActiveWorkspace = async (workspaceId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('User not authenticated');
+    if (!workspaces.some(workspace => workspace.id === workspaceId)) {
+      throw new Error('Workspace não disponível para este usuário');
+    }
+    persistActiveWorkspace(session.user.id, workspaceId);
+  };
+
+  const activateWorkspaceForProject = async (projectId: string): Promise<boolean> => {
+    const localProject = projects.find(project => project.id === projectId);
+    let workspaceId = localProject?.workspaceId;
+
+    if (!workspaceId) {
+      const { data, error: projectError } = await supabase
+        .from('projects')
+        .select('workspace_id')
+        .eq('id', projectId)
+        .maybeSingle();
+      if (projectError || !data?.workspace_id) return false;
+      workspaceId = data.workspace_id;
+    }
+
+    if (!workspaces.some(workspace => workspace.id === workspaceId)) return false;
+    await setActiveWorkspace(workspaceId);
+    return true;
+  };
+
+  const addWorkspace = async (workspace: Omit<Workspace, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'isDefault'>) => {
+    const userId = await getCurrentUserId();
+    if (!userId) throw new Error('User not authenticated');
+
+    const { data, error: workspaceError } = await supabase
+      .from('workspaces')
+      .insert([workspaceToDb(workspace, userId)])
+      .select()
+      .single();
+    if (workspaceError) throw workspaceError;
+    const newWorkspace = mapWorkspace(data);
+    setWorkspaces(prev => [...prev, newWorkspace].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
+    logAuditEvent({ action: 'workspace_created', entity_type: 'workspace', entity_id: newWorkspace.id, entity_name: newWorkspace.name, level: 'success', details: `Workspace "${newWorkspace.name}" criado` });
+    return newWorkspace;
+  };
+
+  const updateWorkspace = async (id: string, updates: Partial<Pick<Workspace, 'name' | 'kind' | 'color'>>) => {
+    const { error: workspaceError } = await supabase
+      .from('workspaces')
+      .update(workspaceToDb(updates))
+      .eq('id', id);
+    if (workspaceError) throw workspaceError;
+    const previousWorkspace = workspaces.find(workspace => workspace.id === id);
+    setWorkspaces(prev => prev.map(workspace => workspace.id === id ? { ...workspace, ...updates } : workspace));
+    logAuditEvent({ action: 'workspace_updated', entity_type: 'workspace', entity_id: id, entity_name: updates.name || previousWorkspace?.name, level: 'info', details: `Workspace "${updates.name || previousWorkspace?.name || id}" atualizado` });
+  };
+
+  const deleteWorkspace = async (id: string) => {
+    const { error: workspaceError } = await supabase
+      .from('workspaces')
+      .delete()
+      .eq('id', id);
+    if (workspaceError) throw workspaceError;
+    const deletedWorkspace = workspaces.find(workspace => workspace.id === id);
+    const remaining = workspaces.filter(workspace => workspace.id !== id);
+    setWorkspaces(remaining);
+    if (activeWorkspaceIdRef.current === id) {
+      const fallback = remaining.find(workspace => workspace.kind === 'personal' && workspace.isDefault) || remaining[0];
+      if (fallback) await setActiveWorkspace(fallback.id);
+    }
+    logAuditEvent({ action: 'workspace_deleted', entity_type: 'workspace', entity_id: id, entity_name: deletedWorkspace?.name, level: 'warning', details: `Workspace "${deletedWorkspace?.name || id}" excluído` });
+  };
 
   // CRUD operations for People
   const addPerson = async (person: Omit<Person, 'id'>) => {
@@ -252,7 +367,12 @@ export function useSupabaseData() {
       .update(projectToDb(updates))
       .eq('id', id);
     if (error) throw error;
+    const previousProject = projects.find(p => p.id === id);
     setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    if (updates.workspaceId && updates.workspaceId !== previousProject?.workspaceId) {
+      const destination = workspaces.find(workspace => workspace.id === updates.workspaceId);
+      logAuditEvent({ action: 'project_moved_workspace', entity_type: 'project', entity_id: id, entity_name: previousProject?.name, level: 'info', details: `Projeto movido para o workspace "${destination?.name || updates.workspaceId}"` });
+    }
   };
 
   const deleteProject = async (id: string) => {
@@ -907,9 +1027,40 @@ export function useSupabaseData() {
     ));
   };
 
+  const activeWorkspace = useMemo(
+    () => workspaces.find(workspace => workspace.id === activeWorkspaceId) || null,
+    [workspaces, activeWorkspaceId]
+  );
+  const scopedProjects = useMemo(
+    () => activeWorkspaceId ? projects.filter(project => project.workspaceId === activeWorkspaceId) : [],
+    [projects, activeWorkspaceId]
+  );
+  const workspaceProjectCounts = useMemo(() => {
+    return projects.reduce<Record<string, number>>((counts, project) => {
+      counts[project.workspaceId] = (counts[project.workspaceId] || 0) + 1;
+      return counts;
+    }, {});
+  }, [projects]);
+  const scopedProjectIds = useMemo(
+    () => new Set(scopedProjects.map(project => project.id)),
+    [scopedProjects]
+  );
+  const scopedTasks = useMemo(() => tasks.filter(task => scopedProjectIds.has(task.projectId)), [tasks, scopedProjectIds]);
+  const scopedPhases = useMemo(() => phases.filter(phase => scopedProjectIds.has(phase.projectId)), [phases, scopedProjectIds]);
+  const scopedColumns = useMemo(() => customColumns.filter(column => scopedProjectIds.has(column.projectId)), [customColumns, scopedProjectIds]);
+  const scopedMilestones = useMemo(() => milestones.filter(milestone => scopedProjectIds.has(milestone.projectId)), [milestones, scopedProjectIds]);
+  const scopedMeetingNotes = useMemo(() => meetingNotes.filter(note => scopedProjectIds.has(note.projectId)), [meetingNotes, scopedProjectIds]);
+  const scopedSpreadsheets = useMemo(() => spreadsheets.filter(sheet => scopedProjectIds.has(sheet.projectId)), [spreadsheets, scopedProjectIds]);
+
   return {
+    // Workspaces e dados já filtrados pelo workspace ativo
+    workspaces, activeWorkspaceId, activeWorkspace, workspaceProjectCounts,
+    setActiveWorkspace, activateWorkspaceForProject,
+    addWorkspace, updateWorkspace, deleteWorkspace,
     // Data
-    people, projects, phases, cells, tasks, customColumns, milestones, meetingNotes, spreadsheets,
+    people, projects: scopedProjects, phases: scopedPhases, cells, tasks: scopedTasks,
+    customColumns: scopedColumns, milestones: scopedMilestones,
+    meetingNotes: scopedMeetingNotes, spreadsheets: scopedSpreadsheets,
     loading, error,
     // State setters for local updates
     setPeople, setProjects, setPhases, setCells, setTasks, setCustomColumns, setMilestones, setMeetingNotes, setSpreadsheets,
@@ -947,6 +1098,19 @@ export function useSupabaseData() {
 }
 
 // Mapping functions (DB snake_case -> App camelCase)
+function mapWorkspace(data: any): Workspace {
+  return {
+    id: data.id,
+    userId: data.user_id,
+    name: data.name,
+    kind: data.kind,
+    color: data.color,
+    isDefault: data.is_default,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
 function mapPerson(data: any): Person {
   return {
     id: data.id,
@@ -966,6 +1130,7 @@ function mapPerson(data: any): Person {
 function mapProject(data: any): Project {
   return {
     id: data.id,
+    workspaceId: data.workspace_id,
     name: data.name,
     description: data.description,
     startDate: data.start_date,
@@ -1059,6 +1224,7 @@ function personToDb(person: Partial<Person>): any {
 
 function projectToDb(project: Partial<Project>): any {
   const result: any = {};
+  if (project.workspaceId !== undefined) result.workspace_id = project.workspaceId;
   if (project.name !== undefined) result.name = project.name;
   if (project.description !== undefined) result.description = project.description;
   if (project.startDate !== undefined) result.start_date = project.startDate;
@@ -1066,6 +1232,18 @@ function projectToDb(project: Partial<Project>): any {
   if (project.status !== undefined) result.status = project.status;
   if (project.coverColor !== undefined) result.cover_color = project.coverColor;
   if (project.imageUrl !== undefined) result.image_url = project.imageUrl;
+  return result;
+}
+
+function workspaceToDb(
+  workspace: Partial<Pick<Workspace, 'name' | 'kind' | 'color'>>,
+  userId?: string
+): any {
+  const result: any = {};
+  if (userId !== undefined) result.user_id = userId;
+  if (workspace.name !== undefined) result.name = workspace.name;
+  if (workspace.kind !== undefined) result.kind = workspace.kind;
+  if (workspace.color !== undefined) result.color = workspace.color;
   return result;
 }
 

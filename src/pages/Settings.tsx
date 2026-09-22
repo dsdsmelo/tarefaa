@@ -22,7 +22,11 @@ import {
   Sparkles,
   Eye,
   EyeOff,
-  KeyRound
+  KeyRound,
+  BriefcaseBusiness,
+  UserRound,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -51,7 +55,7 @@ import {
 const Settings = () => {
   const { toast } = useToast();
   const { user, profile, updateProfile, refreshProfile, subscription, refreshSubscription, isAdmin } = useAuth();
-  const { projects, tasks, people, cells, phases, customColumns } = useData();
+  const { projects, tasks, people, cells, phases, customColumns, workspaces, activeWorkspace, workspaceProjectCounts, addWorkspace, deleteWorkspace, setActiveWorkspace } = useData();
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');
@@ -61,6 +65,10 @@ const Settings = () => {
   const [isReactivating, setIsReactivating] = useState(false);
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [workspaceKind, setWorkspaceKind] = useState<'personal' | 'corporate'>('corporate');
+  const [isSavingWorkspace, setIsSavingWorkspace] = useState(false);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<typeof workspaces[number] | null>(null);
 
   // IA / OpenAI key — write-only: o cliente nunca lê o valor da chave
   const [openaiKey, setOpenaiKey] = useState('');
@@ -96,6 +104,46 @@ const Settings = () => {
       toast({ title: 'Erro', description: 'Não foi possível salvar a chave.', variant: 'destructive' });
     } finally {
       setIsSavingKey(false);
+    }
+  };
+
+  const handleCreateWorkspace = async () => {
+    const name = workspaceName.trim();
+    if (!name) {
+      toast({ title: 'Nome obrigatório', description: 'Informe o nome do workspace.', variant: 'destructive' });
+      return;
+    }
+    setIsSavingWorkspace(true);
+    try {
+      const workspace = await addWorkspace({
+        name,
+        kind: workspaceKind,
+        color: workspaceKind === 'personal' ? '#2563EB' : '#7C3AED',
+      });
+      setWorkspaceName('');
+      await setActiveWorkspace(workspace.id);
+      toast({ title: 'Workspace criado', description: `Você está no workspace ${workspace.name}.` });
+    } catch (err: any) {
+      toast({ title: 'Erro ao criar workspace', description: err.message || 'Não foi possível criar o workspace.', variant: 'destructive' });
+    } finally {
+      setIsSavingWorkspace(false);
+    }
+  };
+
+  const handleDeleteWorkspace = async () => {
+    if (!workspaceToDelete) return;
+    try {
+      await deleteWorkspace(workspaceToDelete.id);
+      toast({ title: 'Workspace excluído', description: 'O workspace vazio foi removido.' });
+      setWorkspaceToDelete(null);
+    } catch (err: any) {
+      toast({
+        title: 'Não foi possível excluir',
+        description: err.message?.includes('projects_workspace_id_fkey')
+          ? 'Mova os projetos deste workspace antes de excluí-lo.'
+          : (err.message || 'Não foi possível excluir o workspace.'),
+        variant: 'destructive',
+      });
     }
   };
 
@@ -484,6 +532,10 @@ const Settings = () => {
             <TabsTrigger value="data" className="gap-2">
               <Database className="w-4 h-4" />
               Dados
+            </TabsTrigger>
+            <TabsTrigger value="workspaces" className="gap-2">
+              <BriefcaseBusiness className="w-4 h-4" />
+              Workspaces
             </TabsTrigger>
             <TabsTrigger value="security" className="gap-2">
               <Lock className="w-4 h-4" />
@@ -904,6 +956,65 @@ const Settings = () => {
             </div>
           </TabsContent>
 
+          {/* Workspaces Tab */}
+          <TabsContent value="workspaces" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
+              <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
+                <div className="flex items-start justify-between gap-4 mb-5">
+                  <div>
+                    <h3 className="text-lg font-semibold">Seus workspaces</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Projetos, tarefas e métricas não são misturados entre workspaces.</p>
+                  </div>
+                  {activeWorkspace && <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium whitespace-nowrap">Atual: {activeWorkspace.name}</span>}
+                </div>
+                <div className="space-y-3">
+                  {workspaces.map((workspace) => {
+                    const projectCount = workspaceProjectCounts[workspace.id] || 0;
+                    const isCurrent = workspace.id === activeWorkspace?.id;
+                    return (
+                      <div key={workspace.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+                        <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: workspace.color }} />
+                        {workspace.kind === 'personal' ? <UserRound className="w-4 h-4 text-muted-foreground" /> : <BriefcaseBusiness className="w-4 h-4 text-muted-foreground" />}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{workspace.name}</p>
+                          <p className="text-xs text-muted-foreground">{workspace.kind === 'personal' ? 'Pessoal' : 'Corporativo'} · {projectCount} {projectCount === 1 ? 'projeto' : 'projetos'}</p>
+                        </div>
+                        {!isCurrent && <Button variant="outline" size="sm" onClick={() => void setActiveWorkspace(workspace.id)}>Abrir</Button>}
+                        {!workspace.isDefault && (
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setWorkspaceToDelete(workspace)} title="Excluir workspace vazio">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-card rounded-xl border border-border p-6 shadow-soft h-fit">
+                <h3 className="text-lg font-semibold mb-1">Novo workspace</h3>
+                <p className="text-sm text-muted-foreground mb-5">Crie um workspace por empresa, cliente ou contexto pessoal que precise separar.</p>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="workspaceName">Nome</Label>
+                    <Input id="workspaceName" value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} placeholder="Ex: Acme Ltda." maxLength={80} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="workspaceKind">Tipo</Label>
+                    <select id="workspaceKind" value={workspaceKind} onChange={(event) => setWorkspaceKind(event.target.value as 'personal' | 'corporate')} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <option value="corporate">Corporativo</option>
+                      <option value="personal">Pessoal</option>
+                    </select>
+                  </div>
+                  <Button className="w-full gradient-primary text-white" onClick={handleCreateWorkspace} disabled={isSavingWorkspace}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    {isSavingWorkspace ? 'Criando...' : 'Criar workspace'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -941,6 +1052,23 @@ const Settings = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <AlertDialog open={!!workspaceToDelete} onOpenChange={(open) => !open && setWorkspaceToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir workspace?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O workspace "{workspaceToDelete?.name}" só poderá ser excluído se estiver vazio. Projetos não serão apagados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteWorkspace} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

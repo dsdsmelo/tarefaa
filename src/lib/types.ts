@@ -75,8 +75,22 @@ export interface Person {
   avatarUrl?: string;
 }
 
+export type WorkspaceKind = 'personal' | 'corporate';
+
+export interface Workspace {
+  id: string;
+  userId: string;
+  name: string;
+  kind: WorkspaceKind;
+  color: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Project {
   id: string;
+  workspaceId: string;
   name: string;
   description?: string;
   startDate?: string;

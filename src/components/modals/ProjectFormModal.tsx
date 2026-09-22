@@ -40,6 +40,7 @@ const PROJECT_IMAGES_BUCKET = 'project-images';
 
 const projectSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
+  workspaceId: z.string().min(1, 'Workspace é obrigatório'),
   description: z.string().optional(),
   startDate: z.string().min(1, 'Data início é obrigatória'),
   endDate: z.string().optional(),
@@ -84,7 +85,7 @@ const PROTECTED_FIELDS: CustomColumn['standardField'][] = [
 ];
 
 export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormModalProps) {
-  const { addProject, updateProject, customColumns, addCustomColumn, updateCustomColumn, setCustomColumns, people, getProjectMemberIds, updateProjectMembers } = useData();
+  const { addProject, updateProject, customColumns, addCustomColumn, updateCustomColumn, setCustomColumns, people, getProjectMemberIds, updateProjectMembers, workspaces, activeWorkspaceId } = useData();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cover state
@@ -127,6 +128,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
     resolver: zodResolver(projectSchema),
     defaultValues: {
       name: '',
+      workspaceId: activeWorkspaceId || '',
       description: '',
       startDate: '',
       endDate: '',
@@ -144,6 +146,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
     if (project) {
       form.reset({
         name: project.name,
+        workspaceId: project.workspaceId,
         description: project.description || '',
         startDate: project.startDate || '',
         endDate: project.endDate || '',
@@ -161,6 +164,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
     } else {
       form.reset({
         name: '',
+        workspaceId: activeWorkspaceId || '',
         description: '',
         startDate: '',
         endDate: '',
@@ -171,7 +175,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
       setPendingColumns([]);
       setSelectedMemberIds([]);
     }
-  }, [project, form, open, getProjectMemberIds]);
+  }, [project, form, open, getProjectMemberIds, activeWorkspaceId]);
 
   const toggleMember = (personId: string) => {
     setSelectedMemberIds(prev =>
@@ -504,6 +508,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
     try {
       const projectData = {
         name: data.name,
+        workspaceId: data.workspaceId,
         description: data.description || undefined,
         startDate: data.startDate || undefined,
         endDate: data.endDate || undefined,
@@ -571,6 +576,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
     try {
       await updateProject(project.id, {
         name: data.name,
+        workspaceId: data.workspaceId,
         description: data.description || undefined,
         startDate: data.startDate || undefined,
         endDate: data.endDate || undefined,
@@ -931,6 +937,31 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="workspaceId">Workspace *</Label>
+                  <Select
+                    value={form.watch('workspaceId')}
+                    onValueChange={(value) => form.setValue('workspaceId', value, { shouldValidate: true })}
+                  >
+                    <SelectTrigger id="workspaceId"><SelectValue placeholder="Selecione o workspace" /></SelectTrigger>
+                    <SelectContent>
+                      {workspaces.map((workspace) => (
+                        <SelectItem key={workspace.id} value={workspace.id}>
+                          {workspace.name} · {workspace.kind === 'personal' ? 'Pessoal' : 'Corporativo'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.workspaceId && (
+                    <p className="text-sm text-destructive">{form.formState.errors.workspaceId.message}</p>
+                  )}
+                  {project && form.watch('workspaceId') !== project.workspaceId && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Ao salvar, tarefas, fases, marcos, anotações e tabelas acompanharão este projeto para o novo workspace.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="description">Descrição</Label>
                   <Textarea id="description" {...form.register('description')} placeholder="Descrição do projeto" rows={3} />
                 </div>
@@ -1004,6 +1035,26 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
                 <Input id="name" {...form.register('name')} placeholder="Nome do projeto" />
                 {form.formState.errors.name && (
                   <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="workspaceId">Workspace *</Label>
+                <Select
+                  value={form.watch('workspaceId')}
+                  onValueChange={(value) => form.setValue('workspaceId', value, { shouldValidate: true })}
+                >
+                  <SelectTrigger id="workspaceId"><SelectValue placeholder="Selecione o workspace" /></SelectTrigger>
+                  <SelectContent>
+                    {workspaces.map((workspace) => (
+                      <SelectItem key={workspace.id} value={workspace.id}>
+                        {workspace.name} · {workspace.kind === 'personal' ? 'Pessoal' : 'Corporativo'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.workspaceId && (
+                  <p className="text-sm text-destructive">{form.formState.errors.workspaceId.message}</p>
                 )}
               </div>
 

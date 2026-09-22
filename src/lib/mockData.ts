@@ -25,9 +25,9 @@ export const mockDevices: Device[] = [
 ];
 
 export const mockProjects: Project[] = [
-  { id: '1', name: 'Assessment Infraestrutura 2024', description: 'Levantamento completo da infraestrutura de rede', startDate: '2024-01-15', endDate: '2024-06-30', status: 'active' },
-  { id: '2', name: 'Migração Datacenter', description: 'Migração de equipamentos para novo datacenter', startDate: '2024-03-01', endDate: '2024-12-31', status: 'active' },
-  { id: '3', name: 'Modernização Firewall', description: 'Atualização de todos os firewalls da empresa', startDate: '2024-02-01', endDate: '2024-08-31', status: 'planning' },
+  { id: '1', workspaceId: 'personal', name: 'Assessment Infraestrutura 2024', description: 'Levantamento completo da infraestrutura de rede', startDate: '2024-01-15', endDate: '2024-06-30', status: 'active' },
+  { id: '2', workspaceId: 'personal', name: 'Migração Datacenter', description: 'Migração de equipamentos para novo datacenter', startDate: '2024-03-01', endDate: '2024-12-31', status: 'active' },
+  { id: '3', workspaceId: 'personal', name: 'Modernização Firewall', description: 'Atualização de todos os firewalls da empresa', startDate: '2024-02-01', endDate: '2024-08-31', status: 'planning' },
 ];
 
 export const mockPhases: Phase[] = [
