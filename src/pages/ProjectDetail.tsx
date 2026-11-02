@@ -116,15 +116,28 @@ const ProjectDetail = () => {
     return safeProjects.find(p => p.id === projectId);
   }, [safeProjects, projectId]);
 
+  // Projeto que já esteve visível nesta página (distingue link direto de troca manual)
+  const shownProjectIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (project) shownProjectIdRef.current = project.id;
+  }, [project]);
+
   // Links diretos continuam funcionando mesmo quando o último workspace
   // selecionado era outro. A troca só ocorre após a validação de acesso no
   // banco, feita por activateWorkspaceForProject.
   useEffect(() => {
-    if (!loading && !project && projectId && attemptedProjectWorkspaceRef.current !== projectId) {
+    if (loading || project || !projectId) return;
+    // O projeto estava aberto e saiu do escopo: o usuário trocou de workspace.
+    // Respeita a escolha e volta para a lista em vez de desfazer a troca.
+    if (shownProjectIdRef.current === projectId) {
+      navigate('/projects', { replace: true });
+      return;
+    }
+    if (attemptedProjectWorkspaceRef.current !== projectId) {
       attemptedProjectWorkspaceRef.current = projectId;
       void activateWorkspaceForProject(projectId);
     }
-  }, [loading, project, projectId, activateWorkspaceForProject]);
+  }, [loading, project, projectId, activateWorkspaceForProject, navigate]);
 
   const projectTasks = useMemo(() => {
     return safeTasks.filter(t => t.projectId === projectId);
