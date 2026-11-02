@@ -35,6 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/hooks/useTheme';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -56,7 +57,8 @@ const Settings = () => {
   const { toast } = useToast();
   const { user, profile, updateProfile, refreshProfile, subscription, refreshSubscription, isAdmin } = useAuth();
   const { projects, tasks, people, cells, phases, customColumns, workspaces, activeWorkspace, workspaceProjectCounts, addWorkspace, deleteWorkspace, setActiveWorkspace } = useData();
-  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+  const { theme, setTheme } = useTheme();
+  const isDarkMode = theme === 'dark';
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -155,8 +157,7 @@ const Settings = () => {
   });
 
   const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
+    setTheme(isDarkMode ? 'light' : 'dark');
     toast({
       title: 'Tema alterado',
       description: `Modo ${!isDarkMode ? 'escuro' : 'claro'} ativado.`,

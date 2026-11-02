@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,37 +6,37 @@
 
 @layer base {
   :root {
-    /* Tarefaa Brand Colors - Blue, Green, Orange */
-    --background: 210 20% 98%;
-    --foreground: 210 40% 14%;
+    /* Tarefaa - visual sóbrio: fundo azul-acinzentado, cards brancos com borda */
+    --background: 216 33% 96%;
+    --foreground: 218 35% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 40% 14%;
+    --card-foreground: 218 35% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 40% 14%;
+    --popover-foreground: 218 35% 14%;
 
-    /* Primary: Tarefaa Blue */
-    --primary: 207 90% 45%;
+    /* Primary: Tarefaa Blue (tom mais fechado) */
+    --primary: 210 62% 40%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 210 40% 14%;
+    --secondary: 216 30% 94%;
+    --secondary-foreground: 218 35% 14%;
 
-    --muted: 210 20% 96%;
-    --muted-foreground: 210 15% 46%;
+    --muted: 216 30% 94%;
+    --muted-foreground: 216 14% 45%;
 
-    --accent: 210 20% 96%;
-    --accent-foreground: 210 40% 14%;
+    --accent: 216 30% 94%;
+    --accent-foreground: 218 35% 14%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 207 90% 45%;
+    --border: 216 24% 90%;
+    --input: 216 22% 86%;
+    --ring: 210 62% 40%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
     /* Tarefaa Brand Colors */
     --tarefaa-blue: 207 90% 45%;
@@ -63,18 +63,18 @@
     --chart-4: 0 84% 60%;
     --chart-5: 262 83% 58%;
 
-    /* Sidebar */
-    --sidebar-background: 210 40% 14%;
-    --sidebar-foreground: 210 20% 96%;
-    --sidebar-primary: 207 90% 45%;
+    /* Sidebar (clara, mesma família do fundo) */
+    --sidebar-background: 216 33% 94%;
+    --sidebar-foreground: 218 25% 25%;
+    --sidebar-primary: 210 62% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 20%;
-    --sidebar-accent-foreground: 210 20% 96%;
-    --sidebar-border: 210 40% 20%;
-    --sidebar-ring: 207 90% 45%;
+    --sidebar-accent: 214 55% 88%;
+    --sidebar-accent-foreground: 218 35% 14%;
+    --sidebar-border: 216 24% 88%;
+    --sidebar-ring: 210 62% 40%;
 
     /* Custom Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(207 90% 45%), hsl(207 90% 35%));
+    --gradient-primary: linear-gradient(135deg, hsl(210 58% 48%), hsl(214 55% 34%));
     --gradient-success: linear-gradient(135deg, hsl(130 70% 40%), hsl(130 70% 50%));
     --gradient-warning: linear-gradient(135deg, hsl(35 95% 55%), hsl(25 95% 53%));
     --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%), hsl(0 84% 50%));
@@ -82,42 +82,44 @@
   }
 
   .dark {
-    --background: 210 40% 6%;
-    --foreground: 210 20% 96%;
+    --background: 220 22% 8%;
+    --foreground: 216 25% 93%;
 
-    --card: 210 40% 11%;
-    --card-foreground: 210 20% 96%;
+    --card: 220 20% 11%;
+    --card-foreground: 216 25% 93%;
 
-    --popover: 210 40% 11%;
-    --popover-foreground: 210 20% 96%;
+    --popover: 220 20% 11%;
+    --popover-foreground: 216 25% 93%;
 
-    --primary: 207 90% 50%;
+    --primary: 210 65% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 18%;
-    --secondary-foreground: 210 20% 96%;
+    --secondary: 220 16% 16%;
+    --secondary-foreground: 216 25% 93%;
 
-    --muted: 210 40% 18%;
-    --muted-foreground: 210 15% 60%;
+    --muted: 220 16% 16%;
+    --muted-foreground: 216 12% 62%;
 
-    --accent: 210 40% 18%;
-    --accent-foreground: 210 20% 96%;
+    --accent: 220 16% 16%;
+    --accent-foreground: 216 25% 93%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 40% 18%;
-    --input: 210 40% 18%;
-    --ring: 207 90% 50%;
+    --border: 220 15% 19%;
+    --input: 220 15% 22%;
+    --ring: 210 65% 52%;
 
-    --sidebar-background: 210 40% 6%;
-    --sidebar-foreground: 210 20% 96%;
-    --sidebar-primary: 207 90% 50%;
+    --sidebar-background: 220 24% 7%;
+    --sidebar-foreground: 216 20% 82%;
+    --sidebar-primary: 210 65% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 11%;
-    --sidebar-accent-foreground: 210 20% 96%;
-    --sidebar-border: 210 40% 11%;
-    --sidebar-ring: 207 90% 50%;
+    --sidebar-accent: 214 35% 20%;
+    --sidebar-accent-foreground: 216 25% 95%;
+    --sidebar-border: 220 15% 15%;
+    --sidebar-ring: 210 65% 52%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(210 60% 52%), hsl(214 55% 38%));
   }
 }
 
@@ -128,7 +130,6 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', sans-serif;
   }
 }
 
@@ -304,7 +305,7 @@
   --dsg-header-active-text-color: hsl(var(--foreground));
   --dsg-cell-background-color: hsl(var(--card));
   --dsg-cell-disabled-background-color: hsl(var(--muted));
-  font-family: 'Inter', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .spreadsheet-editor .dsg-cell {
@@ -343,7 +344,7 @@
 
 /* Input styling when editing */
 .spreadsheet-editor .dsg-input {
-  font-family: 'Inter', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.875rem;
   padding: 4px 8px;
   border: none;
