@@ -4,7 +4,6 @@ import {
   Search,
   LayoutGrid,
   List,
-  Calendar,
   MoreVertical,
   Pencil,
   Trash2,
@@ -18,10 +17,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { ProgressBar } from '@/components/ui/progress-bar';
-import { ProjectFormModal, COVER_GRADIENTS, isHexColor } from '@/components/modals/ProjectFormModal';
+import { ProjectFormModal } from '@/components/modals/ProjectFormModal';
+import { ProjectAvatar, ProjectStatusBadge } from '@/components/projects/ProjectIdentity';
 import { useData } from '@/contexts/DataContext';
 import { calculatePercentage } from '@/lib/mockData';
-import { projectStatusLabels, Project } from '@/lib/types';
+import { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -49,13 +49,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Link, useNavigate } from 'react-router-dom';
 
-const statusColors = {
-  planning: 'bg-purple-500',
-  active: 'bg-status-completed',
-  paused: 'bg-status-pending',
-  completed: 'bg-status-progress',
-  cancelled: 'bg-status-cancelled',
-};
+// "2026-09-03" -> "03 set"
+const formatShortDate = (iso: string) =>
+  new Date(iso.slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
 
 const Projects = () => {
   const navigate = useNavigate();
@@ -230,134 +226,57 @@ const Projects = () => {
               const progress = getProjectProgress(project.id);
               const taskCount = getProjectTaskCount(project.id);
               const phaseCount = getProjectPhaseCount(project.id);
-              const coverGradient = project.coverColor
-                ? COVER_GRADIENTS.find(g => g.id === project.coverColor)
-                : null;
-              const coverSolid = project.coverColor && isHexColor(project.coverColor)
-                ? project.coverColor
-                : null;
-              const glowColor = coverGradient?.color ?? coverSolid;
-              const hasImage = !!project.imageUrl;
+              const meta = [
+                `${taskCount} ${taskCount === 1 ? 'tarefa' : 'tarefas'}`,
+                phaseCount > 0 && `${phaseCount} ${phaseCount === 1 ? 'fase' : 'fases'}`,
+                project.startDate && `início ${formatShortDate(project.startDate)}`,
+              ].filter(Boolean).join(' · ');
 
               return (
                 <div
                   key={project.id}
                   onClick={() => navigate(`/projects/${project.id}`)}
-                  className="flex flex-col bg-card rounded-xl border border-border hover:border-primary/40 transition-colors animate-fade-in overflow-hidden group relative cursor-pointer"
+                  className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 hover:border-primary/40 transition-colors cursor-pointer"
                 >
-                  {/* Modern gradient: soft colored glow coming from the top-right corner */}
-                  {glowColor && (
-                    <div
-                      className="pointer-events-none absolute inset-0"
-                      style={{ background: `radial-gradient(115% 90% at 100% 0%, ${glowColor}26 0%, ${glowColor}0d 34%, transparent 64%)` }}
-                    />
-                  )}
-
-                  {/* Color strip */}
-                  {coverGradient && (
-                    <div className={cn("relative h-2 w-full bg-gradient-to-r", coverGradient.class)} />
-                  )}
-                  {coverSolid && (
-                    <div className="relative h-2 w-full" style={{ backgroundColor: coverSolid }} />
-                  )}
-
-                  {/* Actions (hover) - top-right corner, above the image */}
-                  <div
-                    className="absolute top-1.5 right-1.5 z-20 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity rounded-md bg-card/70 backdrop-blur-sm"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => handleEdit(project)}
-                    >
-                      <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
-                          <Eye className="w-4 h-4 mr-2" />
-                          Ver Detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(project)}>
-                          <Pencil className="w-4 h-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(project.id)}>
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  {/* Content Section
-                      A imagem fica em fluxo (flex) e não mais absoluta: assim o card
-                      pode encurtar sem que o conteúdo colida com a miniatura, e some
-                      o pr-20 que roubava largura do nome. */}
-                  <div className="relative p-3 flex flex-1 gap-3">
-                    <div className="flex-1 min-w-0 flex flex-col">
-                      {/* Project name */}
+                  {/* Mesma estrutura em todos os cards: ícone, nome, status, uma linha de info */}
+                  <div className="flex items-start gap-3">
+                    <ProjectAvatar project={project} />
+                    <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-semibold truncate group-hover:text-primary transition-colors" title={project.name}>
                         {project.name}
                       </h3>
-
-                      {/* Meta info inline: status + contadores + data.
-                          flex-wrap para nunca cortar informação em cards estreitos. */}
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 text-xs text-muted-foreground tabular-nums">
-                        <span className="flex items-center gap-1.5">
-                          <span className={cn('w-2 h-2 rounded-full', statusColors[project.status])} />
-                          <span className="font-medium">
-                            {projectStatusLabels[project.status]}
-                          </span>
-                        </span>
-                        <span className="text-border">•</span>
-                        <span>{phaseCount} fases</span>
-                        <span className="text-border">•</span>
-                        <span>{taskCount} tarefas</span>
-                        {project.startDate && (
-                          <>
-                            <span className="text-border">•</span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {new Date(project.startDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}
-                            </span>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Progress bar inline: colada no rodapé para alinhar cards da mesma linha */}
-                      <div className="flex items-center gap-2 mt-auto pt-2">
-                        <div className="flex-1">
-                          <ProgressBar
-                            value={progress}
-                            size="sm"
-                            color={coverSolid || undefined}
-                            gradientClass={coverGradient?.class}
-                          />
-                        </div>
-                        <span className="text-xs font-mono text-muted-foreground min-w-[32px] text-right">
-                          {progress}%
-                        </span>
-                      </div>
+                      <p className="text-xs text-muted-foreground truncate tabular-nums mt-0.5">{meta}</p>
                     </div>
+                    <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <ProjectStatusBadge status={project.status} />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" title="Ações">
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Ver Detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(project)}>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(project.id)}>
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
 
-                    {/* Project / client image - miniatura arredondada no canto superior direito */}
-                    {hasImage && (
-                      <div className="pointer-events-none self-start w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-white ring-1 ring-border flex items-center justify-center p-1.5">
-                        <img
-                          src={project.imageUrl!}
-                          alt={project.name}
-                          className="max-w-full max-h-full object-contain"
-                        />
-                      </div>
-                    )}
+                  {/* Progresso sempre na largura total, colado no rodapé */}
+                  <div className="mt-auto flex items-center gap-2">
+                    <ProgressBar value={progress} size="sm" color="hsl(var(--primary))" className="flex-1" />
+                    <span className="text-xs font-mono text-muted-foreground w-9 text-right">{progress}%</span>
                   </div>
                 </div>
               );
@@ -388,18 +307,18 @@ const Projects = () => {
                       onClick={() => navigate(`/projects/${project.id}`)}
                     >
                       <td className="px-5 py-2.5">
-                        <div>
-                          <Link to={`/projects/${project.id}`} className="text-sm font-medium hover:text-primary">{project.name}</Link>
-                          {project.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">{project.description}</p>
-                          )}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <ProjectAvatar project={project} size="sm" />
+                          <div className="min-w-0">
+                            <Link to={`/projects/${project.id}`} className="text-sm font-medium hover:text-primary">{project.name}</Link>
+                            {project.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-1">{project.description}</p>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-5 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <div className={cn('w-2 h-2 rounded-full', statusColors[project.status])} />
-                          <span className="text-sm">{projectStatusLabels[project.status]}</span>
-                        </div>
+                        <ProjectStatusBadge status={project.status} />
                       </td>
                       <td className="px-5 py-2.5 text-xs font-mono text-muted-foreground whitespace-nowrap">
                         {project.startDate && project.endDate ? (
@@ -412,7 +331,10 @@ const Projects = () => {
                       </td>
                       <td className="px-5 py-2.5 text-sm tabular-nums">{taskCount}</td>
                       <td className="px-5 py-2.5 w-48">
-                        <ProgressBar value={progress} showLabel size="sm" />
+                        <div className="flex items-center gap-2">
+                          <ProgressBar value={progress} size="sm" color="hsl(var(--primary))" className="flex-1" />
+                          <span className="text-xs font-mono text-muted-foreground w-9 text-right">{progress}%</span>
+                        </div>
                       </td>
                       <td className="px-5 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>

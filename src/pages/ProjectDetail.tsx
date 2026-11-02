@@ -23,12 +23,11 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { PageBody } from '@/components/layout/PageBody';
 import { Panel } from '@/components/ui/panel';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Badge, type BadgeProps } from '@/components/ui/badge';
+import { ProjectAvatar, ProjectStatusBadge } from '@/components/projects/ProjectIdentity';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useData } from '@/contexts/DataContext';
 import { calculatePercentage, isTaskOverdue, isTaskDueSoon } from '@/lib/mockData';
-import { projectStatusLabels, type ProjectStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ProjectGanttChart } from '@/components/gantt/ProjectGanttChart';
 import { TaskFormModal } from '@/components/modals/TaskFormModal';
@@ -58,14 +57,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-
-const statusBadgeVariant: Record<ProjectStatus, BadgeProps['variant']> = {
-  active: 'success',
-  planning: 'default',
-  paused: 'warning',
-  completed: 'secondary',
-  cancelled: 'outline',
-};
 
 const PROJECT_TABS = ['dashboard', 'tasks', 'gantt', 'meetings'];
 
@@ -276,30 +267,13 @@ const ProjectDetail = () => {
     );
   }
 
-  const projectInitials = project.name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(word => word.charAt(0).toUpperCase())
-    .join('');
-
   return (
     <TooltipProvider>
     <MainLayout>
       <Header
         title={project.name}
         backTo="/projects"
-        leading={
-          project.imageUrl ? (
-            <div className="w-12 h-12 rounded-xl overflow-hidden border border-border bg-white p-1 flex items-center justify-center">
-              <img src={project.imageUrl} alt={project.name} className="max-w-full max-h-full object-contain" />
-            </div>
-          ) : (
-            <div className="w-12 h-12 rounded-xl gradient-primary text-primary-foreground flex items-center justify-center font-semibold">
-              {projectInitials}
-            </div>
-          )
-        }
+        leading={<ProjectAvatar project={project} size="lg" />}
         subtitle={
           <>
             {project.startDate && project.endDate && (
@@ -313,7 +287,7 @@ const ProjectDetail = () => {
             {project.description || 'Dashboard do projeto'}
           </>
         }
-        badge={<Badge variant={statusBadgeVariant[project.status]}>{projectStatusLabels[project.status]}</Badge>}
+        badge={<ProjectStatusBadge status={project.status} />}
         actions={
           <>
             <Button variant="outline" onClick={() => setReportOpen(true)}>
