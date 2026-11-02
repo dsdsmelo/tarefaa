@@ -2,7 +2,9 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ChevronDown, ChevronRight, LocateFixed } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageBody } from '@/components/layout/PageBody';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useData } from '@/contexts/DataContext';
 import { isTaskOverdue, calculatePercentage } from '@/lib/mockData';
 import { cn } from '@/lib/utils';
@@ -253,12 +255,12 @@ const Gantt = () => {
     <MainLayout>
       <Header title="Gráfico Gantt" subtitle="Visualização temporal das tarefas" />
 
-      <div className="px-6 pt-3 pb-6 space-y-3">
+      <PageBody className="space-y-3">
         {/* Toolbar */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
-              <SelectTrigger className="w-40 h-9">
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder="Agrupar por" />
               </SelectTrigger>
               <SelectContent>
@@ -268,52 +270,33 @@ const Gantt = () => {
             </Select>
 
             <div className="text-xs text-muted-foreground">
-              {completedTasks}/{totalTasks} concluídas
+              <span className="font-mono tabular-nums">{completedTasks}/{totalTasks}</span> concluídas
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={scrollToToday} className="h-8">
+                <Button variant="outline" size="icon" onClick={scrollToToday}>
                   <LocateFixed className="w-4 h-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Ir para Hoje</TooltipContent>
             </Tooltip>
 
-            <div className="flex border border-border rounded-lg overflow-hidden">
-              <Button
-                variant={zoom === 'day' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setZoom('day')}
-                className="rounded-none h-8 text-xs"
-              >
-                Dia
-              </Button>
-              <Button
-                variant={zoom === 'week' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setZoom('week')}
-                className="rounded-none h-8 text-xs"
-              >
-                Semana
-              </Button>
-              <Button
-                variant={zoom === 'month' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setZoom('month')}
-                className="rounded-none h-8 text-xs"
-              >
-                Mês
-              </Button>
-            </div>
+            <Tabs value={zoom} onValueChange={(v) => setZoom(v as ZoomLevel)}>
+              <TabsList variant="segmented">
+                <TabsTrigger value="day">Dia</TabsTrigger>
+                <TabsTrigger value="week">Semana</TabsTrigger>
+                <TabsTrigger value="month">Mês</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 
         {/* Gantt Chart */}
         <TooltipProvider>
-          <div className="bg-card rounded-xl border border-border shadow-soft overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 180px)' }}>
+          <div className="bg-card rounded-xl border border-border overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 180px)' }}>
             {/* Header Row */}
             <div className="flex border-b border-border flex-shrink-0">
               {/* Labels header */}
@@ -328,7 +311,7 @@ const Gantt = () => {
                     className="absolute top-0 bottom-0 w-0.5 bg-primary z-20 pointer-events-none"
                     style={{ left: getTodayPosition() }}
                   >
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-t whitespace-nowrap">
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-primary text-primary-foreground text-[9px] font-semibold rounded-t whitespace-nowrap">
                       Hoje
                     </div>
                   </div>
@@ -344,7 +327,7 @@ const Gantt = () => {
                           isToday && "bg-primary/10"
                         )}
                       >
-                        {col.subLabel && <span className="text-[9px] text-muted-foreground uppercase">{col.subLabel}</span>}
+                        {col.subLabel && <span className="text-[9px] text-muted-foreground">{col.subLabel}</span>}
                         <span className="text-[11px] font-medium text-foreground/80">{col.label}</span>
                       </div>
                     );
@@ -377,7 +360,7 @@ const Gantt = () => {
                             <AvatarCircle name={group.name} color={group.color} size="sm" avatarUrl={group.avatarUrl} />
                           )}
                           <span className="text-xs font-medium truncate">{group.name}</span>
-                          <span className="text-[10px] text-muted-foreground flex-shrink-0">({group.tasks.length})</span>
+                          <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">({group.tasks.length})</span>
                         </div>
                       </div>
 
@@ -492,7 +475,7 @@ const Gantt = () => {
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <div
-                                      className={cn("absolute top-[5px] h-[14px] rounded shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer", styles.bg)}
+                                      className={cn("absolute top-[5px] h-[14px] rounded hover:opacity-90 transition-opacity overflow-hidden cursor-pointer", styles.bg)}
                                       style={{ left: position.left, width: position.width, minWidth: '12px' }}
                                     >
                                       {taskProgress > 0 && taskProgress < 100 && (
@@ -553,7 +536,7 @@ const Gantt = () => {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 px-4 py-2 border-t border-border bg-muted/30 flex-shrink-0 text-xs">
+            <div className="flex flex-wrap items-center gap-4 px-4 py-2 border-t border-border bg-muted/30 flex-shrink-0 text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded bg-amber-500" />
                 <span>Pendente</span>
@@ -581,7 +564,7 @@ const Gantt = () => {
             </div>
           </div>
         </TooltipProvider>
-      </div>
+      </PageBody>
     </MainLayout>
   );
 };

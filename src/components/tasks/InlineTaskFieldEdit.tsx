@@ -40,18 +40,18 @@ export const StatusEditCell = ({ status, onSave }: StatusEditCellProps) => {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors">
+        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/60 rounded-md px-1 py-0.5 -mx-1 transition-colors">
           <StatusBadge status={status} />
           <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-44 p-2" align="start">
-        <div className="space-y-1">
+      <PopoverContent className="w-44 p-1" align="start">
+        <div className="space-y-0.5">
           {(['pending', 'in_progress', 'blocked', 'completed', 'cancelled'] as TaskStatus[]).map((s) => (
             <button
               key={s}
               className={cn(
-                "w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors",
+                "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-muted/60 transition-colors",
                 status === s && "bg-muted"
               )}
               onClick={() => handleSelect(s)}
@@ -82,18 +82,18 @@ export const PriorityEditCell = ({ priority, onSave }: PriorityEditCellProps) =>
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors">
+        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/60 rounded-md px-1 py-0.5 -mx-1 transition-colors">
           <PriorityBadge priority={priority} />
           <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-36 p-2" align="start">
-        <div className="space-y-1">
+      <PopoverContent className="w-36 p-1" align="start">
+        <div className="space-y-0.5">
           {(['low', 'medium', 'high', 'urgent'] as TaskPriority[]).map((p) => (
             <button
               key={p}
               className={cn(
-                "w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors",
+                "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-muted/60 transition-colors",
                 priority === p && "bg-muted"
               )}
               onClick={() => handleSelect(p)}
@@ -141,7 +141,7 @@ export const ResponsibleEditCell = ({ responsibleIds = [], people, projectMember
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors min-h-[22px]">
+        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/60 rounded-md px-1 py-0.5 -mx-1 transition-colors min-h-[22px]">
           {selectedPeople.length > 0 ? (
             <div className="flex items-center gap-1">
               {/* Mostra até 3 avatares sobrepostos */}
@@ -176,11 +176,11 @@ export const ResponsibleEditCell = ({ responsibleIds = [], people, projectMember
           <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-56 p-2" align="start">
-        <div className="space-y-1 max-h-64 overflow-y-auto">
+      <PopoverContent className="w-56 p-1" align="start">
+        <div className="space-y-0.5 max-h-64 overflow-y-auto">
           {selectedPeople.length > 0 && (
             <button
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors text-muted-foreground"
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-muted/60 transition-colors text-muted-foreground"
               onClick={handleClearAll}
             >
               <X className="w-3 h-3" />
@@ -191,7 +191,7 @@ export const ResponsibleEditCell = ({ responsibleIds = [], people, projectMember
             <label
               key={p.id}
               className={cn(
-                "w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors cursor-pointer",
+                "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-muted/60 transition-colors cursor-pointer",
                 responsibleIds.includes(p.id) && "bg-muted"
               )}
             >
@@ -230,16 +230,16 @@ export const PhaseEditCell = ({ phaseId, phases, projectId, onSave }: PhaseEditC
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors min-h-[22px]">
+        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/60 rounded-md px-1 py-0.5 -mx-1 transition-colors min-h-[22px]">
           <span className="text-xs text-muted-foreground">{currentPhase?.name || '-'}</span>
           <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-2" align="start">
-        <div className="space-y-1 max-h-48 overflow-y-auto">
+      <PopoverContent className="w-48 p-1" align="start">
+        <div className="space-y-0.5 max-h-48 overflow-y-auto">
           <button
             className={cn(
-              "w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors",
+              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-muted/60 transition-colors",
               !phaseId && "bg-muted"
             )}
             onClick={() => handleSelect('none')}
@@ -250,7 +250,7 @@ export const PhaseEditCell = ({ phaseId, phases, projectId, onSave }: PhaseEditC
             <button
               key={p.id}
               className={cn(
-                "w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors",
+                "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-muted/60 transition-colors",
                 phaseId === p.id && "bg-muted"
               )}
               onClick={() => handleSelect(p.id)}
@@ -310,23 +310,23 @@ export const TextEditCell = ({ value, placeholder, onSave, className, isOverdue 
           onChange={(e) => setLocalValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={handleSave}
-          className="h-6 text-xs min-w-[120px]"
+          className="h-7 px-2 text-xs min-w-[120px]"
         />
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 dark:hover:text-emerald-300"
           onClick={handleSave}
         >
-          <Check className="w-3 h-3" />
+          <Check className="w-3.5 h-3.5" />
         </Button>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           onClick={handleCancel}
         >
-          <X className="w-3 h-3" />
+          <X className="w-3.5 h-3.5" />
         </Button>
       </div>
     );
@@ -334,7 +334,7 @@ export const TextEditCell = ({ value, placeholder, onSave, className, isOverdue 
 
   return (
     <div 
-      className="group flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors min-h-[22px] min-w-0 overflow-hidden"
+      className="group flex items-center gap-1 cursor-pointer hover:bg-muted/60 rounded-md px-1 py-0.5 -mx-1 transition-colors min-h-[22px] min-w-0 overflow-hidden"
       onClick={() => {
         setLocalValue(value);
         setIsEditing(true);
@@ -376,10 +376,10 @@ export const DateEditCell = ({ value, placeholder, onSave }: DateEditCellProps) 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors min-h-[22px]">
+        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/60 rounded-md px-1 py-0.5 -mx-1 transition-colors min-h-[22px]">
           <CalendarIcon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
           <span className={cn(
-            "text-xs",
+            "text-xs tabular-nums",
             !date && "text-muted-foreground"
           )}>
             {date ? format(date, 'dd/MM/yy', { locale: ptBR }) : (placeholder || '-')}
@@ -404,7 +404,7 @@ export const DateEditCell = ({ value, placeholder, onSave }: DateEditCellProps) 
               className="w-full text-muted-foreground"
               onClick={handleClear}
             >
-              <X className="w-3 h-3 mr-1" />
+              <X className="w-3.5 h-3.5" />
               Limpar data
             </Button>
           </div>

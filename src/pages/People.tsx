@@ -8,7 +8,10 @@ import {
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageBody } from '@/components/layout/PageBody';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { AvatarCircle } from '@/components/ui/avatar-circle';
 import { PersonFormModal } from '@/components/modals/PersonFormModal';
@@ -90,16 +93,32 @@ const People = () => {
     setModalOpen(true);
   };
 
+  // Mesmo cabeçalho nos três estados (carregando/erro/conteúdo); a ação só fica ativa com os dados prontos
+  const pageHeader = (
+    <Header
+      title="Pessoas"
+      subtitle="Gerencie os membros da equipe e parceiros"
+      actions={
+        <Button onClick={handleOpenNew} disabled={loading || !!error}>
+          <Plus className="w-4 h-4" />
+          Nova Pessoa
+        </Button>
+      }
+    />
+  );
+
   if (loading) {
     return (
       <MainLayout>
-        <Header title="Pessoas" subtitle="Gerencie os membros da equipe e parceiros" />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando dados...</p>
+        {pageHeader}
+        <PageBody>
+          <Skeleton className="h-9 w-full max-w-sm rounded-lg" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+            {[...Array(8)].map((_, i) => (
+              <Skeleton key={i} className="h-[84px] rounded-xl" />
+            ))}
           </div>
-        </div>
+        </PageBody>
       </MainLayout>
     );
   }
@@ -107,7 +126,7 @@ const People = () => {
   if (error) {
     return (
       <MainLayout>
-        <Header title="Pessoas" subtitle="Gerencie os membros da equipe e parceiros" />
+        {pageHeader}
         <div className="flex items-center justify-center h-96">
           <div className="text-center text-destructive">
             <p className="font-medium mb-2">Erro ao carregar dados</p>
@@ -120,12 +139,12 @@ const People = () => {
 
   return (
     <MainLayout>
-      <Header title="Pessoas" subtitle="Gerencie os membros da equipe e parceiros" />
-      
-      <div className="p-6 space-y-6">
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative flex-1 max-w-sm">
+      {pageHeader}
+
+      <PageBody>
+        {/* Toolbar: busca + filtro por tipo */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="relative flex-1 w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Buscar pessoas..."
@@ -135,29 +154,23 @@ const People = () => {
             />
           </div>
 
-          <Button className="gradient-primary text-white" onClick={handleOpenNew}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Pessoa
-          </Button>
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList variant="segmented">
+              <TabsTrigger value="all">
+                Todos
+                <span className="text-xs tabular-nums text-muted-foreground">{safePeople.length}</span>
+              </TabsTrigger>
+              <TabsTrigger value="internal">
+                Internos
+                <span className="text-xs tabular-nums text-muted-foreground">{safePeople.filter(p => p.type === 'internal').length}</span>
+              </TabsTrigger>
+              <TabsTrigger value="partner">
+                Parceiros
+                <span className="text-xs tabular-nums text-muted-foreground">{safePeople.filter(p => p.type === 'partner').length}</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="all">
-              Todos
-              <Badge variant="secondary" className="ml-2">{safePeople.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="internal">
-              Internos
-              <Badge variant="secondary" className="ml-2">{safePeople.filter(p => p.type === 'internal').length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="partner">
-              Parceiros
-              <Badge variant="secondary" className="ml-2">{safePeople.filter(p => p.type === 'partner').length}</Badge>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
 
         {/* People Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
@@ -169,25 +182,25 @@ const People = () => {
               <div
                 key={person.id}
                 className={cn(
-                  "group bg-card rounded-lg border border-border p-3 shadow-soft hover:shadow-medium hover:border-primary/30 transition-all duration-200 animate-fade-in",
+                  "group bg-card rounded-xl border border-border p-3 hover:border-primary/40 transition-colors animate-fade-in",
                   !person.active && "opacity-60"
                 )}
               >
                 <div className="flex items-center gap-2.5">
-                  <AvatarCircle name={person.name} color={person.color} size="lg" avatarUrl={person.avatarUrl} />
+                  <AvatarCircle name={person.name} color={person.color} size="md" avatarUrl={person.avatarUrl} />
 
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold truncate leading-tight" title={person.name}>{person.name}</h3>
+                    <h3 className="text-sm font-semibold truncate leading-tight" title={person.name}>{person.name}</h3>
                     {person.email && (
-                      <p className="text-sm text-muted-foreground truncate leading-tight" title={person.email}>{person.email}</p>
+                      <p className="text-xs text-muted-foreground truncate leading-tight" title={person.email}>{person.email}</p>
                     )}
                   </div>
 
                   <div className="flex items-center flex-shrink-0">
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Editar"
                       onClick={() => handleEdit(person)}
                     >
@@ -195,8 +208,8 @@ const People = () => {
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Excluir"
                       onClick={() => handleDeleteClick(person)}
                     >
@@ -205,7 +218,7 @@ const People = () => {
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
                   <Badge variant={person.type === 'internal' ? 'default' : 'secondary'}>
                     {personTypeLabels[person.type]}
                   </Badge>
@@ -222,19 +235,19 @@ const People = () => {
         </div>
 
         {filteredPeople.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <Search className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Nenhuma pessoa encontrada</h3>
-            <p className="text-muted-foreground mb-4">Tente ajustar a busca ou adicione uma nova pessoa.</p>
-            <Button className="gradient-primary text-white" onClick={handleOpenNew}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Pessoa
-            </Button>
-          </div>
+          <EmptyState
+            icon={Search}
+            title="Nenhuma pessoa encontrada"
+            description="Tente ajustar a busca ou adicione uma nova pessoa."
+            action={
+              <Button onClick={handleOpenNew}>
+                <Plus className="w-4 h-4" />
+                Nova Pessoa
+              </Button>
+            }
+          />
         )}
-      </div>
+      </PageBody>
 
       {/* Person Form Modal */}
       <PersonFormModal

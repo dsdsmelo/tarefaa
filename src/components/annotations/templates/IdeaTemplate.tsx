@@ -15,7 +15,7 @@ export function IdeaTemplate({ data, onChange }: IdeaTemplateProps) {
       {/* Descrição */}
       <div className="space-y-2">
         <Label className="text-sm font-medium flex items-center gap-2">
-          <Lightbulb className="h-4 w-4 text-amber-500" />
+          <Lightbulb className="h-4 w-4 text-muted-foreground" />
           Descrição da Ideia
         </Label>
         <RichTextEditor
@@ -29,7 +29,7 @@ export function IdeaTemplate({ data, onChange }: IdeaTemplateProps) {
       {/* Benefícios Esperados */}
       <div className="space-y-2">
         <Label className="text-sm font-medium flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-green-500" />
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
           Benefícios Esperados
         </Label>
         <RichTextEditor
@@ -43,7 +43,7 @@ export function IdeaTemplate({ data, onChange }: IdeaTemplateProps) {
       {/* Recursos Necessários */}
       <div className="space-y-2">
         <Label className="text-sm font-medium flex items-center gap-2">
-          <Package className="h-4 w-4 text-blue-500" />
+          <Package className="h-4 w-4 text-muted-foreground" />
           Recursos Necessários
         </Label>
         <Textarea
@@ -57,7 +57,7 @@ export function IdeaTemplate({ data, onChange }: IdeaTemplateProps) {
       {/* Próximos Passos */}
       <div className="space-y-2">
         <Label className="text-sm font-medium flex items-center gap-2">
-          <ArrowRight className="h-4 w-4 text-purple-500" />
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
           Próximos Passos
         </Label>
         <RichTextEditor

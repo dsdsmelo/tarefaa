@@ -171,11 +171,11 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 text-blue-600 dark:text-blue-400">
-              {task ? <Pencil className="w-5 h-5" /> : <ClipboardList className="w-5 h-5" />}
+            <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              {task ? <Pencil className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
             </div>
             <div>
-              <DialogTitle className="text-lg">{task ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle>
+              <DialogTitle>{task ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle>
               <DialogDescription>
                 {task ? 'Atualize as informações da tarefa' : 'Preencha os dados básicos para criar uma nova tarefa'}
               </DialogDescription>
@@ -245,7 +245,7 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
                     variant="outline"
                     role="combobox"
                     className={cn(
-                      "w-full justify-start text-left font-normal h-10",
+                      "w-full justify-start text-left font-normal",
                       selectedPeople.length === 0 && "text-muted-foreground"
                     )}
                   >
@@ -348,11 +348,11 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="gradient-primary text-white">
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Salvando...' : task ? 'Atualizar' : 'Criar Tarefa'}
             </Button>
           </div>

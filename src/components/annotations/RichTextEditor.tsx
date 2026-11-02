@@ -188,7 +188,7 @@ const MenuBar = ({
                 type="button"
                 title={c.name}
                 onClick={() => (c.value ? editor.chain().focus().setColor(c.value).run() : editor.chain().focus().unsetColor().run())}
-                className="w-7 h-7 rounded border border-border flex items-center justify-center hover:scale-110 transition-transform"
+                className="w-7 h-7 rounded border border-border flex items-center justify-center hover:border-primary transition-colors"
                 style={{ backgroundColor: c.value ?? 'transparent' }}
               >
                 {!c.value && <span className="text-[10px] text-muted-foreground">A</span>}
@@ -213,7 +213,7 @@ const MenuBar = ({
                 type="button"
                 title={c.name}
                 onClick={() => editor.chain().focus().toggleHighlight({ color: c.value }).run()}
-                className="w-7 h-7 rounded border border-border hover:scale-110 transition-transform"
+                className="w-7 h-7 rounded border border-border hover:border-primary transition-colors"
                 style={{ backgroundColor: c.value }}
               />
             ))}
@@ -221,7 +221,7 @@ const MenuBar = ({
               type="button"
               title="Remover realce"
               onClick={() => editor.chain().focus().unsetHighlight().run()}
-              className="w-7 h-7 rounded border border-border flex items-center justify-center hover:scale-110 transition-transform"
+              className="w-7 h-7 rounded border border-border flex items-center justify-center hover:border-primary transition-colors"
             >
               <Eraser className="h-3.5 w-3.5 text-muted-foreground" />
             </button>

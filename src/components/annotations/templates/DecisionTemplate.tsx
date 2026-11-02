@@ -176,7 +176,7 @@ export function DecisionTemplate({ data, onChange }: DecisionTemplateProps) {
                   !data.deadline && 'text-muted-foreground'
                 )}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
+                <CalendarIcon className="h-4 w-4" />
                 {data.deadline
                   ? format(new Date(data.deadline), 'PPP', { locale: ptBR })
                   : 'Selecionar data...'}

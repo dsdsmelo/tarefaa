@@ -12,7 +12,10 @@ import {
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageBody } from '@/components/layout/PageBody';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { ProjectFormModal, COVER_GRADIENTS, isHexColor } from '@/components/modals/ProjectFormModal';
@@ -123,16 +126,32 @@ const Projects = () => {
     }
   };
 
+  // Mesmo cabeçalho nos três estados (carregando/erro/conteúdo); a ação só fica ativa com os dados prontos
+  const pageHeader = (
+    <Header
+      title="Projetos"
+      subtitle="Gerencie seus projetos e acompanhe o progresso"
+      actions={
+        <Button onClick={handleOpenNew} disabled={loading || !!error}>
+          <Plus className="w-4 h-4" />
+          Novo Projeto
+        </Button>
+      }
+    />
+  );
+
   if (loading) {
     return (
       <MainLayout>
-        <Header title="Projetos" subtitle="Gerencie seus projetos e acompanhe o progresso" />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando dados...</p>
+        {pageHeader}
+        <PageBody>
+          <Skeleton className="h-9 w-full max-w-sm rounded-lg" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+            {[...Array(8)].map((_, i) => (
+              <Skeleton key={i} className="h-[84px] rounded-xl" />
+            ))}
           </div>
-        </div>
+        </PageBody>
       </MainLayout>
     );
   }
@@ -140,7 +159,7 @@ const Projects = () => {
   if (error) {
     return (
       <MainLayout>
-        <Header title="Projetos" subtitle="Gerencie seus projetos e acompanhe o progresso" />
+        {pageHeader}
         <div className="flex items-center justify-center h-96">
           <div className="text-center text-destructive">
             <p className="font-medium mb-2">Erro ao carregar dados</p>
@@ -153,12 +172,12 @@ const Projects = () => {
 
   return (
     <MainLayout>
-      <Header title="Projetos" subtitle="Gerencie seus projetos e acompanhe o progresso" />
-      
-      <div className="p-6 space-y-6">
+      {pageHeader}
+
+      <PageBody>
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex gap-3 flex-1 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="flex gap-2 flex-1 w-full sm:w-auto">
             <div className="relative flex-1 max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -183,26 +202,23 @@ const Projects = () => {
             </Select>
           </div>
 
-          <div className="flex gap-2">
-            <div className="flex border border-border rounded-lg p-1">
-              <Button
-                variant={view === 'cards' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setView('cards')}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={view === 'table' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setView('table')}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-            </div>
-            <Button className="gradient-primary text-white" onClick={handleOpenNew}>
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Projeto
+          {/* Alternância cards/lista: mesmo desenho do TabsList segmentado (36px) */}
+          <div className="inline-flex h-9 items-center gap-1 rounded-lg bg-muted p-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('h-7 w-7 rounded-md', view === 'cards' ? 'bg-card text-foreground shadow-soft hover:bg-card' : 'text-muted-foreground')}
+              onClick={() => setView('cards')}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('h-7 w-7 rounded-md', view === 'table' ? 'bg-card text-foreground shadow-soft hover:bg-card' : 'text-muted-foreground')}
+              onClick={() => setView('table')}
+            >
+              <List className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -227,7 +243,7 @@ const Projects = () => {
                 <div
                   key={project.id}
                   onClick={() => navigate(`/projects/${project.id}`)}
-                  className="bg-card rounded-lg border border-border hover:border-primary/40 shadow-soft hover:shadow-medium transition-all duration-200 animate-fade-in overflow-hidden group relative cursor-pointer"
+                  className="bg-card rounded-xl border border-border hover:border-primary/40 transition-colors animate-fade-in overflow-hidden group relative cursor-pointer"
                 >
                   {/* Modern gradient: soft colored glow coming from the top-right corner */}
                   {glowColor && (
@@ -252,15 +268,15 @@ const Projects = () => {
                   >
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
+                      size="icon"
+                      className="h-7 w-7"
                       onClick={() => handleEdit(project)}
                     >
                       <Pencil className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
                           <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -294,10 +310,10 @@ const Projects = () => {
 
                       {/* Meta info inline: status + contadores + data.
                           flex-wrap para nunca cortar informação em cards estreitos. */}
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 text-xs text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 text-xs text-muted-foreground tabular-nums">
                         <span className="flex items-center gap-1.5">
                           <span className={cn('w-2 h-2 rounded-full', statusColors[project.status])} />
-                          <span className="text-[11px] font-medium uppercase tracking-wide">
+                          <span className="font-medium">
                             {projectStatusLabels[project.status]}
                           </span>
                         </span>
@@ -326,7 +342,7 @@ const Projects = () => {
                             gradientClass={coverGradient?.class}
                           />
                         </div>
-                        <span className="text-xs font-medium text-muted-foreground min-w-[32px] text-right">
+                        <span className="text-xs font-mono text-muted-foreground min-w-[32px] text-right">
                           {progress}%
                         </span>
                       </div>
@@ -334,7 +350,7 @@ const Projects = () => {
 
                     {/* Project / client image - miniatura arredondada no canto superior direito */}
                     {hasImage && (
-                      <div className="pointer-events-none w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden bg-white ring-1 ring-border shadow-medium flex items-center justify-center p-1.5">
+                      <div className="pointer-events-none w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-white ring-1 ring-border flex items-center justify-center p-1.5">
                         <img
                           src={project.imageUrl!}
                           alt={project.name}
@@ -348,16 +364,16 @@ const Projects = () => {
             })}
           </div>
         ) : (
-          <div className="bg-card rounded-xl border border-border shadow-soft overflow-hidden">
+          <div className="bg-card rounded-xl border border-border overflow-x-auto">
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Projeto</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Período</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Tarefas</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Progresso</th>
-                  <th className="text-right py-4 px-6 text-sm font-medium text-muted-foreground">Ações</th>
+                  <th className="text-left px-5 py-2.5 text-xs font-medium text-muted-foreground">Projeto</th>
+                  <th className="text-left px-5 py-2.5 text-xs font-medium text-muted-foreground">Status</th>
+                  <th className="text-left px-5 py-2.5 text-xs font-medium text-muted-foreground">Período</th>
+                  <th className="text-left px-5 py-2.5 text-xs font-medium text-muted-foreground">Tarefas</th>
+                  <th className="text-left px-5 py-2.5 text-xs font-medium text-muted-foreground">Progresso</th>
+                  <th className="text-right px-5 py-2.5 text-xs font-medium text-muted-foreground">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -368,24 +384,24 @@ const Projects = () => {
                   return (
                     <tr 
                       key={project.id} 
-                      className="border-t border-border hover:bg-muted/30 transition-colors cursor-pointer"
+                      className="border-t border-border hover:bg-muted/40 transition-colors cursor-pointer"
                       onClick={() => navigate(`/projects/${project.id}`)}
                     >
-                      <td className="py-4 px-6">
+                      <td className="px-5 py-2.5">
                         <div>
-                          <Link to={`/projects/${project.id}`} className="font-medium hover:text-primary">{project.name}</Link>
+                          <Link to={`/projects/${project.id}`} className="text-sm font-medium hover:text-primary">{project.name}</Link>
                           {project.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-1">{project.description}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{project.description}</p>
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="px-5 py-2.5">
                         <div className="flex items-center gap-2">
                           <div className={cn('w-2 h-2 rounded-full', statusColors[project.status])} />
                           <span className="text-sm">{projectStatusLabels[project.status]}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-sm text-muted-foreground">
+                      <td className="px-5 py-2.5 text-xs font-mono text-muted-foreground whitespace-nowrap">
                         {project.startDate && project.endDate ? (
                           <>
                             {new Date(project.startDate).toLocaleDateString('pt-BR')} - {new Date(project.endDate).toLocaleDateString('pt-BR')}
@@ -394,14 +410,14 @@ const Projects = () => {
                           '-'
                         )}
                       </td>
-                      <td className="py-4 px-6 text-sm">{taskCount}</td>
-                      <td className="py-4 px-6 w-48">
+                      <td className="px-5 py-2.5 text-sm tabular-nums">{taskCount}</td>
+                      <td className="px-5 py-2.5 w-48">
                         <ProgressBar value={progress} showLabel size="sm" />
                       </td>
-                      <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-5 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -432,19 +448,19 @@ const Projects = () => {
         )}
 
         {filteredProjects.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <Search className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Nenhum projeto encontrado</h3>
-            <p className="text-muted-foreground mb-4">Tente ajustar os filtros ou criar um novo projeto.</p>
-            <Button className="gradient-primary text-white" onClick={handleOpenNew}>
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Projeto
-            </Button>
-          </div>
+          <EmptyState
+            icon={Search}
+            title="Nenhum projeto encontrado"
+            description="Tente ajustar os filtros ou criar um novo projeto."
+            action={
+              <Button onClick={handleOpenNew}>
+                <Plus className="w-4 h-4" />
+                Novo Projeto
+              </Button>
+            }
+          />
         )}
-      </div>
+      </PageBody>
 
       {/* Project Form Modal */}
       <ProjectFormModal

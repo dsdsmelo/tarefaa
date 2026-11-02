@@ -1,9 +1,10 @@
 import { useState, useCallback } from 'react';
-import { Plus, Edit, Trash2, GripVertical, X } from 'lucide-react';
+import { Plus, Edit, Trash2, GripVertical, X, Columns3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useData } from '@/contexts/DataContext';
 import { CustomColumn } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -182,27 +183,29 @@ export const CustomColumnManager = ({ projectId }: CustomColumnManagerProps) => 
   }, []);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Colunas Customizadas</h3>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold">Colunas Customizadas</h3>
           <p className="text-sm text-muted-foreground">
             Adicione campos extras às tarefas deste projeto. Arraste para reordenar.
           </p>
         </div>
         <Button onClick={openCreateDialog} size="sm">
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4" />
           Nova Coluna
         </Button>
       </div>
 
       {projectColumns.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
-          <p>Nenhuma coluna customizada criada</p>
-          <p className="text-sm mt-1">Clique em "Nova Coluna" para adicionar</p>
-        </div>
+        <EmptyState
+          icon={Columns3}
+          title="Nenhuma coluna customizada criada"
+          description='Clique em "Nova Coluna" para adicionar'
+          className="py-8 rounded-xl border border-dashed border-border"
+        />
       ) : (
-        <div className="space-y-2">
+        <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
           {projectColumns.map((column, index) => (
             <div 
               key={column.id}
@@ -213,18 +216,18 @@ export const CustomColumnManager = ({ projectId }: CustomColumnManagerProps) => 
               onDrop={(e) => handleDrop(e, column.id)}
               onDragEnd={handleDragEnd}
               className={cn(
-                "flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border transition-all duration-200",
-                draggedId === column.id && "opacity-50 scale-[0.98]",
-                dragOverId === column.id && "border-primary border-2 bg-primary/5"
+                "flex items-center gap-3 px-3 py-2 bg-card hover:bg-muted/40 transition-colors",
+                draggedId === column.id && "opacity-50",
+                dragOverId === column.id && "bg-primary/5 ring-1 ring-inset ring-primary"
               )}
             >
-              <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
-              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono w-6">
+              <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0" />
+              <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums w-5 flex-shrink-0">
                 {index + 1}
               </div>
-              <div className="flex-1">
-                <span className="font-medium">{column.name}</span>
-                <Badge variant="secondary" className="ml-2 text-xs">
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium">{column.name}</span>
+                <Badge variant="secondary" className="ml-2 font-normal">
                   {typeLabels[column.type]}
                 </Badge>
                 {column.type === 'list' && column.options && (
@@ -233,13 +236,13 @@ export const CustomColumnManager = ({ projectId }: CustomColumnManagerProps) => 
                   </span>
                 )}
               </div>
-              <Button variant="ghost" size="sm" onClick={() => openEditDialog(column)}>
+              <Button variant="ghost" size="icon" onClick={() => openEditDialog(column)} className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-foreground">
                 <Edit className="w-4 h-4" />
               </Button>
               <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-destructive hover:text-destructive"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                 onClick={() => handleDelete(column.id)}
               >
                 <Trash2 className="w-4 h-4" />
@@ -257,7 +260,7 @@ export const CustomColumnManager = ({ projectId }: CustomColumnManagerProps) => 
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="name">Nome da Coluna</Label>
               <Input
@@ -298,7 +301,7 @@ export const CustomColumnManager = ({ projectId }: CustomColumnManagerProps) => 
                     placeholder="Adicionar opção..."
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddOption())}
                   />
-                  <Button type="button" onClick={handleAddOption} size="sm">
+                  <Button type="button" onClick={handleAddOption} size="icon" variant="outline" className="shrink-0">
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
@@ -307,7 +310,7 @@ export const CustomColumnManager = ({ projectId }: CustomColumnManagerProps) => 
                     {formData.options.map((option, index) => (
                       <Badge key={index} variant="secondary" className="gap-1">
                         {option}
-                        <button onClick={() => handleRemoveOption(index)}>
+                        <button onClick={() => handleRemoveOption(index)} className="ml-0.5 rounded-sm text-muted-foreground hover:text-destructive transition-colors">
                           <X className="w-3 h-3" />
                         </button>
                       </Badge>

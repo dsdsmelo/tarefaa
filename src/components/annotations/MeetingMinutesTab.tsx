@@ -39,6 +39,7 @@ import {
   Pencil, Trash2, MoreVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface MeetingMinute {
   id: string;
@@ -161,22 +162,22 @@ export function MeetingMinutesTab({ projectId }: MeetingMinutesTabProps) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900">
-            <ScrollText className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+            <ScrollText className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold">Atas de Reunião</h3>
+            <h3 className="font-semibold">Atas de Reunião</h3>
             <p className="text-xs text-muted-foreground">
               Gere atas padronizadas a partir das transcrições das reuniões
             </p>
           </div>
         </div>
-        <Button onClick={() => { setEditing(null); setModalOpen(true); }} className="gradient-primary text-white">
-          <Plus className="w-4 h-4 mr-2" />
+        <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
+          <Plus className="w-4 h-4" />
           Nova Ata
         </Button>
       </div>
@@ -187,27 +188,26 @@ export function MeetingMinutesTab({ projectId }: MeetingMinutesTabProps) {
           <Loader2 className="w-5 h-5 animate-spin mr-2" /> Carregando...
         </div>
       ) : minutes.length === 0 ? (
-        <div className="text-center py-16 bg-muted/20 rounded-xl border-2 border-dashed border-border">
-          <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
-            <ScrollText className="w-8 h-8 text-muted-foreground opacity-60" />
-          </div>
-          <p className="text-base font-medium mb-1">Nenhuma ata ainda</p>
-          <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
-            Suba a transcrição de uma reunião (Meet, Teams…) e gere uma ata padronizada para enviar ao cliente
-          </p>
-          <Button onClick={() => { setEditing(null); setModalOpen(true); }} className="gradient-primary text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            Criar primeira ata
-          </Button>
-        </div>
+        <EmptyState
+          className="rounded-xl border border-dashed border-border bg-card"
+          icon={ScrollText}
+          title="Nenhuma ata ainda"
+          description="Suba a transcrição de uma reunião (Meet, Teams…) e gere uma ata padronizada para enviar ao cliente"
+          action={
+            <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
+              <Plus className="w-4 h-4" />
+              Criar primeira ata
+            </Button>
+          }
+        />
       ) : (
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden divide-y divide-border">
           {minutes.map((m) => {
             const preview = stripHtml(m.content || '');
             return (
               <div
                 key={m.id}
-                className="group flex items-start gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                className="group flex items-start gap-3 px-5 py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
                 onClick={() => { setEditing(m); setModalOpen(true); }}
               >
                 <ScrollText className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -215,7 +215,7 @@ export function MeetingMinutesTab({ projectId }: MeetingMinutesTabProps) {
                   <div className="font-medium text-sm text-foreground truncate">{m.title}</div>
                   {preview && <div className="text-xs text-muted-foreground truncate mt-0.5">{preview.slice(0, 120)}</div>}
                 </div>
-                <div className="text-xs text-muted-foreground flex-shrink-0 mt-0.5">
+                <div className="text-xs font-mono text-muted-foreground flex-shrink-0 mt-0.5">
                   {format(new Date(m.meeting_date + 'T12:00:00'), 'dd MMM yyyy', { locale: ptBR })}
                 </div>
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -400,7 +400,7 @@ function MinuteFormModal({ projectId, userId, open, onOpenChange, editing, onSav
       <DialogContent className="max-w-[96vw] w-[96vw] h-[94vh] sm:max-w-[96vw] flex flex-col gap-0 overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ScrollText className="h-5 w-5 text-muted-foreground" />
+            <ScrollText className="h-4 w-4 text-muted-foreground" />
             {editing ? 'Editar Ata' : 'Nova Ata de Reunião'}
           </DialogTitle>
         </DialogHeader>
@@ -424,10 +424,10 @@ function MinuteFormModal({ projectId, userId, open, onOpenChange, editing, onSav
               <Label className="text-sm font-medium">Transcrição da reunião</Label>
               <div className="flex items-center gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="w-4 h-4 mr-2" /> Subir arquivo (.txt, .vtt, .srt)
+                  <Upload className="w-4 h-4" /> Subir arquivo (.txt, .vtt, .srt)
                 </Button>
-                <Button type="button" size="sm" onClick={handleGenerate} disabled={isGenerating} className="gradient-primary text-white">
-                  {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                <Button type="button" size="sm" onClick={handleGenerate} disabled={isGenerating}>
+                  {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   {isGenerating ? 'Gerando...' : 'Gerar Ata'}
                 </Button>
               </div>
@@ -456,7 +456,7 @@ function MinuteFormModal({ projectId, userId, open, onOpenChange, editing, onSav
 
         <DialogFooter className="gap-2 pt-3 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={isSaving} className="gradient-primary text-white">
+          <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? 'Salvando...' : editing ? 'Salvar Ata' : 'Salvar Ata'}
           </Button>
         </DialogFooter>

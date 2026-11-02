@@ -87,11 +87,11 @@ export function CellFormModal({ open, onOpenChange, cell }: CellFormModalProps) 
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-600 dark:text-emerald-400">
-              {cell ? <Pencil className="w-5 h-5" /> : <Grid3X3 className="w-5 h-5" />}
+            <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              {cell ? <Pencil className="w-4 h-4" /> : <Grid3X3 className="w-4 h-4" />}
             </div>
             <div>
-              <DialogTitle className="text-lg">{cell ? 'Editar Célula' : 'Nova Célula'}</DialogTitle>
+              <DialogTitle>{cell ? 'Editar Célula' : 'Nova Célula'}</DialogTitle>
               <DialogDescription>
                 {cell ? 'Atualize as informações da célula' : 'Preencha os dados para criar uma nova célula'}
               </DialogDescription>
@@ -122,11 +122,11 @@ export function CellFormModal({ open, onOpenChange, cell }: CellFormModalProps) 
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="gradient-primary text-white">
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Salvando...' : cell ? 'Atualizar' : 'Criar Célula'}
             </Button>
           </div>

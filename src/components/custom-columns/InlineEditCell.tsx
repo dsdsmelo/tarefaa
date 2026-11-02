@@ -78,7 +78,7 @@ export const InlineEditCell = ({ column, value, onSave }: InlineEditCellProps) =
   if (!isEditing) {
     return (
       <div
-        className="group flex items-start gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors min-h-[24px]"
+        className="group flex items-start gap-1 cursor-pointer hover:bg-muted/60 rounded-md px-1 py-0.5 -mx-1 transition-colors min-h-[24px]"
         onClick={handleStartEdit}
       >
         <DisplayValue column={column} value={value} people={people} />
@@ -104,7 +104,7 @@ export const InlineEditCell = ({ column, value, onSave }: InlineEditCellProps) =
             }
           }}
           onBlur={handleSave}
-          className="text-xs min-w-[120px] min-h-[60px] max-h-[150px] p-2 rounded-md border border-input bg-background resize-y"
+          className="text-xs min-w-[120px] min-h-[60px] max-h-[150px] px-2 py-1.5 rounded-md border border-input bg-card resize-y placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           placeholder="Digite aqui... (Shift+Enter para nova linha)"
         />
       )}
@@ -117,7 +117,7 @@ export const InlineEditCell = ({ column, value, onSave }: InlineEditCellProps) =
           onChange={(e) => setEditValue(Number(e.target.value))}
           onKeyDown={handleKeyDown}
           onBlur={handleSave}
-          className="h-6 text-xs w-16"
+          className="h-7 px-2 text-xs w-16"
         />
       )}
 
@@ -129,7 +129,7 @@ export const InlineEditCell = ({ column, value, onSave }: InlineEditCellProps) =
           onChange={(e) => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={handleSave}
-          className="h-6 text-xs"
+          className="h-7 px-2 text-xs"
         />
       )}
 
@@ -144,7 +144,7 @@ export const InlineEditCell = ({ column, value, onSave }: InlineEditCellProps) =
             setIsEditing(false);
           }}
         >
-          <SelectTrigger className="h-6 text-xs min-w-[80px]">
+          <SelectTrigger className="h-7 px-2 text-xs min-w-[80px]">
             <SelectValue placeholder="Selecionar..." />
           </SelectTrigger>
           <SelectContent>
@@ -166,7 +166,7 @@ export const InlineEditCell = ({ column, value, onSave }: InlineEditCellProps) =
             setIsEditing(false);
           }}
         >
-          <SelectTrigger className="h-6 text-xs min-w-[100px]">
+          <SelectTrigger className="h-7 px-2 text-xs min-w-[100px]">
             <SelectValue placeholder="Selecionar..." />
           </SelectTrigger>
           <SelectContent>
@@ -186,19 +186,19 @@ export const InlineEditCell = ({ column, value, onSave }: InlineEditCellProps) =
         <div className={cn("flex gap-0.5", column.type === 'text' && "flex-col")}>
           <Button
             variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+            size="icon"
+            className="h-7 w-7 shrink-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 dark:hover:text-emerald-300"
             onClick={handleSave}
           >
-            <Check className="w-3 h-3" />
+            <Check className="w-3.5 h-3.5" />
           </Button>
           <Button
             variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+            size="icon"
+            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             onClick={handleCancel}
           >
-            <X className="w-3 h-3" />
+            <X className="w-3.5 h-3.5" />
           </Button>
         </div>
       )}
@@ -230,16 +230,16 @@ const PercentageEditCell = ({ value, onSave }: PercentageEditCellProps) => {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors min-h-[24px]">
+        <div className="group flex items-center gap-1 cursor-pointer hover:bg-muted/60 rounded-md px-1 py-0.5 -mx-1 transition-colors min-h-[24px]">
           <ProgressBar value={value ?? 0} showLabel size="sm" className="min-w-[70px]" />
           <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-4" align="start">
-        <div className="space-y-4">
+      <PopoverContent className="w-64 p-3" align="start">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Porcentagem</span>
-            <span className="text-lg font-bold text-primary">{localValue}%</span>
+            <span className="text-sm font-semibold tabular-nums text-primary">{localValue}%</span>
           </div>
           
           <Slider
@@ -256,7 +256,7 @@ const PercentageEditCell = ({ value, onSave }: PercentageEditCellProps) => {
                 key={qv}
                 variant={localValue === qv ? "default" : "outline"}
                 size="sm"
-                className="flex-1 min-w-[40px]"
+                className="h-7 flex-1 min-w-[40px] px-0 tabular-nums"
                 onClick={() => setLocalValue(qv)}
               >
                 {qv}%
@@ -264,7 +264,7 @@ const PercentageEditCell = ({ value, onSave }: PercentageEditCellProps) => {
             ))}
           </div>
 
-          <div className="flex gap-2 pt-2 border-t">
+          <div className="flex gap-2 pt-3 border-t border-border">
             <Button variant="outline" size="sm" className="flex-1" onClick={() => setIsOpen(false)}>
               Cancelar
             </Button>
@@ -306,7 +306,7 @@ const DisplayValue = ({ column, value, people }: DisplayValueProps) => {
 
     case 'date':
       return (
-        <span className="text-xs">
+        <span className="text-xs tabular-nums">
           {new Date(value as string).toLocaleDateString('pt-BR')}
         </span>
       );

@@ -615,11 +615,11 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
       </Label>
       <div className="flex items-center gap-4">
         <div className="relative group">
-          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-border bg-muted flex items-center justify-center shrink-0">
+          <div className="w-16 h-16 rounded-full overflow-hidden border border-border bg-muted flex items-center justify-center shrink-0">
             {imageUrl ? (
               <img src={imageUrl} alt="Imagem do projeto" className="w-full h-full object-cover" />
             ) : (
-              <ImageIcon className="w-7 h-7 text-muted-foreground/60" />
+              <ImageIcon className="w-6 h-6 text-muted-foreground/60" />
             )}
           </div>
           <button
@@ -629,16 +629,16 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
             className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           >
             {isUploadingImage ? (
-              <Loader2 className="w-6 h-6 text-white animate-spin" />
+              <Loader2 className="w-5 h-5 text-white animate-spin" />
             ) : (
-              <Camera className="w-6 h-6 text-white" />
+              <Camera className="w-5 h-5 text-white" />
             )}
           </button>
           {imageUrl && !isUploadingImage && (
             <button
               type="button"
               onClick={handleRemoveImage}
-              className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-white hover:bg-destructive/80 transition-colors"
+              className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-destructive-foreground hover:bg-destructive/80 transition-colors"
             >
               <X className="w-3 h-3" />
             </button>
@@ -679,11 +679,11 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
               type="button"
               onClick={() => handleSelectGradient(gradient.id)}
               className={cn(
-                "w-8 h-8 rounded-md bg-gradient-to-br transition-all",
+                "w-8 h-8 rounded-md bg-gradient-to-br",
                 gradient.class,
                 coverColor === gradient.id
-                  ? "ring-2 ring-primary ring-offset-2 scale-110"
-                  : "hover:scale-105 hover:ring-1 hover:ring-border"
+                  ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                  : "hover:ring-1 hover:ring-border"
               )}
               title={gradient.name}
             />
@@ -695,10 +695,10 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
               type="button"
               onClick={() => setCoverColor(coverColor === color ? null : color)}
               className={cn(
-                "w-8 h-8 rounded-md transition-all",
+                "w-8 h-8 rounded-md",
                 coverColor === color
-                  ? "ring-2 ring-primary ring-offset-2 scale-110"
-                  : "hover:scale-105 hover:ring-1 hover:ring-border"
+                  ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                  : "hover:ring-1 hover:ring-border"
               )}
               style={{ backgroundColor: color }}
               title={color}
@@ -706,7 +706,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
           ))}
           {/* Custom color picker button */}
           <label
-            className="w-8 h-8 rounded-md border-2 border-dashed border-muted-foreground/50 flex items-center justify-center cursor-pointer hover:border-primary hover:scale-105 transition-all"
+            className="w-8 h-8 rounded-md border-2 border-dashed border-muted-foreground/50 flex items-center justify-center cursor-pointer hover:border-primary transition-colors"
             title="Adicionar cor personalizada"
           >
             <Plus className="w-4 h-4 text-muted-foreground" />
@@ -741,7 +741,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
             variant="outline"
             role="combobox"
             className={cn(
-              "w-full justify-start text-left font-normal h-auto min-h-10 py-2",
+              "w-full justify-start text-left font-normal h-auto min-h-9 py-1.5",
               selectedMembers.length === 0 && "text-muted-foreground"
             )}
           >
@@ -838,8 +838,8 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
           onDrop={(e) => handleDrop(e, column.id)}
           onDragEnd={handleDragEnd}
           className={cn(
-            "flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border transition-all duration-200",
-            draggedId === column.id && "opacity-50 scale-[0.98]",
+            "flex items-center gap-3 px-3 py-2 bg-muted/40 rounded-lg border border-border transition-colors",
+            draggedId === column.id && "opacity-50",
             dragOverId === column.id && "border-primary border-2 bg-primary/5"
           )}
         >
@@ -848,13 +848,13 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
             {index + 1}
           </div>
           <div className="flex-1 min-w-0">
-            <span className="font-medium truncate block">{column.name}</span>
+            <span className="text-sm font-medium truncate block">{column.name}</span>
             <div className="flex items-center gap-2 mt-0.5">
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary">
                 {typeLabels[column.type]}
               </Badge>
               {column.isMilestone && (
-                <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                <Badge variant="warning">
                   Marco
                 </Badge>
               )}
@@ -907,11 +907,11 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 text-violet-600 dark:text-violet-400">
-                {project ? <Pencil className="w-5 h-5" /> : <FolderKanban className="w-5 h-5" />}
+              <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                {project ? <Pencil className="w-4 h-4" /> : <FolderKanban className="w-4 h-4" />}
               </div>
               <div>
-                <DialogTitle className="text-lg">
+                <DialogTitle>
                   {project ? 'Editar Projeto' : 'Novo Projeto'}
                 </DialogTitle>
                 <DialogDescription>
@@ -1003,15 +1003,15 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
 
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Colunas</h3>
+                  <h3 className="text-sm font-medium">Colunas</h3>
                   <Button type="button" onClick={openCreateColumnDialog} size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="w-4 h-4" />
                     Nova Coluna
                   </Button>
                 </div>
 
                 {existingProjectColumns.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                  <div className="text-center py-6 text-muted-foreground border border-dashed rounded-lg">
                     <Columns3 className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">Nenhuma coluna configurada</p>
                   </div>
@@ -1020,9 +1020,9 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
+              <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting || activePeople.length === 0} className="gradient-primary text-white">
+                <Button type="submit" disabled={isSubmitting || activePeople.length === 0}>
                   {isSubmitting ? 'Salvando...' : 'Atualizar'}
                 </Button>
               </div>
@@ -1097,9 +1097,9 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
 
               <MembersSection />
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
+              <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting || activePeople.length === 0} className="gradient-primary text-white">
+                <Button type="submit" disabled={isSubmitting || activePeople.length === 0}>
                   {isSubmitting ? 'Criando...' : 'Criar Projeto'}
                 </Button>
               </div>
@@ -1113,10 +1113,10 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-slate-500/20 to-gray-500/20 text-slate-600 dark:text-slate-400">
-                {editingColumn ? <Edit className="w-5 h-5" /> : <Columns3 className="w-5 h-5" />}
+              <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                {editingColumn ? <Edit className="w-4 h-4" /> : <Columns3 className="w-4 h-4" />}
               </div>
-              <DialogTitle className="text-lg">{editingColumn ? 'Editar Coluna' : 'Nova Coluna'}</DialogTitle>
+              <DialogTitle>{editingColumn ? 'Editar Coluna' : 'Nova Coluna'}</DialogTitle>
             </div>
           </DialogHeader>
 

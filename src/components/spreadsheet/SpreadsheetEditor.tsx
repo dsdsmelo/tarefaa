@@ -1032,7 +1032,7 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -1043,13 +1043,13 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
   return (
     <div className="space-y-2">
       {/* Toolbar */}
-      <div className="flex items-center gap-1 p-2 bg-muted/30 rounded-lg border flex-wrap">
+      <div className="flex items-center gap-1 p-2 bg-card rounded-xl border border-border flex-wrap">
         {/* Structural */}
         <Button variant="outline" size="sm" onClick={addRow} title="Adicionar linha">
-          <Plus className="h-4 w-4 mr-1" />Linha
+          <Plus className="h-4 w-4" />Linha
         </Button>
         <Button variant="outline" size="sm" onClick={addColumn} title="Adicionar coluna">
-          <Plus className="h-4 w-4 mr-1" />Coluna
+          <Plus className="h-4 w-4" />Coluna
         </Button>
 
         <div className="h-6 w-px bg-border mx-1" />
@@ -1133,7 +1133,7 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
               {BG_COLORS.map((c) => (
                 <button
                   key={c.color || 'none'}
-                  className={`w-10 h-8 rounded border hover:scale-110 transition-transform ${
+                  className={`w-10 h-8 rounded-md border hover:border-primary/60 transition-colors ${
                     currentStyle.bgColor === c.color ? 'ring-2 ring-primary ring-offset-1' : ''
                   }`}
                   style={{ backgroundColor: c.color || '#ffffff' }}
@@ -1162,7 +1162,7 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
               {TEXT_COLORS.map((c) => (
                 <button
                   key={c.color || 'default'}
-                  className={`w-10 h-8 rounded border hover:scale-110 transition-transform flex items-center justify-center ${
+                  className={`w-10 h-8 rounded-md border hover:border-primary/60 transition-colors flex items-center justify-center ${
                     currentStyle.textColor === c.color ? 'ring-2 ring-primary ring-offset-1' : ''
                   }`}
                   onClick={() => applyStyle({ textColor: c.color })}
@@ -1191,7 +1191,7 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" title="Largura das colunas">
-              <Columns className="h-4 w-4 mr-1" />
+              <Columns className="h-4 w-4" />
               <ChevronDown className="h-3 w-3" />
             </Button>
           </PopoverTrigger>
@@ -1219,7 +1219,7 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" title="Altura das linhas">
-              <Rows className="h-4 w-4 mr-1" />
+              <Rows className="h-4 w-4" />
               <ChevronDown className="h-3 w-3" />
             </Button>
           </PopoverTrigger>
@@ -1253,7 +1253,7 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
             onClick={handleUnmergeCells}
             title="Desfazer mesclagem"
           >
-            <Split className="h-4 w-4 mr-1" />Separar
+            <Split className="h-4 w-4" />Separar
           </Button>
         ) : (
           <Button
@@ -1263,7 +1263,7 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
             title="Mesclar células selecionadas"
             disabled={!getSelectionBounds() || (getSelectionBounds()?.startRow === getSelectionBounds()?.endRow && getSelectionBounds()?.startCol === getSelectionBounds()?.endCol)}
           >
-            <Merge className="h-4 w-4 mr-1" />Mesclar
+            <Merge className="h-4 w-4" />Mesclar
           </Button>
         )}
 
@@ -1274,7 +1274,7 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
           onClick={() => toggleHeaderRow(0)}
           title="Definir primeira linha como cabeçalho"
         >
-          <TableProperties className="h-4 w-4 mr-1" />Cabeçalho
+          <TableProperties className="h-4 w-4" />Cabeçalho
         </Button>
 
         <div className="h-6 w-px bg-border mx-1" />
@@ -1287,12 +1287,12 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
           title="Colar (Ctrl+V)"
           disabled={!selectedCell}
         >
-          <Clipboard className="h-4 w-4 mr-1" />Colar
+          <Clipboard className="h-4 w-4" />Colar
         </Button>
 
         {/* Export */}
         <Button variant="outline" size="sm" onClick={exportExcel}>
-          <Download className="h-4 w-4 mr-1" />Excel
+          <Download className="h-4 w-4" />Excel
         </Button>
 
         <div className="flex-1" />
@@ -1305,20 +1305,20 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
             </span>
           )}
           {saveStatus === 'saved' && (
-            <span className="text-xs text-emerald-600 flex items-center gap-1">
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <Cloud className="h-3 w-3" /> Salvo
             </span>
           )}
           {saveStatus === 'error' && (
             <Button variant="destructive" size="sm" onClick={() => doSave(columns, rows)}>
-              <RefreshCw className="h-4 w-4 mr-1" /> Tentar novamente
+              <RefreshCw className="h-4 w-4" /> Tentar novamente
             </Button>
           )}
         </div>
       </div>
 
       {/* Table Container */}
-      <div className="border rounded-lg overflow-auto bg-card" style={{ maxHeight: '60vh' }}>
+      <div className="border border-border rounded-xl overflow-auto bg-card" style={{ maxHeight: '60vh' }}>
         <table
           className="border-collapse"
           style={{ width: totalWidth, minWidth: '100%', tableLayout: 'fixed' }}
@@ -1590,7 +1590,7 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
 
       {/* Footer */}
       <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-        <span>{rows.length} linhas × {columns.length} colunas</span>
+        <span className="tabular-nums">{rows.length} linhas × {columns.length} colunas</span>
         <span>Arraste ou Shift+↑↓←→ para selecionar • Digite para editar • Enter/F2 para editar • Delete para limpar • Ctrl+C/V copiar/colar • Ctrl+A selecionar tudo</span>
       </div>
     </div>

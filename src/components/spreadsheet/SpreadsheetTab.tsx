@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { EmptyState } from '@/components/ui/empty-state';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -171,9 +172,9 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
   if (activeSpreadsheet) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={handleBackToList}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-4 h-4" />
             Voltar
           </Button>
           <div>
@@ -189,21 +190,21 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
-            <Table2 className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+            <Table2 className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold">Tabelas do Projeto</h3>
-            <p className="text-xs text-muted-foreground">
+            <h3 className="font-semibold">Tabelas do Projeto</h3>
+            <p className="text-xs text-muted-foreground tabular-nums">
               {spreadsheets.length} {spreadsheets.length === 1 ? 'tabela' : 'tabelas'}
             </p>
           </div>
         </div>
-        <div className="flex gap-3 w-full sm:w-auto">
+        <div className="flex gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -221,8 +222,8 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
               </button>
             )}
           </div>
-          <Button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button onClick={() => handleOpenModal()}>
+            <Plus className="w-4 h-4" />
             Nova Tabela
           </Button>
         </div>
@@ -230,49 +231,48 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
 
       {/* Spreadsheets Grid */}
       {spreadsheets.length === 0 ? (
-        <div className="text-center py-16 bg-muted/20 rounded-xl border-2 border-dashed border-border">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-600/10 flex items-center justify-center mx-auto mb-4">
-            <Table2 className="w-8 h-8 text-emerald-600 opacity-60" />
-          </div>
-          <p className="text-base font-medium mb-1">Nenhuma tabela ainda</p>
-          <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
-            Crie tabelas estilo Excel para organizar dados, fazer cálculos e muito mais
-          </p>
-          <Button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            Criar primeira tabela
-          </Button>
-        </div>
+        <EmptyState
+          className="rounded-xl border border-dashed border-border bg-card"
+          icon={Table2}
+          title="Nenhuma tabela ainda"
+          description="Crie tabelas estilo Excel para organizar dados, fazer cálculos e muito mais"
+          action={
+            <Button onClick={() => handleOpenModal()}>
+              <Plus className="w-4 h-4" />
+              Criar primeira tabela
+            </Button>
+          }
+        />
       ) : filteredSpreadsheets.length === 0 ? (
-        <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
-          <Search className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-50" />
-          <p className="text-muted-foreground font-medium">Nenhuma tabela encontrada</p>
-          <p className="text-sm text-muted-foreground mt-1">Tente ajustar o termo de busca</p>
-          <Button variant="outline" className="mt-4" onClick={() => setSearch('')}>
-            Limpar busca
-          </Button>
-        </div>
+        <EmptyState
+          className="rounded-xl border border-dashed border-border bg-card"
+          icon={Search}
+          title="Nenhuma tabela encontrada"
+          description="Tente ajustar o termo de busca"
+          action={
+            <Button variant="outline" size="sm" onClick={() => setSearch('')}>
+              Limpar busca
+            </Button>
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filteredSpreadsheets.map((spreadsheet) => (
             <div
               key={spreadsheet.id}
-              className="group bg-card rounded-xl border border-border overflow-hidden shadow-soft hover:shadow-md transition-all cursor-pointer"
+              className="group bg-card rounded-xl border border-border overflow-hidden hover:border-primary/40 transition-colors cursor-pointer"
               onClick={() => handleOpenSpreadsheet(spreadsheet)}
             >
-              {/* Header Strip */}
-              <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-600" />
-
               {/* Card Content */}
               <div className="p-4 space-y-3">
                 {/* Icon + Title */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-emerald-500/10">
-                      <Table2 className="w-4 h-4 text-emerald-600" />
+                    <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <Table2 className="w-4 h-4 text-primary" />
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-sm">{spreadsheet.name}</h4>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{spreadsheet.name}</h4>
                       <p className="text-xs text-muted-foreground">
                         Tabela
                       </p>
@@ -291,7 +291,7 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
                 <div className="flex items-center justify-between pt-2 border-t border-border/50">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <Calendar className="w-3 h-3" />
-                    <span className="text-[11px]">
+                    <span className="text-xs font-mono">
                       {format(new Date(spreadsheet.updatedAt), 'dd MMM yyyy', { locale: ptBR })}
                     </span>
                   </div>
@@ -334,7 +334,7 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Table2 className="h-5 w-5 text-emerald-600" />
+              <Table2 className="h-4 w-4 text-primary" />
               {editingSpreadsheet ? 'Editar Tabela' : 'Nova Tabela'}
             </DialogTitle>
           </DialogHeader>
@@ -368,8 +368,8 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
             <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={saving}>
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            <Button onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {editingSpreadsheet ? 'Salvar' : 'Criar Tabela'}
             </Button>
           </DialogFooter>

@@ -165,12 +165,12 @@ export function NoteFormModal({
           <DialogTitle className="flex items-center gap-2">
             {editingNote ? (
               <>
-                <Pencil className="h-5 w-5 text-muted-foreground" />
+                <Pencil className="h-4 w-4 text-muted-foreground" />
                 Editar Anotação
               </>
             ) : (
               <>
-                <NotebookPen className="h-5 w-5 text-muted-foreground" />
+                <NotebookPen className="h-4 w-4 text-muted-foreground" />
                 Nova Anotação
               </>
             )}
@@ -217,7 +217,6 @@ export function NoteFormModal({
           <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="gradient-primary text-white"
           >
             {isSaving ? 'Salvando...' : editingNote ? 'Salvar Anotação' : 'Criar Anotação'}
           </Button>

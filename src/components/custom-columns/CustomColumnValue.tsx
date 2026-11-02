@@ -138,7 +138,7 @@ export const CustomColumnDisplay = ({ column, value }: CustomColumnDisplayProps)
 
     case 'date':
       return (
-        <span className="text-sm">
+        <span className="text-sm tabular-nums">
           {new Date(value as string).toLocaleDateString('pt-BR')}
         </span>
       );

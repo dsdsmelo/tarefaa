@@ -141,8 +141,8 @@ export const PhaseFormModal = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <Layers className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Layers className="w-4 h-4" />
             </div>
             <div>
               <DialogTitle>
@@ -156,7 +156,7 @@ export const PhaseFormModal = ({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -266,17 +266,17 @@ export const PhaseFormModal = ({
                         type="button"
                         onClick={() => field.onChange(color)}
                         className={cn(
-                          "w-7 h-7 rounded-full transition-all border-2",
+                          "w-7 h-7 rounded-full transition-colors border-2",
                           field.value === color
-                            ? "scale-110 border-foreground shadow-md"
-                            : "border-transparent hover:scale-105"
+                            ? "border-foreground ring-2 ring-foreground/20 ring-offset-1 ring-offset-background"
+                            : "border-transparent hover:border-foreground/30"
                         )}
                         style={{ backgroundColor: color }}
                         title={colorOptions.find(c => c.value === color)?.label || color}
                       />
                     ))}
                     <label
-                      className="w-7 h-7 rounded-full border-2 border-dashed border-muted-foreground/50 flex items-center justify-center cursor-pointer hover:border-primary hover:scale-105 transition-all"
+                      className="w-7 h-7 rounded-full border-2 border-dashed border-muted-foreground/50 flex items-center justify-center cursor-pointer hover:border-primary transition-colors"
                       title="Adicionar cor personalizada"
                     >
                       <Plus className="w-3.5 h-3.5 text-muted-foreground" />
@@ -319,7 +319,7 @@ export const PhaseFormModal = ({
               )}
             />
 
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

@@ -58,14 +58,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/empty-state';
 
 // Note categories with colors and icons
 const NOTE_CATEGORIES = [
-  { id: 'meeting', label: 'Reunião', color: 'bg-blue-500', textColor: 'text-blue-600', bgLight: 'bg-blue-50 dark:bg-blue-500/10', borderColor: 'border-blue-200 dark:border-blue-500/30', icon: MessageSquare },
-  { id: 'decision', label: 'Decisão', color: 'bg-emerald-500', textColor: 'text-emerald-600', bgLight: 'bg-emerald-50 dark:bg-emerald-500/10', borderColor: 'border-emerald-200 dark:border-emerald-500/30', icon: FileText },
-  { id: 'idea', label: 'Ideia', color: 'bg-amber-500', textColor: 'text-amber-600', bgLight: 'bg-amber-50 dark:bg-amber-500/10', borderColor: 'border-amber-200 dark:border-amber-500/30', icon: Lightbulb },
-  { id: 'reminder', label: 'Lembrete', color: 'bg-purple-500', textColor: 'text-purple-600', bgLight: 'bg-purple-50 dark:bg-purple-500/10', borderColor: 'border-purple-200 dark:border-purple-500/30', icon: Bell },
-  { id: 'general', label: 'Geral', color: 'bg-slate-500', textColor: 'text-slate-600', bgLight: 'bg-slate-50 dark:bg-slate-500/10', borderColor: 'border-slate-200 dark:border-slate-500/30', icon: StickyNote },
+  { id: 'meeting', label: 'Reunião', color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400', bgLight: 'bg-blue-50 dark:bg-blue-500/10', borderColor: 'border-blue-200 dark:border-blue-500/30', icon: MessageSquare },
+  { id: 'decision', label: 'Decisão', color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400', bgLight: 'bg-emerald-50 dark:bg-emerald-500/10', borderColor: 'border-emerald-200 dark:border-emerald-500/30', icon: FileText },
+  { id: 'idea', label: 'Ideia', color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400', bgLight: 'bg-amber-50 dark:bg-amber-500/10', borderColor: 'border-amber-200 dark:border-amber-500/30', icon: Lightbulb },
+  { id: 'reminder', label: 'Lembrete', color: 'bg-purple-500', textColor: 'text-purple-600 dark:text-purple-400', bgLight: 'bg-purple-50 dark:bg-purple-500/10', borderColor: 'border-purple-200 dark:border-purple-500/30', icon: Bell },
+  { id: 'general', label: 'Geral', color: 'bg-slate-500', textColor: 'text-slate-600 dark:text-slate-400', bgLight: 'bg-slate-50 dark:bg-slate-500/10', borderColor: 'border-slate-200 dark:border-slate-500/30', icon: StickyNote },
 ] as const;
 
 type NoteCategory = typeof NOTE_CATEGORIES[number]['id'];
@@ -322,19 +323,19 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-[hsl(207,90%,45%)] to-[hsl(130,70%,40%)]">
-            <StickyNote className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+            <StickyNote className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold">Anotações do Projeto</h3>
-            <p className="text-xs text-muted-foreground">{projectNotes.length} {projectNotes.length === 1 ? 'anotação' : 'anotações'}</p>
+            <h3 className="font-semibold">Anotações do Projeto</h3>
+            <p className="text-xs text-muted-foreground tabular-nums">{projectNotes.length} {projectNotes.length === 1 ? 'anotação' : 'anotações'}</p>
           </div>
         </div>
-        <div className="flex gap-3 w-full sm:w-auto">
+        <div className="flex gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -352,22 +353,22 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
               </button>
             )}
           </div>
-          <Button onClick={() => handleOpenModal()} className="gradient-primary text-white">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button onClick={() => handleOpenModal()}>
+            <Plus className="w-4 h-4" />
             Nova Anotação
           </Button>
         </div>
       </div>
 
       {/* Category Filter Pills */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="inline-flex flex-wrap items-center gap-1 rounded-lg bg-muted p-1">
         <button
           onClick={() => setCategoryFilter('all')}
           className={cn(
-            "px-3 py-1.5 rounded-full text-xs font-medium transition-all border",
+            "h-7 px-3 rounded-md text-xs font-medium tabular-nums transition-colors",
             categoryFilter === 'all'
-              ? "bg-foreground text-background border-foreground"
-              : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
+              ? "bg-card text-foreground shadow-soft"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           Todas ({categoryCounts.all})
@@ -378,10 +379,10 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
               key={cat.id}
               onClick={() => setCategoryFilter(cat.id)}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium transition-all border flex items-center gap-1.5",
+                "h-7 px-3 rounded-md text-xs font-medium tabular-nums transition-colors flex items-center gap-1.5",
                 categoryFilter === cat.id
-                  ? cn(cat.bgLight, cat.textColor, cat.borderColor)
-                  : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
+                  ? "bg-card text-foreground shadow-soft"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <div className={cn("w-2 h-2 rounded-full", cat.color)} />
@@ -393,30 +394,32 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
 
       {/* Notes Grid */}
       {projectNotes.length === 0 ? (
-        <div className="text-center py-16 bg-muted/20 rounded-xl border-2 border-dashed border-border">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[hsl(207,90%,45%)]/10 to-[hsl(130,70%,40%)]/10 flex items-center justify-center mx-auto mb-4">
-            <StickyNote className="w-8 h-8 text-primary opacity-60" />
-          </div>
-          <p className="text-base font-medium mb-1">Nenhuma anotação ainda</p>
-          <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
-            Registre decisões, ideias, lembretes e tudo que é importante para o projeto
-          </p>
-          <Button onClick={() => handleOpenModal()} className="gradient-primary text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            Criar primeira anotação
-          </Button>
-        </div>
+        <EmptyState
+          className="rounded-xl border border-dashed border-border bg-card"
+          icon={StickyNote}
+          title="Nenhuma anotação ainda"
+          description="Registre decisões, ideias, lembretes e tudo que é importante para o projeto"
+          action={
+            <Button onClick={() => handleOpenModal()}>
+              <Plus className="w-4 h-4" />
+              Criar primeira anotação
+            </Button>
+          }
+        />
       ) : filteredNotes.length === 0 ? (
-        <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
-          <Search className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-50" />
-          <p className="text-muted-foreground font-medium">Nenhuma anotação encontrada</p>
-          <p className="text-sm text-muted-foreground mt-1">Tente ajustar o filtro ou termo de busca</p>
-          <Button variant="outline" className="mt-4" onClick={() => { setSearch(''); setCategoryFilter('all'); }}>
-            Limpar filtros
-          </Button>
-        </div>
+        <EmptyState
+          className="rounded-xl border border-dashed border-border bg-card"
+          icon={Search}
+          title="Nenhuma anotação encontrada"
+          description="Tente ajustar o filtro ou termo de busca"
+          action={
+            <Button variant="outline" size="sm" onClick={() => { setSearch(''); setCategoryFilter('all'); }}>
+              Limpar filtros
+            </Button>
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filteredNotes.map((note) => {
             const catInfo = getCategoryInfo(getNoteCategory(note));
             const CatIcon = catInfo.icon;
@@ -428,8 +431,8 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
               <div
                 key={note.id}
                 className={cn(
-                  "group bg-card rounded-xl border overflow-hidden shadow-soft hover:shadow-md transition-all relative",
-                  isPinned ? "ring-2 ring-primary/30" : "border-border"
+                  "group bg-card rounded-xl border overflow-hidden transition-colors relative",
+                  isPinned ? "border-primary ring-1 ring-primary/30" : "border-border hover:border-primary/40"
                 )}
               >
                 {/* Category Color Strip */}
@@ -440,7 +443,7 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
                   {/* Top row: category + date + pin */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold", catInfo.bgLight, catInfo.textColor)}>
+                      <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium", catInfo.bgLight, catInfo.textColor)}>
                         <CatIcon className="w-3 h-3" />
                         {catInfo.label}
                       </span>
@@ -473,7 +476,7 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
                   {actualParticipants.length > 0 && (
                     <div className="flex items-center gap-1.5">
                       <Users className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                      <span className="text-[11px] text-muted-foreground truncate">
+                      <span className="text-xs text-muted-foreground truncate">
                         {actualParticipants.join(', ')}
                       </span>
                     </div>
@@ -483,7 +486,7 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <div className="flex items-center gap-1.5 text-muted-foreground">
                       <Calendar className="w-3 h-3" />
-                      <span className="text-[11px]">
+                      <span className="text-xs font-mono">
                         {format(new Date(note.meetingDate), 'dd MMM yyyy', { locale: ptBR })}
                       </span>
                     </div>
@@ -535,16 +538,16 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-[hsl(207,90%,45%)]/20 to-[hsl(130,70%,40%)]/20 text-primary">
-                {editingNote ? <Pencil className="w-5 h-5" /> : <NotebookPen className="w-5 h-5" />}
+              <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-primary">
+                {editingNote ? <Pencil className="w-4 h-4" /> : <NotebookPen className="w-4 h-4" />}
               </div>
-              <DialogTitle className="text-lg">
+              <DialogTitle>
                 {editingNote ? 'Editar Anotação' : 'Nova Anotação'}
               </DialogTitle>
             </div>
           </DialogHeader>
 
-          <div className="space-y-5 py-4">
+          <div className="space-y-4 py-2">
             {/* Category Selector */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Categoria</label>
@@ -557,9 +560,9 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
                       type="button"
                       onClick={() => setCategory(cat.id)}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all",
+                        "flex items-center gap-2 h-8 px-3 rounded-md border text-sm font-medium transition-colors",
                         category === cat.id
-                          ? cn(cat.bgLight, cat.textColor, cat.borderColor, "shadow-sm")
+                          ? cn(cat.bgLight, cat.textColor, cat.borderColor)
                           : "border-border hover:bg-muted/50 text-muted-foreground"
                       )}
                     >
@@ -593,7 +596,7 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
                       !meetingDate && 'text-muted-foreground'
                     )}
                   >
-                    <Calendar className="mr-2 h-4 w-4" />
+                    <Calendar className="h-4 w-4" />
                     {meetingDate ? format(meetingDate, 'PPP', { locale: ptBR }) : <span>Selecione uma data</span>}
                   </Button>
                 </PopoverTrigger>
@@ -639,8 +642,8 @@ export const MeetingNotesTab = ({ projectId }: MeetingNotesTabProps) => {
             <Button variant="outline" onClick={handleCloseModal}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} className="gradient-primary text-white">
-              <Save className="w-4 h-4 mr-2" />
+            <Button onClick={handleSave}>
+              <Save className="w-4 h-4" />
               {editingNote ? 'Salvar' : 'Criar Anotação'}
             </Button>
           </DialogFooter>

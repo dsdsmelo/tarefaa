@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { Phase } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
@@ -174,7 +175,7 @@ export const PhaseManagerSheet = ({
         <SheetContent className="w-full sm:max-w-lg">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-primary" />
+              <Layers className="w-4 h-4 text-primary" />
               Gerenciar Fases/Sprints
             </SheetTitle>
             <SheetDescription>
@@ -182,15 +183,16 @@ export const PhaseManagerSheet = ({
             </SheetDescription>
           </SheetHeader>
 
-          <div className="mt-6 space-y-4">
+          <div className="mt-5 space-y-4">
             {/* Phase list */}
             <div className="space-y-2">
               {projectPhases.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Layers className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Nenhuma fase cadastrada</p>
-                  <p className="text-sm">Crie fases para organizar seu projeto</p>
-                </div>
+                <EmptyState
+                  icon={Layers}
+                  title="Nenhuma fase cadastrada"
+                  description="Crie fases para organizar seu projeto"
+                  className="py-8"
+                />
               ) : (
                 projectPhases.map((phase, index) => {
                   const isEditing = editingId === phase.id;
@@ -199,7 +201,7 @@ export const PhaseManagerSheet = ({
                   return (
                     <div
                       key={phase.id}
-                      className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border group"
+                      className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border border-border hover:bg-muted/40 transition-colors group"
                     >
                       {/* Drag handle / order buttons */}
                       <div className="flex flex-col gap-0.5">
@@ -231,8 +233,8 @@ export const PhaseManagerSheet = ({
                               <button
                                 key={color}
                                 type="button"
-                                className={`w-5 h-5 rounded-full transition-transform ${
-                                  editingColor === color ? 'ring-2 ring-primary ring-offset-2 scale-110' : ''
+                                className={`w-5 h-5 rounded-full ${
+                                  editingColor === color ? 'ring-2 ring-primary ring-offset-2' : ''
                                 }`}
                                 style={{ backgroundColor: color }}
                                 onClick={() => setEditingColor(color)}
@@ -252,7 +254,7 @@ export const PhaseManagerSheet = ({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-green-600"
+                            className="h-8 w-8 text-emerald-600 dark:text-emerald-400"
                             onClick={handleSaveEdit}
                           >
                             <Check className="w-4 h-4" />
@@ -272,9 +274,9 @@ export const PhaseManagerSheet = ({
                             className="w-4 h-4 rounded-full flex-shrink-0"
                             style={{ backgroundColor: phase.color || colorOptions[0] }}
                           />
-                          <span className="flex-1 font-medium">{phase.name}</span>
+                          <span className="flex-1 text-sm font-medium truncate">{phase.name}</span>
                           {milestoneCount > 0 && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground tabular-nums flex items-center gap-1">
                               <Flag className="w-3 h-3" />
                               {milestoneCount}
                             </span>
@@ -307,14 +309,14 @@ export const PhaseManagerSheet = ({
 
             {/* Add new phase */}
             {isAdding ? (
-              <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+              <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 rounded-lg border border-primary/20">
                 <div className="flex gap-1 flex-wrap">
                   {colorOptions.map((color) => (
                     <button
                       key={color}
                       type="button"
-                      className={`w-5 h-5 rounded-full transition-transform ${
-                        newPhaseColor === color ? 'ring-2 ring-primary ring-offset-2 scale-110' : ''
+                      className={`w-5 h-5 rounded-full ${
+                        newPhaseColor === color ? 'ring-2 ring-primary ring-offset-2' : ''
                       }`}
                       style={{ backgroundColor: color }}
                       onClick={() => setNewPhaseColor(color)}
@@ -338,7 +340,7 @@ export const PhaseManagerSheet = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-green-600"
+                  className="h-8 w-8 text-emerald-600 dark:text-emerald-400"
                   onClick={handleAddPhase}
                 >
                   <Check className="w-4 h-4" />
@@ -361,13 +363,13 @@ export const PhaseManagerSheet = ({
                 className="w-full"
                 onClick={() => setIsAdding(true)}
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-4 h-4" />
                 Nova Fase/Sprint
               </Button>
             )}
 
             {/* Info */}
-            <p className="text-xs text-muted-foreground text-center pt-4">
+            <p className="text-xs text-muted-foreground text-center pt-2">
               Fases com marcos vinculados não podem ser excluídas.
             </p>
           </div>

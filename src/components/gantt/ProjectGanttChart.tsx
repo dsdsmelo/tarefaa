@@ -10,6 +10,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Tooltip,
   TooltipContent,
@@ -288,20 +290,18 @@ export const ProjectGanttChart = ({
 
   if (tasks.length === 0 && projectPhases.length === 0 && projectMilestones.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-72 bg-muted/20 rounded-xl border-2 border-dashed border-border">
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-            <Calendar className="w-6 h-6 text-muted-foreground" />
-          </div>
-          <div>
-            <p className="text-sm font-medium">Nenhum item no cronograma</p>
-            <p className="text-sm text-muted-foreground">Adicione fases, marcos ou tarefas com datas</p>
-          </div>
-          <div className="flex gap-2 justify-center">
-            {onAddPhase && <Button variant="outline" size="sm" onClick={onAddPhase}><Layers className="w-4 h-4 mr-2" />Nova Fase</Button>}
-            {onAddMilestone && <Button variant="outline" size="sm" onClick={onAddMilestone}><Diamond className="w-4 h-4 mr-2" />Novo Marco</Button>}
-          </div>
-        </div>
+      <div className="rounded-xl border border-dashed border-border bg-card">
+        <EmptyState
+          icon={Calendar}
+          title="Nenhum item no cronograma"
+          description="Adicione fases, marcos ou tarefas com datas"
+          action={
+            <div className="flex gap-2 justify-center">
+              {onAddPhase && <Button variant="outline" size="sm" onClick={onAddPhase}><Layers className="w-4 h-4" />Nova Fase</Button>}
+              {onAddMilestone && <Button variant="outline" size="sm" onClick={onAddMilestone}><Diamond className="w-4 h-4" />Novo Marco</Button>}
+            </div>
+          }
+        />
       </div>
     );
   }
@@ -317,24 +317,24 @@ export const ProjectGanttChart = ({
     <TooltipProvider>
       <div className="space-y-4">
         {/* Toolbar */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            {onAddPhase && <Button variant="outline" onClick={onAddPhase} className="h-9"><Layers className="w-4 h-4 mr-2" />Nova Fase</Button>}
-            {onAddMilestone && <Button variant="outline" onClick={onAddMilestone} className="h-9"><Diamond className="w-4 h-4 mr-2" />Novo Marco</Button>}
+            {onAddPhase && <Button variant="outline" onClick={onAddPhase}><Layers className="w-4 h-4" />Nova Fase</Button>}
+            {onAddMilestone && <Button variant="outline" onClick={onAddMilestone}><Diamond className="w-4 h-4" />Novo Marco</Button>}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Go to Today Button */}
-            <Button variant="outline" size="sm" onClick={scrollToToday} className="h-8 px-3">
-              <LocateFixed className="w-4 h-4 mr-1.5" />
+            <Button variant="outline" size="sm" onClick={scrollToToday}>
+              <LocateFixed className="w-4 h-4" />
               Hoje
             </Button>
 
             {/* Legend Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground">
-                  <Info className="w-4 h-4 mr-1.5" />
+                <Button variant="ghost" size="sm" className="text-muted-foreground">
+                  <Info className="w-4 h-4" />
                   Legenda
                 </Button>
               </DropdownMenuTrigger>
@@ -354,16 +354,18 @@ export const ProjectGanttChart = ({
             </DropdownMenu>
 
             {/* Zoom Controls */}
-            <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-              <Button variant={zoom === 'day' ? 'default' : 'ghost'} size="sm" onClick={() => setZoom('day')} className="h-8 px-3 text-sm"><CalendarDays className="w-4 h-4 mr-1.5" />Dia</Button>
-              <Button variant={zoom === 'week' ? 'default' : 'ghost'} size="sm" onClick={() => setZoom('week')} className="h-8 px-3 text-sm"><Calendar className="w-4 h-4 mr-1.5" />Semana</Button>
-              <Button variant={zoom === 'month' ? 'default' : 'ghost'} size="sm" onClick={() => setZoom('month')} className="h-8 px-3 text-sm"><CalendarRange className="w-4 h-4 mr-1.5" />Mês</Button>
-            </div>
+            <Tabs value={zoom} onValueChange={(v) => setZoom(v as ZoomLevel)}>
+              <TabsList variant="segmented">
+                <TabsTrigger value="day"><CalendarDays className="w-4 h-4" />Dia</TabsTrigger>
+                <TabsTrigger value="week"><Calendar className="w-4 h-4" />Semana</TabsTrigger>
+                <TabsTrigger value="month"><CalendarRange className="w-4 h-4" />Mês</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 
         {/* Gantt Chart - Two Column Layout */}
-        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
           {/* Fixed Header Row */}
           <div className="flex w-full border-b border-border">
             {/* Label Column Header */}
@@ -392,7 +394,7 @@ export const ProjectGanttChart = ({
                   className="absolute top-0 bottom-0 w-0.5 bg-primary z-20 pointer-events-none"
                   style={{ left: getTodayPosition() }}
                 >
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-t shadow-md whitespace-nowrap">
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-primary text-primary-foreground text-[10px] font-semibold rounded-t whitespace-nowrap">
                     Hoje
                   </div>
                 </div>
@@ -408,7 +410,7 @@ export const ProjectGanttChart = ({
                         isToday && "bg-primary/10"
                       )}
                     >
-                      {col.subLabel && <span className="text-[10px] text-muted-foreground uppercase">{col.subLabel}</span>}
+                      {col.subLabel && <span className="text-[10px] text-muted-foreground">{col.subLabel}</span>}
                       <span className={cn("font-medium", zoom === 'day' ? "text-xs" : "text-sm", isToday && "text-primary font-semibold")}>{col.label}</span>
                     </div>
                   );
@@ -440,7 +442,7 @@ export const ProjectGanttChart = ({
                     </button>
                     <Layers className="w-3.5 h-3.5 text-amber-600 ml-2" />
                     <span className="text-xs font-medium text-amber-700 dark:text-amber-400 ml-2">Fases e Marcos</span>
-                    <span className="text-[10px] text-muted-foreground ml-1">({projectPhases.length + projectMilestones.length})</span>
+                    <span className="text-[10px] text-muted-foreground tabular-nums ml-1">({projectPhases.length + projectMilestones.length})</span>
                   </div>
 
                   {showPhasesSection && (
@@ -452,7 +454,7 @@ export const ProjectGanttChart = ({
                           <div key={phase.id}>
                             {/* Phase row */}
                             <div className={cn(phaseRowHeight, "flex items-center px-3 pl-10 hover:bg-muted/20 transition-colors")}>
-                              <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0 shadow-sm" style={{ backgroundColor: phaseColor }} />
+                              <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: phaseColor }} />
                               <span className="text-xs truncate flex-1 ml-2">{phase.name}</span>
                               {phase.linkedMilestones.length > 0 && (
                                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -520,18 +522,18 @@ export const ProjectGanttChart = ({
                       {person ? (
                         <AvatarCircle name={person.name} color={person.color} size="sm" avatarUrl={person.avatarUrl} />
                       ) : (
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-sm bg-muted-foreground ml-1">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold bg-muted-foreground ml-1">
                           {group.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
                         </div>
                       )}
                       <div className="min-w-0 flex-1 ml-2">
                         <div className="flex items-center gap-2">
                           <p className="text-xs font-semibold truncate">{group.name}</p>
-                          <span className="text-[10px] text-muted-foreground">({group.tasks.length})</span>
+                          <span className="text-[10px] text-muted-foreground tabular-nums">({group.tasks.length})</span>
                           <div className="flex-1 h-1 bg-muted rounded-full max-w-[40px] overflow-hidden">
                             <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
                           </div>
-                          <span className="text-[10px] font-medium text-emerald-600">{progress}%</span>
+                          <span className="text-[10px] font-mono font-medium tabular-nums text-emerald-600 dark:text-emerald-400">{progress}%</span>
                         </div>
                       </div>
                     </div>
@@ -601,7 +603,7 @@ export const ProjectGanttChart = ({
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <div
-                                        className="absolute top-1 h-4 rounded shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                                        className="absolute top-1 h-4 rounded cursor-pointer hover:opacity-90 transition-opacity"
                                         style={{ left: position.left, width: position.width, minWidth: '24px', backgroundColor: phaseColor }}
                                       >
                                         <div className="h-full flex items-center px-1.5 text-[10px] text-white font-medium truncate">
@@ -626,8 +628,8 @@ export const ProjectGanttChart = ({
                                           </div>
                                         )}
                                         <div className="flex gap-1 pt-2 border-t">
-                                          {onEditPhase && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => onEditPhase(phase)}><Pencil className="w-3 h-3 mr-1" />Editar</Button>}
-                                          {onDeletePhase && <Button variant="outline" size="sm" className="h-7 text-xs text-destructive" onClick={() => { if(confirm('Excluir fase?')) onDeletePhase(phase.id); }}><Trash2 className="w-3 h-3 mr-1" />Excluir</Button>}
+                                          {onEditPhase && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => onEditPhase(phase)}><Pencil className="w-3 h-3" />Editar</Button>}
+                                          {onDeletePhase && <Button variant="outline" size="sm" className="h-7 text-xs text-destructive" onClick={() => { if(confirm('Excluir fase?')) onDeletePhase(phase.id); }}><Trash2 className="w-3 h-3" />Excluir</Button>}
                                         </div>
                                       </div>
                                     </PopoverContent>
@@ -650,18 +652,18 @@ export const ProjectGanttChart = ({
                                     <Popover>
                                       <PopoverTrigger asChild>
                                         <div
-                                          className="absolute top-1/2 cursor-pointer hover:scale-110 transition-transform z-10 group"
+                                          className="absolute top-1/2 cursor-pointer hover:opacity-80 transition-opacity z-10 group"
                                           style={{ left: milestonePos, transform: 'translate(-50%, -50%)' }}
                                         >
                                           <div className="relative flex items-center justify-center w-5 h-5">
                                             <div
-                                              className="w-3.5 h-3.5 rotate-45 rounded-sm shadow-md border border-white/50"
+                                              className="w-3.5 h-3.5 rotate-45 rounded-sm border border-white/50"
                                               style={{ backgroundColor: milestoneColor }}
                                             />
                                             {m.completed && <CheckCircle2 className="w-2.5 h-2.5 absolute -top-1 -right-1 text-emerald-500 bg-white rounded-full" />}
                                           </div>
                                           <div className="absolute left-full top-1/2 -translate-y-1/2 ml-1 hidden group-hover:block pointer-events-none">
-                                            <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap bg-background/95 px-1.5 py-0.5 rounded shadow-sm border">
+                                            <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap bg-background/95 px-1.5 py-0.5 rounded border">
                                               {m.name}
                                             </span>
                                           </div>
@@ -684,8 +686,8 @@ export const ProjectGanttChart = ({
                                             <label htmlFor={`m-${m.id}`} className="text-sm cursor-pointer">Marcar como concluído</label>
                                           </div>
                                           <div className="flex gap-1 pt-2">
-                                            {onEditMilestone && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => onEditMilestone(m)}><Pencil className="w-3 h-3 mr-1" />Editar</Button>}
-                                            {onDeleteMilestone && <Button variant="outline" size="sm" className="h-7 text-xs text-destructive" onClick={() => { if(confirm('Excluir marco?')) onDeleteMilestone(m.id); }}><Trash2 className="w-3 h-3 mr-1" />Excluir</Button>}
+                                            {onEditMilestone && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => onEditMilestone(m)}><Pencil className="w-3 h-3" />Editar</Button>}
+                                            {onDeleteMilestone && <Button variant="outline" size="sm" className="h-7 text-xs text-destructive" onClick={() => { if(confirm('Excluir marco?')) onDeleteMilestone(m.id); }}><Trash2 className="w-3 h-3" />Excluir</Button>}
                                           </div>
                                         </div>
                                       </PopoverContent>
@@ -713,18 +715,18 @@ export const ProjectGanttChart = ({
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <div
-                                    className="absolute top-1/2 cursor-pointer hover:scale-110 transition-transform z-10 group"
+                                    className="absolute top-1/2 cursor-pointer hover:opacity-80 transition-opacity z-10 group"
                                     style={{ left: milestonePos, transform: 'translate(-50%, -50%)' }}
                                   >
                                     <div className="relative flex items-center justify-center w-5 h-5">
                                       <div
-                                        className="w-3.5 h-3.5 rotate-45 rounded-sm shadow-md border border-white/50"
+                                        className="w-3.5 h-3.5 rotate-45 rounded-sm border border-white/50"
                                         style={{ backgroundColor: milestoneColor }}
                                       />
                                       {m.completed && <CheckCircle2 className="w-2.5 h-2.5 absolute -top-1 -right-1 text-emerald-500 bg-white rounded-full" />}
                                     </div>
                                     <div className="absolute left-full top-1/2 -translate-y-1/2 ml-1 hidden group-hover:block pointer-events-none">
-                                      <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap bg-background/95 px-1.5 py-0.5 rounded shadow-sm border">
+                                      <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap bg-background/95 px-1.5 py-0.5 rounded border">
                                         {m.name}
                                       </span>
                                     </div>
@@ -743,8 +745,8 @@ export const ProjectGanttChart = ({
                                       <label htmlFor={`m-${m.id}`} className="text-sm cursor-pointer">Marcar como concluído</label>
                                     </div>
                                     <div className="flex gap-1 pt-2">
-                                      {onEditMilestone && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => onEditMilestone(m)}><Pencil className="w-3 h-3 mr-1" />Editar</Button>}
-                                      {onDeleteMilestone && <Button variant="outline" size="sm" className="h-7 text-xs text-destructive" onClick={() => { if(confirm('Excluir marco?')) onDeleteMilestone(m.id); }}><Trash2 className="w-3 h-3 mr-1" />Excluir</Button>}
+                                      {onEditMilestone && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => onEditMilestone(m)}><Pencil className="w-3 h-3" />Editar</Button>}
+                                      {onDeleteMilestone && <Button variant="outline" size="sm" className="h-7 text-xs text-destructive" onClick={() => { if(confirm('Excluir marco?')) onDeleteMilestone(m.id); }}><Trash2 className="w-3 h-3" />Excluir</Button>}
                                     </div>
                                   </div>
                                 </PopoverContent>
@@ -790,7 +792,7 @@ export const ProjectGanttChart = ({
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div
-                                    className={cn("absolute top-[5px] h-[14px] rounded shadow-sm hover:shadow-md transition-all overflow-hidden", styles.bg)}
+                                    className={cn("absolute top-[5px] h-[14px] rounded hover:opacity-90 transition-opacity overflow-hidden", styles.bg)}
                                     style={{ left: position.left, width: position.width, minWidth: '12px' }}
                                   >
                                     {taskProgress > 0 && taskProgress < 100 && (

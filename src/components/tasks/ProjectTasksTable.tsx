@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { InlineEditCell } from '@/components/custom-columns/InlineEditCell';
 import { TaskProgressEditCell } from '@/components/custom-columns/TaskProgressEditCell';
 import {
@@ -534,6 +535,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
             <TextEditCell
               value={task.name}
               isOverdue={overdue}
+              className="text-sm font-medium"
               onSave={(value) => handleTaskFieldUpdate(task.id, { name: value })}
             />
           );
@@ -608,10 +610,10 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Toolbar */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-        <div className="flex gap-3 flex-1 w-full lg:w-auto flex-wrap">
+      <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
+        <div className="flex gap-2 flex-1 w-full lg:w-auto flex-wrap items-center">
           <div className="relative flex-1 max-w-sm min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -623,7 +625,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
             {search && (
               <button
                 onClick={() => handleSearchChange('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -634,7 +636,6 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
           <Button
             variant={showCompleted ? "outline" : "secondary"}
             onClick={handleShowCompletedToggle}
-            className="gap-2"
             title={showCompleted ? "Ocultar tarefas concluídas" : "Mostrar tarefas concluídas"}
           >
             {showCompleted ? (
@@ -644,7 +645,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
             )}
             <span className="hidden sm:inline">Concluídas</span>
             {completedTasksCount > 0 && (
-              <Badge variant={showCompleted ? "secondary" : "default"} className="ml-1 h-5 min-w-5 p-0 flex items-center justify-center text-xs">
+              <Badge variant={showCompleted ? "secondary" : "default"} className="h-5 min-w-5 justify-center px-1.5 tabular-nums">
                 {completedTasksCount}
               </Badge>
             )}
@@ -652,19 +653,19 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
 
           {/* Clear Filters Button */}
           {activeFiltersCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
-              <X className="w-4 h-4 mr-1" />
+            <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground">
+              <X className="w-4 h-4" />
               Limpar filtros ({activeFiltersCount})
             </Button>
           )}
         </div>
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           <ColumnManagerSheet
             projectId={projectId}
             trigger={
               <Button variant="outline">
-                <Columns3 className="w-4 h-4 mr-2" />
+                <Columns3 className="w-4 h-4" />
                 Colunas
               </Button>
             }
@@ -720,7 +721,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
       </div>
 
       {/* Barra de filtros ativos */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 empty:hidden">
         {/* Filtros padrão ativos */}
         <StandardFiltersBar
           filters={standardFilters}
@@ -745,7 +746,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
       </div>
 
       {/* Tasks Table */}
-      <div className="bg-card rounded-lg border border-border shadow-soft overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table style={{
             tableLayout: 'fixed',
@@ -759,9 +760,9 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
               ))}
               <col style={{ width: '48px' }} />
             </colgroup>
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left py-1.5 px-2 bg-muted border-r border-border/60" style={{ width: '40px' }}>
+            <thead className="bg-muted/40">
+              <tr className="border-b border-border">
+                <th className="h-9 px-3 text-left align-middle" style={{ width: '40px' }}>
                   <Checkbox
                     checked={selectedTasks.length === paginatedTasks.length && paginatedTasks.length > 0}
                     onCheckedChange={toggleAllTasks}
@@ -778,7 +779,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
                     key={col.id}
                     style={{ width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px`, position: 'relative' }}
                     className={cn(
-                      "text-left py-1.5 px-2 text-xs font-medium text-muted-foreground whitespace-nowrap border-r border-border/60 overflow-hidden text-ellipsis",
+                      "h-9 px-3 text-left align-middle text-xs font-medium text-muted-foreground whitespace-nowrap border-r border-border/50 overflow-hidden text-ellipsis",
                       draggedColumnId === col.id && "opacity-50",
                       dragOverColumnId === col.id && "bg-primary/10 border-l-2 border-primary"
                     )}
@@ -806,7 +807,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
                               cancelEditingColumn();
                             }
                           }}
-                          className="bg-background border border-primary rounded px-1.5 py-0.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 min-w-[70px]"
+                          className="bg-card border border-primary rounded-md px-1.5 py-0.5 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring min-w-[70px]"
                           autoFocus
                         />
                       ) : (
@@ -868,7 +869,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
                   </th>
                   );
                 })}
-                <th className="text-right py-1.5 px-2 text-xs font-medium text-muted-foreground w-8"></th>
+                <th className="h-9 px-2 text-right align-middle text-xs font-medium text-muted-foreground w-8"></th>
               </tr>
             </thead>
             <tbody>
@@ -879,12 +880,12 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
                   <tr
                     key={task.id}
                     className={cn(
-                      "group/row border-t border-border hover:bg-muted/30 transition-colors",
+                      "group/row border-t border-border/70 first:border-t-0 hover:bg-muted/40 transition-colors",
                       overdue && "bg-status-blocked/5",
                       selectedTasks.includes(task.id) && "bg-primary/5"
                     )}
                   >
-                    <td className="py-1 px-2 bg-card border-r border-border/60">
+                    <td className="py-1.5 px-3 align-middle">
                       <Checkbox
                         checked={selectedTasks.includes(task.id)}
                         onCheckedChange={() => toggleTaskSelection(task.id)}
@@ -901,7 +902,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
                         key={col.id}
                         style={{ width: `${columnWidths[col.id] ?? getDefaultWidth(col)}px` }}
                         className={cn(
-                          "py-1 px-2 text-xs border-r border-border/60 overflow-hidden text-ellipsis",
+                          "py-1.5 px-3 align-middle text-xs border-r border-border/40 overflow-hidden text-ellipsis",
                           !shouldWrap && "whitespace-nowrap",
                           isNameCol && "font-medium"
                         )}
@@ -910,11 +911,11 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
                       </td>
                       );
                     })}
-                    <td className="py-1 px-2 text-right">
+                    <td className="py-1.5 px-2 text-right align-middle">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                            <MoreVertical className="w-3.5 h-3.5" />
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                            <MoreVertical className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -942,18 +943,16 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
         </div>
 
         {filteredTasks.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <Search className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Nenhuma tarefa encontrada</h3>
-            <p className="text-muted-foreground mb-4">Tente ajustar os filtros ou criar uma nova tarefa.</p>
-            {activeFiltersCount > 0 && (
-              <Button variant="outline" onClick={clearFilters}>
+          <EmptyState
+            icon={Search}
+            title="Nenhuma tarefa encontrada"
+            description="Tente ajustar os filtros ou criar uma nova tarefa."
+            action={activeFiltersCount > 0 && (
+              <Button variant="outline" size="sm" onClick={clearFilters}>
                 Limpar Filtros
               </Button>
             )}
-          </div>
+          />
         )}
 
         {/* Pagination */}
@@ -1031,7 +1030,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
               Selecione os responsáveis que serão atribuídos às {selectedTasks.length} {selectedTasks.length === 1 ? 'tarefa selecionada' : 'tarefas selecionadas'}. Isto irá substituir os responsáveis atuais. Se nenhum for marcado, os responsáveis serão removidos.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="max-h-64 overflow-y-auto space-y-1 border rounded-md p-2">
+          <div className="max-h-64 overflow-y-auto space-y-0.5 border border-border rounded-lg p-1">
             {(() => {
               const activePeople = people.filter((p) => {
                 if (!p.active) return false;
@@ -1046,7 +1045,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
               return activePeople.map((person) => (
                 <label
                   key={person.id}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/60 cursor-pointer transition-colors"
                 >
                   <Checkbox
                     checked={bulkResponsibleIds.includes(person.id)}

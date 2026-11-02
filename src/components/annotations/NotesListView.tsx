@@ -37,6 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { EmptyState } from '@/components/ui/empty-state';
 import { NoteFormModal } from './NoteFormModal';
 import { sanitizeHtml, escapeHtml } from '@/lib/sanitize';
 
@@ -195,19 +196,19 @@ export function NotesListView({ projectId }: NotesListViewProps) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-[hsl(207,90%,45%)] to-[hsl(130,70%,40%)]">
-            <StickyNote className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+            <StickyNote className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold">Anotações do Projeto</h3>
-            <p className="text-xs text-muted-foreground">{projectNotes.length} {projectNotes.length === 1 ? 'anotação' : 'anotações'}</p>
+            <h3 className="font-semibold">Anotações do Projeto</h3>
+            <p className="text-xs text-muted-foreground tabular-nums">{projectNotes.length} {projectNotes.length === 1 ? 'anotação' : 'anotações'}</p>
           </div>
         </div>
-        <div className="flex gap-3 w-full sm:w-auto">
+        <div className="flex gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -225,8 +226,8 @@ export function NotesListView({ projectId }: NotesListViewProps) {
               </button>
             )}
           </div>
-          <Button onClick={() => handleOpenModal()} className="gradient-primary text-white">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button onClick={() => handleOpenModal()}>
+            <Plus className="w-4 h-4" />
             Nova Anotação
           </Button>
         </div>
@@ -234,30 +235,32 @@ export function NotesListView({ projectId }: NotesListViewProps) {
 
       {/* Notes List */}
       {projectNotes.length === 0 ? (
-        <div className="text-center py-16 bg-muted/20 rounded-xl border-2 border-dashed border-border">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[hsl(207,90%,45%)]/10 to-[hsl(130,70%,40%)]/10 flex items-center justify-center mx-auto mb-4">
-            <StickyNote className="w-8 h-8 text-primary opacity-60" />
-          </div>
-          <p className="text-base font-medium mb-1">Nenhuma anotação ainda</p>
-          <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
-            Registre decisões, ideias, lembretes e tudo que é importante para o projeto
-          </p>
-          <Button onClick={() => handleOpenModal()} className="gradient-primary text-white">
-            <Plus className="w-4 h-4 mr-2" />
-            Criar primeira anotação
-          </Button>
-        </div>
+        <EmptyState
+          className="rounded-xl border border-dashed border-border bg-card"
+          icon={StickyNote}
+          title="Nenhuma anotação ainda"
+          description="Registre decisões, ideias, lembretes e tudo que é importante para o projeto"
+          action={
+            <Button onClick={() => handleOpenModal()}>
+              <Plus className="w-4 h-4" />
+              Criar primeira anotação
+            </Button>
+          }
+        />
       ) : filteredNotes.length === 0 ? (
-        <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
-          <Search className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-50" />
-          <p className="text-muted-foreground font-medium">Nenhuma anotação encontrada</p>
-          <p className="text-sm text-muted-foreground mt-1">Tente ajustar o termo de busca</p>
-          <Button variant="outline" className="mt-4" onClick={() => setSearch('')}>
-            Limpar busca
-          </Button>
-        </div>
+        <EmptyState
+          className="rounded-xl border border-dashed border-border bg-card"
+          icon={Search}
+          title="Nenhuma anotação encontrada"
+          description="Tente ajustar o termo de busca"
+          action={
+            <Button variant="outline" size="sm" onClick={() => setSearch('')}>
+              Limpar busca
+            </Button>
+          }
+        />
       ) : (
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden divide-y divide-border">
           {filteredNotes.map((note) => {
             const preview = getPreview(note);
             const displayPreview = preview.length > 120 ? preview.slice(0, 120) + '...' : preview;
@@ -266,7 +269,7 @@ export function NotesListView({ projectId }: NotesListViewProps) {
             return (
               <div
                 key={note.id}
-                className="group flex items-start gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                className="group flex items-start gap-3 px-5 py-2.5 hover:bg-muted/40 transition-colors cursor-pointer"
                 onClick={() => handleOpenModal(note)}
               >
                 {/* Icon */}
@@ -275,7 +278,7 @@ export function NotesListView({ projectId }: NotesListViewProps) {
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-medium text-sm text-foreground truncate">{note.title}</span>
+                    <span className="font-medium text-sm text-foreground truncate group-hover:text-primary transition-colors">{note.title}</span>
 
                     {/* Links à direita do título — clique direto sem abrir a anotação */}
                     {links.length > 0 && (
@@ -326,7 +329,7 @@ export function NotesListView({ projectId }: NotesListViewProps) {
                 </div>
 
                 {/* Date */}
-                <div className="text-xs text-muted-foreground flex-shrink-0 mt-0.5">
+                <div className="text-xs font-mono text-muted-foreground flex-shrink-0 mt-0.5">
                   {format(new Date(note.meetingDate), 'dd MMM yyyy', { locale: ptBR })}
                 </div>
 

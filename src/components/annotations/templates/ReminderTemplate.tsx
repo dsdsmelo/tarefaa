@@ -27,16 +27,16 @@ interface ReminderTemplateProps {
 }
 
 const priorityOptions = [
-  { value: 'low', label: 'Baixa', color: 'text-green-600', bg: 'bg-green-100' },
-  { value: 'medium', label: 'Média', color: 'text-yellow-600', bg: 'bg-yellow-100' },
-  { value: 'high', label: 'Alta', color: 'text-orange-600', bg: 'bg-orange-100' },
-  { value: 'urgent', label: 'Urgente', color: 'text-red-600', bg: 'bg-red-100' },
+  { value: 'low', label: 'Baixa', color: 'text-priority-low', bg: 'bg-priority-low/10' },
+  { value: 'medium', label: 'Média', color: 'text-priority-medium', bg: 'bg-priority-medium/10' },
+  { value: 'high', label: 'Alta', color: 'text-priority-high', bg: 'bg-priority-high/10' },
+  { value: 'urgent', label: 'Urgente', color: 'text-priority-urgent', bg: 'bg-priority-urgent/10' },
 ] as const;
 
 const statusOptions = [
-  { value: 'pending', label: 'Pendente', color: 'text-yellow-600', bg: 'bg-yellow-100' },
-  { value: 'in_progress', label: 'Em Progresso', color: 'text-blue-600', bg: 'bg-blue-100' },
-  { value: 'completed', label: 'Concluído', color: 'text-green-600', bg: 'bg-green-100' },
+  { value: 'pending', label: 'Pendente', color: 'text-status-pending', bg: 'bg-status-pending/10' },
+  { value: 'in_progress', label: 'Em Progresso', color: 'text-status-progress', bg: 'bg-status-progress/10' },
+  { value: 'completed', label: 'Concluído', color: 'text-status-completed', bg: 'bg-status-completed/10' },
 ] as const;
 
 export function ReminderTemplate({ data, onChange }: ReminderTemplateProps) {
@@ -50,7 +50,7 @@ export function ReminderTemplate({ data, onChange }: ReminderTemplateProps) {
       {/* Descrição */}
       <div className="space-y-2">
         <Label className="text-sm font-medium flex items-center gap-2">
-          <Bell className="h-4 w-4 text-purple-500" />
+          <Bell className="h-4 w-4 text-muted-foreground" />
           Descrição do Lembrete
         </Label>
         <RichTextEditor
@@ -78,7 +78,7 @@ export function ReminderTemplate({ data, onChange }: ReminderTemplateProps) {
                   !data.deadline && 'text-muted-foreground'
                 )}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
+                <CalendarIcon className="h-4 w-4" />
                 {data.deadline
                   ? format(new Date(data.deadline), 'dd/MM/yyyy', { locale: ptBR })
                   : 'Selecionar...'}

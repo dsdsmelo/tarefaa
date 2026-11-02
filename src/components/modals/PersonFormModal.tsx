@@ -234,11 +234,11 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 text-pink-600 dark:text-pink-400">
-              {person ? <Pencil className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+            <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              {person ? <Pencil className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
             </div>
             <div>
-              <DialogTitle className="text-lg">{person ? 'Editar Pessoa' : 'Nova Pessoa'}</DialogTitle>
+              <DialogTitle>{person ? 'Editar Pessoa' : 'Nova Pessoa'}</DialogTitle>
               <DialogDescription>
                 {person ? 'Atualize as informações da pessoa' : 'Preencha os dados para adicionar uma nova pessoa'}
               </DialogDescription>
@@ -263,16 +263,16 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
                 className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
               >
                 {isUploadingAvatar ? (
-                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  <Loader2 className="w-5 h-5 text-white animate-spin" />
                 ) : (
-                  <Camera className="w-6 h-6 text-white" />
+                  <Camera className="w-5 h-5 text-white" />
                 )}
               </button>
               {avatarUrl && !isUploadingAvatar && (
                 <button
                   type="button"
                   onClick={handleRemoveAvatar}
-                  className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-white hover:bg-destructive/80 transition-colors"
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center text-destructive-foreground hover:bg-destructive/80 transition-colors"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -358,10 +358,10 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
                   key={color.value}
                   type="button"
                   onClick={() => form.setValue('color', color.value)}
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${
+                  className={`w-7 h-7 rounded-full border-2 transition-colors ${
                     form.watch('color') === color.value
-                      ? 'border-foreground scale-110'
-                      : 'border-transparent'
+                      ? 'border-foreground ring-2 ring-foreground/20 ring-offset-1 ring-offset-background'
+                      : 'border-transparent hover:border-foreground/30'
                   }`}
                   style={{ backgroundColor: color.value }}
                   title={color.label}
@@ -370,11 +370,11 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || isUploadingAvatar} className="gradient-primary text-white">
+            <Button type="submit" disabled={isSubmitting || isUploadingAvatar}>
               {isSubmitting ? 'Salvando...' : person ? 'Atualizar' : 'Criar Pessoa'}
             </Button>
           </div>

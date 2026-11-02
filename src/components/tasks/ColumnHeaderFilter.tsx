@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AvatarCircle } from '@/components/ui/avatar-circle';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge, PriorityBadge } from '@/components/ui/status-badge';
 import { useData } from '@/contexts/DataContext';
-import { CustomColumn, Person } from '@/lib/types';
+import { CustomColumn, Person, TaskStatus, TaskPriority } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
   Popover,
@@ -44,7 +45,7 @@ export const ColumnHeaderFilter = ({ column, filter, onChange }: ColumnHeaderFil
       <PopoverTrigger asChild>
         <button
           className={cn(
-            "p-0.5 rounded hover:bg-muted/80 transition-colors",
+            "p-0.5 rounded-sm hover:bg-muted transition-colors",
             hasActiveFilter ? "text-primary" : "text-muted-foreground/50 hover:text-muted-foreground"
           )}
           onClick={(e) => e.stopPropagation()}
@@ -52,13 +53,13 @@ export const ColumnHeaderFilter = ({ column, filter, onChange }: ColumnHeaderFil
           <Filter className={cn("w-3 h-3", hasActiveFilter && "fill-primary/20")} />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-3" align="start" onClick={(e) => e.stopPropagation()}>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Filtrar: {column.name}</span>
+      <PopoverContent className="w-64 p-2" align="start" onClick={(e) => e.stopPropagation()}>
+        <div className="space-y-2">
+          <div className="flex h-7 items-center justify-between gap-2 px-1">
+            <span className="text-sm font-medium truncate">Filtrar: {column.name}</span>
             {hasActiveFilter && (
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearFilter}>
-                <X className="w-3 h-3 mr-1" />
+              <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-muted-foreground" onClick={clearFilter}>
+                <X className="w-3.5 h-3.5" />
                 Limpar
               </Button>
             )}
@@ -108,7 +109,7 @@ const FilterContent = ({ column, filter, onChange, people }: FilterContentProps)
             column.options?.map(option => (
               <label
                 key={option}
-                className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5"
+                className="flex items-center gap-2 cursor-pointer hover:bg-muted/60 rounded-md px-2 py-1.5 transition-colors"
               >
                 <Checkbox
                   checked={(filter.selected || []).includes(option)}
@@ -136,7 +137,7 @@ const FilterContent = ({ column, filter, onChange, people }: FilterContentProps)
             people.map(person => (
               <label
                 key={person.id}
-                className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5"
+                className="flex items-center gap-2 cursor-pointer hover:bg-muted/60 rounded-md px-2 py-1.5 transition-colors"
               >
                 <Checkbox
                   checked={(filter.selected || []).includes(person.id)}
@@ -240,18 +241,18 @@ interface StandardColumnFilterProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pendente', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  { value: 'in_progress', label: 'Em Progresso', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  { value: 'blocked', label: 'Bloqueado', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-  { value: 'completed', label: 'Concluído', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  { value: 'cancelled', label: 'Cancelado', color: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400' },
+  { value: 'pending', label: 'Pendente' },
+  { value: 'in_progress', label: 'Em Progresso' },
+  { value: 'blocked', label: 'Bloqueado' },
+  { value: 'completed', label: 'Concluído' },
+  { value: 'cancelled', label: 'Cancelado' },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Baixa', color: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400' },
-  { value: 'medium', label: 'Média', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  { value: 'high', label: 'Alta', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
-  { value: 'urgent', label: 'Urgente', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  { value: 'low', label: 'Baixa' },
+  { value: 'medium', label: 'Média' },
+  { value: 'high', label: 'Alta' },
+  { value: 'urgent', label: 'Urgente' },
 ];
 
 export const StandardColumnFilter = ({ type, selected, onChange, people = [] }: StandardColumnFilterProps) => {
@@ -285,7 +286,7 @@ export const StandardColumnFilter = ({ type, selected, onChange, people = [] }: 
       <PopoverTrigger asChild>
         <button
           className={cn(
-            "p-0.5 rounded hover:bg-muted/80 transition-colors",
+            "p-0.5 rounded-sm hover:bg-muted transition-colors",
             hasActiveFilter ? "text-primary" : "text-muted-foreground/50 hover:text-muted-foreground"
           )}
           onClick={(e) => e.stopPropagation()}
@@ -293,13 +294,13 @@ export const StandardColumnFilter = ({ type, selected, onChange, people = [] }: 
           <Filter className={cn("w-3 h-3", hasActiveFilter && "fill-primary/20")} />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-56 p-3" align="start" onClick={(e) => e.stopPropagation()}>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Filtrar: {getTitle()}</span>
+      <PopoverContent className="w-56 p-2" align="start" onClick={(e) => e.stopPropagation()}>
+        <div className="space-y-2">
+          <div className="flex h-7 items-center justify-between gap-2 px-1">
+            <span className="text-sm font-medium truncate">Filtrar: {getTitle()}</span>
             {hasActiveFilter && (
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearFilter}>
-                <X className="w-3 h-3 mr-1" />
+              <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-muted-foreground" onClick={clearFilter}>
+                <X className="w-3.5 h-3.5" />
                 Limpar
               </Button>
             )}
@@ -309,30 +310,26 @@ export const StandardColumnFilter = ({ type, selected, onChange, people = [] }: 
             {type === 'status' && STATUS_OPTIONS.map(option => (
               <label
                 key={option.value}
-                className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5"
+                className="flex items-center gap-2 cursor-pointer hover:bg-muted/60 rounded-md px-2 py-1.5 transition-colors"
               >
                 <Checkbox
                   checked={selected.includes(option.value)}
                   onCheckedChange={() => toggleOption(option.value)}
                 />
-                <span className={cn("text-xs px-2 py-0.5 rounded-full", option.color)}>
-                  {option.label}
-                </span>
+                <StatusBadge status={option.value as TaskStatus} />
               </label>
             ))}
 
             {type === 'priority' && PRIORITY_OPTIONS.map(option => (
               <label
                 key={option.value}
-                className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5"
+                className="flex items-center gap-2 cursor-pointer hover:bg-muted/60 rounded-md px-2 py-1.5 transition-colors"
               >
                 <Checkbox
                   checked={selected.includes(option.value)}
                   onCheckedChange={() => toggleOption(option.value)}
                 />
-                <span className={cn("text-xs px-2 py-0.5 rounded-full", option.color)}>
-                  {option.label}
-                </span>
+                <PriorityBadge priority={option.value as TaskPriority} />
               </label>
             ))}
 
@@ -343,7 +340,7 @@ export const StandardColumnFilter = ({ type, selected, onChange, people = [] }: 
                 people.filter(p => p.active).map(person => (
                   <label
                     key={person.id}
-                    className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5"
+                    className="flex items-center gap-2 cursor-pointer hover:bg-muted/60 rounded-md px-2 py-1.5 transition-colors"
                   >
                     <Checkbox
                       checked={selected.includes(person.id)}
@@ -414,7 +411,7 @@ export const StandardFiltersBar = ({ filters, people, onClearStatus, onClearPrio
         <Badge variant="secondary" className="gap-1 text-xs">
           <span className="font-medium">Status:</span>
           <span className="font-normal">{getSelectedLabels(filters.status, STATUS_OPTIONS)}</span>
-          <button onClick={onClearStatus} className="ml-1 hover:text-destructive">
+          <button onClick={onClearStatus} className="ml-0.5 rounded-sm text-muted-foreground hover:text-destructive transition-colors">
             <X className="w-3 h-3" />
           </button>
         </Badge>
@@ -423,7 +420,7 @@ export const StandardFiltersBar = ({ filters, people, onClearStatus, onClearPrio
         <Badge variant="secondary" className="gap-1 text-xs">
           <span className="font-medium">Prioridade:</span>
           <span className="font-normal">{getSelectedLabels(filters.priority, PRIORITY_OPTIONS)}</span>
-          <button onClick={onClearPriority} className="ml-1 hover:text-destructive">
+          <button onClick={onClearPriority} className="ml-0.5 rounded-sm text-muted-foreground hover:text-destructive transition-colors">
             <X className="w-3 h-3" />
           </button>
         </Badge>
@@ -432,7 +429,7 @@ export const StandardFiltersBar = ({ filters, people, onClearStatus, onClearPrio
         <Badge variant="secondary" className="gap-1 text-xs">
           <span className="font-medium">Responsável:</span>
           <span className="font-normal">{getResponsibleNames(filters.responsible)}</span>
-          <button onClick={onClearResponsible} className="ml-1 hover:text-destructive">
+          <button onClick={onClearResponsible} className="ml-0.5 rounded-sm text-muted-foreground hover:text-destructive transition-colors">
             <X className="w-3 h-3" />
           </button>
         </Badge>
@@ -483,14 +480,14 @@ export const ActiveFiltersBar = ({ filters, columns, onClear, onClearAll }: Acti
           <Badge key={columnId} variant="secondary" className="gap-1 text-xs">
             <span className="font-medium">{column.name}:</span>
             <span className="font-normal">{getFilterLabel(columnId, filter)}</span>
-            <button onClick={() => onClear(columnId)} className="ml-1 hover:text-destructive">
+            <button onClick={() => onClear(columnId)} className="ml-0.5 rounded-sm text-muted-foreground hover:text-destructive transition-colors">
               <X className="w-3 h-3" />
             </button>
           </Badge>
         );
       })}
       {activeFilters.length > 1 && (
-        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={onClearAll}>
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground" onClick={onClearAll}>
           Limpar todos
         </Button>
       )}

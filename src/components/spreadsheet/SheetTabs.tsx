@@ -45,7 +45,7 @@ export function SheetTabs({
   };
 
   return (
-    <div className="flex items-center gap-1 p-2 bg-muted/30 border-t overflow-x-auto">
+    <div className="flex items-center gap-1 p-1.5 bg-muted/30 rounded-lg border border-border overflow-x-auto">
       {sheets.map((sheet) => (
         <div key={sheet.id} className="flex items-center">
           {editingSheetId === sheet.id ? (
@@ -59,16 +59,16 @@ export function SheetTabs({
                 if (e.key === 'Escape') setEditingSheetId(null);
               }}
               autoFocus
-              className="px-3 py-1.5 text-sm border-2 border-primary rounded outline-none min-w-[80px]"
+              className="h-7 px-3 text-sm bg-card border border-primary ring-1 ring-primary/30 rounded-md outline-none min-w-[80px]"
             />
           ) : (
             <button
               onClick={() => onSelectSheet(sheet.id)}
               onDoubleClick={() => startEditing(sheet)}
-              className={`px-3 py-1.5 text-sm rounded-t border-b-2 transition-colors ${
+              className={`h-7 px-3 text-sm rounded-md border transition-colors ${
                 activeSheetId === sheet.id
-                  ? 'bg-background border-primary text-foreground font-medium'
-                  : 'bg-muted/50 border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-card border-border text-foreground font-medium'
+                  : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
               {sheet.name}
@@ -78,7 +78,7 @@ export function SheetTabs({
           {activeSheetId === sheet.id && sheets.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-1 hover:bg-muted rounded ml-0.5">
+                <button className="p-1 hover:bg-muted rounded-md ml-0.5">
                   <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
@@ -113,7 +113,7 @@ export function SheetTabs({
         variant="ghost"
         size="sm"
         onClick={onAddSheet}
-        className="h-8 w-8 p-0 ml-1"
+        className="h-7 w-7 p-0 ml-1"
         title="Adicionar planilha"
       >
         <Plus className="h-4 w-4" />

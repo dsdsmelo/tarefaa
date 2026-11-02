@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Switch } from '@/components/ui/switch';
 import { useData } from '@/contexts/DataContext';
 import { CustomColumn } from '@/lib/types';
@@ -334,7 +335,7 @@ export const ColumnManagerSheet = ({
         <SheetTrigger asChild>
           {trigger || (
             <Button variant="outline" size="sm">
-              <Settings2 className="w-4 h-4 mr-2" />
+              <Settings2 className="w-4 h-4" />
               Gerenciar Colunas
             </Button>
           )}
@@ -347,8 +348,8 @@ export const ColumnManagerSheet = ({
             </SheetDescription>
           </SheetHeader>
 
-          <div className="mt-6 space-y-4 max-h-[calc(100vh-180px)] overflow-y-auto pr-2">
-            <div className="flex flex-col gap-3">
+          <div className="mt-4 space-y-3 max-h-[calc(100vh-160px)] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2">
               <p className="text-xs text-muted-foreground">Arraste para reordenar, clique para renomear</p>
               <div className="flex flex-wrap gap-2">
                 <Button 
@@ -358,24 +359,25 @@ export const ColumnManagerSheet = ({
                   disabled={isRestoringDefaults}
                   className="flex-1 sm:flex-none"
                 >
-                  <RotateCcw className={cn("w-4 h-4 mr-2", isRestoringDefaults && "animate-spin")} />
+                  <RotateCcw className={cn("w-4 h-4", isRestoringDefaults && "animate-spin")} />
                   Restaurar Padrão
                 </Button>
                 <Button onClick={openCreateDialog} size="sm" className="flex-1 sm:flex-none">
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="w-4 h-4" />
                   Nova Coluna
                 </Button>
               </div>
             </div>
 
             {projectColumns.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
-                <Settings2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="font-medium text-sm">Nenhuma coluna configurada</p>
-                <p className="text-xs mt-1">Adicione colunas para este projeto</p>
-              </div>
+              <EmptyState
+                icon={Settings2}
+                title="Nenhuma coluna configurada"
+                description="Adicione colunas para este projeto"
+                className="py-8 rounded-xl border border-dashed border-border"
+              />
             ) : (
-              <div className="space-y-2">
+              <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
                 {projectColumns.map((column, index) => (
                   <div 
                     key={column.id}
@@ -386,13 +388,13 @@ export const ColumnManagerSheet = ({
                     onDrop={(e) => handleDrop(e, column.id)}
                     onDragEnd={handleDragEnd}
                     className={cn(
-                      "flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border transition-all duration-200",
-                      draggedId === column.id && "opacity-50 scale-[0.98]",
-                      dragOverId === column.id && "border-primary border-2 bg-primary/5"
+                      "flex items-center gap-3 px-3 py-2 bg-card hover:bg-muted/40 transition-colors",
+                      draggedId === column.id && "opacity-50",
+                      dragOverId === column.id && "bg-primary/5 ring-1 ring-inset ring-primary"
                     )}
                   >
                     <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0" />
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono w-5 flex-shrink-0">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums w-5 flex-shrink-0">
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -415,24 +417,24 @@ export const ColumnManagerSheet = ({
                         />
                       ) : (
                         <span 
-                          className="font-medium truncate block cursor-text"
+                          className="text-sm font-medium truncate block cursor-text hover:text-primary transition-colors"
                           onClick={() => startEditingInline(column.id, column.name)}
                         >
                           {column.name}
                         </span>
                       )}
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-1.5 mt-0.5">
                         {column.standardField ? (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="font-normal text-muted-foreground">
                             {standardFieldLabels[column.standardField] || column.standardField}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="font-normal">
                             {typeLabels[column.type]}
                           </Badge>
                         )}
                         {column.isMilestone && (
-                          <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                          <Badge variant="warning">
                             Marco
                           </Badge>
                         )}
@@ -444,15 +446,15 @@ export const ColumnManagerSheet = ({
                       </div>
                     </div>
                     {!column.standardField && (
-                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(column)} className="flex-shrink-0">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(column)} className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-foreground">
                         <Edit className="w-4 h-4" />
                       </Button>
                     )}
                     {isProtectedColumn(column) ? (
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className={cn("flex-shrink-0", column.hidden ? "text-muted-foreground" : "text-foreground")}
+                        size="icon"
+                        className={cn("h-8 w-8 flex-shrink-0", column.hidden ? "text-muted-foreground" : "text-foreground")}
                         onClick={() => handleToggleVisibility(column)}
                         title={column.hidden ? "Mostrar na tabela de tarefas" : "Ocultar da tabela de tarefas"}
                       >
@@ -461,8 +463,8 @@ export const ColumnManagerSheet = ({
                     ) : (
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive flex-shrink-0"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                         onClick={() => handleDelete(column.id)}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -484,7 +486,7 @@ export const ColumnManagerSheet = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="name">Nome da Coluna</Label>
               <Input
@@ -545,7 +547,7 @@ export const ColumnManagerSheet = ({
                     placeholder="Adicionar opção..."
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddOption())}
                   />
-                  <Button type="button" onClick={handleAddOption} size="sm">
+                  <Button type="button" onClick={handleAddOption} size="icon" variant="outline" className="shrink-0">
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
@@ -554,7 +556,7 @@ export const ColumnManagerSheet = ({
                     {formData.options.map((option, index) => (
                       <Badge key={index} variant="secondary" className="gap-1">
                         {option}
-                        <button onClick={() => handleRemoveOption(index)} className="ml-1 hover:text-destructive">
+                        <button onClick={() => handleRemoveOption(index)} className="ml-0.5 rounded-sm text-muted-foreground hover:text-destructive transition-colors">
                           <X className="w-3 h-3" />
                         </button>
                       </Badge>

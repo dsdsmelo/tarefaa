@@ -14,9 +14,9 @@ interface InfoRowProps {
 }
 
 export const InfoRow = ({ label, value, mono }: InfoRowProps) => (
-  <div className="flex items-center justify-between gap-4 py-2.5 text-sm">
+  <div className="flex items-start justify-between gap-4 py-2.5 text-sm">
     <dt className="shrink-0 text-muted-foreground">{label}</dt>
-    <dd className={cn('min-w-0 truncate text-right font-medium', mono && 'font-mono')}>
+    <dd className={cn('min-w-0 break-words text-right font-medium', mono && 'font-mono')}>
       {value === undefined || value === null || value === '' ? '---' : value}
     </dd>
   </div>

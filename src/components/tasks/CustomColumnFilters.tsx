@@ -49,13 +49,13 @@ export const CustomColumnFilters = ({ columns, filters, onChange }: CustomColumn
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 pt-2 border-t">
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 pt-3 border-t border-border">
         <span className="text-sm font-medium text-muted-foreground">Colunas Customizadas</span>
       </div>
 
       {customColumns.map(column => (
-        <div key={column.id} className="space-y-2">
+        <div key={column.id} className="space-y-1.5">
           <Label className="text-sm">{column.name}</Label>
           <FilterInput
             column={column}
@@ -88,12 +88,12 @@ const FilterInput = ({ column, value, onChange, onClear, people }: FilterInputPr
             value={value.text || ''}
             onChange={(e) => onChange({ text: e.target.value })}
             placeholder="Buscar..."
-            className="pl-8 pr-8 h-9"
+            className="pl-8 pr-8"
           />
           {value.text && (
             <button
               onClick={onClear}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -127,7 +127,6 @@ const FilterInput = ({ column, value, onChange, onClear, people }: FilterInputPr
               type="date"
               value={value.min as string || ''}
               onChange={(e) => onChange({ ...value, min: e.target.value })}
-              className="h-9"
               placeholder="De"
             />
           </div>
@@ -136,7 +135,6 @@ const FilterInput = ({ column, value, onChange, onClear, people }: FilterInputPr
               type="date"
               value={value.max as string || ''}
               onChange={(e) => onChange({ ...value, max: e.target.value })}
-              className="h-9"
               placeholder="Até"
             />
           </div>
@@ -152,7 +150,6 @@ const FilterInput = ({ column, value, onChange, onClear, people }: FilterInputPr
               type="number"
               value={value.min as number ?? ''}
               onChange={(e) => onChange({ ...value, min: e.target.value ? Number(e.target.value) : undefined })}
-              className="h-9"
               placeholder="Mín"
             />
           </div>
@@ -161,7 +158,6 @@ const FilterInput = ({ column, value, onChange, onClear, people }: FilterInputPr
               type="number"
               value={value.max as number ?? ''}
               onChange={(e) => onChange({ ...value, max: e.target.value ? Number(e.target.value) : undefined })}
-              className="h-9"
               placeholder="Máx"
             />
           </div>
@@ -189,14 +185,14 @@ const ListFilter = ({ options, selected, onChange }: ListFilterProps) => {
   };
 
   return (
-    <div className="space-y-2 max-h-[150px] overflow-y-auto border rounded-md p-2">
+    <div className="space-y-0.5 max-h-[150px] overflow-y-auto border border-border rounded-lg p-1">
       {options.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nenhuma opção disponível</p>
+        <p className="px-2 py-1 text-xs text-muted-foreground">Nenhuma opção disponível</p>
       ) : (
         options.map(option => (
           <label
             key={option}
-            className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5"
+            className="flex items-center gap-2 cursor-pointer hover:bg-muted/60 rounded-md px-2 py-1 transition-colors"
           >
             <Checkbox
               checked={selected.includes(option)}
@@ -226,14 +222,14 @@ const UserFilter = ({ people, selected, onChange }: UserFilterProps) => {
   };
 
   return (
-    <div className="space-y-2 max-h-[150px] overflow-y-auto border rounded-md p-2">
+    <div className="space-y-0.5 max-h-[150px] overflow-y-auto border border-border rounded-lg p-1">
       {people.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nenhum usuário disponível</p>
+        <p className="px-2 py-1 text-xs text-muted-foreground">Nenhum usuário disponível</p>
       ) : (
         people.map(person => (
           <label
             key={person.id}
-            className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5"
+            className="flex items-center gap-2 cursor-pointer hover:bg-muted/60 rounded-md px-2 py-1 transition-colors"
           >
             <Checkbox
               checked={selected.includes(person.id)}

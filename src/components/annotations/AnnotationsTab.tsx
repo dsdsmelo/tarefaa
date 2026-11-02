@@ -15,17 +15,17 @@ export function AnnotationsTab({ projectId }: AnnotationsTabProps) {
   return (
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-xl grid-cols-3">
-          <TabsTrigger value="notes" className="flex items-center gap-2">
-            <StickyNote className="h-4 w-4" />
+        <TabsList variant="segmented">
+          <TabsTrigger value="notes">
+            <StickyNote />
             Anotações
           </TabsTrigger>
-          <TabsTrigger value="tables" className="flex items-center gap-2">
-            <Table2 className="h-4 w-4" />
+          <TabsTrigger value="tables">
+            <Table2 />
             Tabelas
           </TabsTrigger>
-          <TabsTrigger value="minutes" className="flex items-center gap-2">
-            <ScrollText className="h-4 w-4" />
+          <TabsTrigger value="minutes">
+            <ScrollText />
             ATA de Reuniões
           </TabsTrigger>
         </TabsList>

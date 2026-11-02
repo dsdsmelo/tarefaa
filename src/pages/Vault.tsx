@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageBody } from '@/components/layout/PageBody';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -82,20 +85,33 @@ export default function Vault() {
   const vault = useVault();
   useEffect(() => { vault.refreshStatus(); }, [vault.refreshStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Com o cofre aberto, o cabeçalho (com selo e ações) é desenhado pela própria UnlockedView
   return (
     <MainLayout>
-      <Header title="Cofre de Senhas" subtitle="Suas senhas criptografadas de ponta a ponta" />
-      <div className="p-6">
-        {vault.status === 'loading' && (
-          <div className="flex items-center justify-center py-24 text-muted-foreground">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Carregando...
+      {vault.status !== 'unlocked' && <VaultHeader />}
+      {vault.status === 'loading' && (
+        <PageBody>
+          <div className="flex items-center justify-center py-24 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin mr-2" /> Carregando...
           </div>
-        )}
-        {vault.status === 'no-vault' && <SetupView />}
-        {vault.status === 'locked' && <LockedView />}
-        {vault.status === 'unlocked' && <UnlockedView />}
-      </div>
+        </PageBody>
+      )}
+      {vault.status === 'no-vault' && <PageBody><SetupView /></PageBody>}
+      {vault.status === 'locked' && <PageBody><LockedView /></PageBody>}
+      {vault.status === 'unlocked' && <UnlockedView />}
     </MainLayout>
+  );
+}
+
+/* Cabeçalho comum a todos os estados do cofre */
+function VaultHeader({ badge, actions }: { badge?: ReactNode; actions?: ReactNode }) {
+  return (
+    <Header
+      title="Cofre de Senhas"
+      subtitle="Suas senhas criptografadas de ponta a ponta"
+      badge={badge}
+      actions={actions}
+    />
   );
 }
 
@@ -128,8 +144,8 @@ function SetupView() {
     return (
       <AuthCard>
         <div className="flex items-center gap-2 mb-2">
-          <KeyRound className="w-5 h-5 text-amber-500" />
-          <h2 className="text-xl font-bold">Guarde seu código de recuperação</h2>
+          <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          <h2 className="font-semibold">Guarde seu código de recuperação</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
           É o <strong>único</strong> jeito de recuperar o cofre se você esquecer a senha mestra.
@@ -140,16 +156,16 @@ function SetupView() {
         </div>
         <div className="flex gap-2 mt-3">
           <Button variant="outline" className="flex-1" onClick={() => copyWithAutoClear(recoveryCode, 'Código')}>
-            <Copy className="w-4 h-4 mr-2" /> Copiar
+            <Copy className="w-4 h-4" /> Copiar
           </Button>
           <Button variant="outline" className="flex-1" onClick={() => {
             const blob = new Blob([`Código de recuperação do Cofre Tarefaa:\n\n${recoveryCode}\n\nGuarde em local seguro.`], { type: 'text/plain' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tarefaa-recuperacao-cofre.txt'; a.click();
           }}>
-            <Download className="w-4 h-4 mr-2" /> Baixar .txt
+            <Download className="w-4 h-4" /> Baixar .txt
           </Button>
         </div>
-        <Button className="w-full mt-4 gradient-primary text-white" onClick={() => setRecoveryCode(null)}>
+        <Button className="w-full mt-4" onClick={() => setRecoveryCode(null)}>
           Guardei em local seguro, continuar
         </Button>
       </AuthCard>
@@ -158,11 +174,11 @@ function SetupView() {
 
   return (
     <AuthCard>
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary mb-3">
-          <VaultIcon className="w-7 h-7" />
+      <div className="text-center mb-5">
+        <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary mb-3">
+          <VaultIcon className="w-5 h-5" />
         </div>
-        <h2 className="text-2xl font-bold">Crie seu Cofre</h2>
+        <h2 className="text-lg font-semibold">Crie seu Cofre</h2>
         <p className="text-sm text-muted-foreground mt-1">
           Defina uma <strong>senha mestra</strong> (diferente da senha de login). Ela criptografa tudo
           e <strong>não é armazenada</strong> — nem nós conseguimos vê-la.
@@ -181,7 +197,7 @@ function SetupView() {
           <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           Se você esquecer a senha mestra, só o código de recuperação (mostrado a seguir) abre o cofre.
         </div>
-        <Button className="w-full gradient-primary text-white" onClick={handleCreate} disabled={saving || !strongEnough || !matches}>
+        <Button className="w-full" onClick={handleCreate} disabled={saving || !strongEnough || !matches}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar cofre'}
         </Button>
       </div>
@@ -220,11 +236,11 @@ function LockedView() {
 
   return (
     <AuthCard>
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary mb-3">
-          <Lock className="w-7 h-7" />
+      <div className="text-center mb-5">
+        <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary mb-3">
+          <Lock className="w-5 h-5" />
         </div>
-        <h2 className="text-2xl font-bold">Cofre bloqueado</h2>
+        <h2 className="text-lg font-semibold">Cofre bloqueado</h2>
       </div>
 
       {mode === 'unlock' && (
@@ -234,7 +250,7 @@ function LockedView() {
             <Input type="password" value={pw} autoFocus onChange={(e) => setPw(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && doUnlock()} placeholder="sua senha mestra" />
           </div>
-          <Button className="w-full gradient-primary text-white" onClick={doUnlock} disabled={busy || !pw}>
+          <Button className="w-full" onClick={doUnlock} disabled={busy || !pw}>
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Desbloquear'}
           </Button>
           <button className="w-full text-center text-sm text-muted-foreground hover:text-primary" onClick={() => setMode('recover')}>
@@ -249,7 +265,7 @@ function LockedView() {
             <Label>Código de recuperação</Label>
             <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="XXXXX-XXXXX-XXXXX-XXXXX" className="font-mono" />
           </div>
-          <Button className="w-full gradient-primary text-white" onClick={doRecover} disabled={busy || !code}>
+          <Button className="w-full" onClick={doRecover} disabled={busy || !code}>
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Recuperar acesso'}
           </Button>
           <button className="w-full text-center text-sm text-muted-foreground hover:text-primary" onClick={() => setMode('unlock')}>Voltar</button>
@@ -260,7 +276,7 @@ function LockedView() {
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">Defina uma nova senha mestra (mín. 10 caracteres).</p>
           <Input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="nova senha mestra" />
-          <Button className="w-full gradient-primary text-white" onClick={doReset} disabled={busy || newPw.length < 10}>
+          <Button className="w-full" onClick={doReset} disabled={busy || newPw.length < 10}>
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar e entrar'}
           </Button>
         </div>
@@ -273,7 +289,7 @@ function LockedView() {
 function AuthCard({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 shadow-medium">
+      <div className="w-full max-w-md bg-card border border-border rounded-xl p-5">
         {children}
       </div>
     </div>
@@ -322,125 +338,129 @@ function UnlockedView() {
   };
 
   return (
-    <div className="space-y-5">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">
-          <ShieldCheck className="w-4 h-4" /> Cofre aberto · {items.length} {items.length === 1 ? 'senha' : 'senhas'}
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Buscar por título, usuário ou site..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-          </div>
-          <Button className="gradient-primary text-white" onClick={() => setEditing('new')}>
-            <Plus className="w-4 h-4 mr-2" /> Nova senha
-          </Button>
-          <Button variant="outline" onClick={lock}><Lock className="w-4 h-4 mr-2" /> Bloquear</Button>
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed border-border">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <VaultIcon className="w-8 h-8 text-primary opacity-70" />
-          </div>
-          <p className="text-base font-medium mb-1">{items.length === 0 ? 'Seu cofre está vazio' : 'Nada encontrado'}</p>
-          <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
-            {items.length === 0 ? 'Guarde suas senhas de forma criptografada e acesse os sites com um clique.' : 'Tente outro termo de busca.'}
-          </p>
-          {items.length === 0 && (
-            <Button className="gradient-primary text-white" onClick={() => setEditing('new')}>
-              <Plus className="w-4 h-4 mr-2" /> Adicionar primeira senha
+    <>
+      <VaultHeader
+        badge={
+          <Badge variant="success" className="tabular-nums">
+            <ShieldCheck className="w-3.5 h-3.5" /> Cofre aberto · {items.length} {items.length === 1 ? 'senha' : 'senhas'}
+          </Badge>
+        }
+        actions={
+          <>
+            <Button variant="outline" onClick={lock}><Lock className="w-4 h-4" /> Bloquear</Button>
+            <Button onClick={() => setEditing('new')}>
+              <Plus className="w-4 h-4" /> Nova senha
             </Button>
-          )}
+          </>
+        }
+      />
+      <PageBody>
+        {/* Toolbar */}
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Buscar por título, usuário ou site..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
-            {paged.map((it) => (
-              <div key={it.id} className="group bg-card border border-border rounded-lg p-3 shadow-soft hover:shadow-medium hover:border-primary/30 transition-all">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
-                    style={{ backgroundColor: colorFromString(it.title) }}>
-                    {(it.title[0] || '?').toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm truncate leading-tight" title={it.title}>{it.title}</div>
-                    {it.url && <div className="text-xs text-muted-foreground truncate leading-tight" title={it.url}>{prettyHost(it.url)}</div>}
-                  </div>
-                  <div className="flex items-center flex-shrink-0">
-                    {it.url && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        title={it.password ? 'Acessar: copia a senha e abre o site' : 'Abrir site'}
-                        onClick={() => launchItem(it)}
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-primary" />
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Editar" onClick={() => setEditing(it)}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" title="Excluir" onClick={() => setToDelete(it)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
 
-                <div className="mt-2 space-y-1">
-                  {it.username && (
-                    <div className="flex items-center justify-between gap-2 text-sm bg-muted/40 rounded-md px-2.5 py-1">
-                      <span className="truncate text-muted-foreground">{it.username}</span>
-                      <button className="text-muted-foreground hover:text-primary flex-shrink-0" title="Copiar usuário"
-                        onClick={() => copy(it.id + 'u', it.username, 'Usuário')}>
-                        {justCopied === it.id + 'u' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                      </button>
+        {filtered.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-card">
+            <EmptyState
+              icon={VaultIcon}
+              title={items.length === 0 ? 'Seu cofre está vazio' : 'Nada encontrado'}
+              description={items.length === 0 ? 'Guarde suas senhas de forma criptografada e acesse os sites com um clique.' : 'Tente outro termo de busca.'}
+              action={items.length === 0 && (
+                <Button onClick={() => setEditing('new')}>
+                  <Plus className="w-4 h-4" /> Adicionar primeira senha
+                </Button>
+              )}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+              {paged.map((it) => (
+                <div key={it.id} className="group bg-card border border-border rounded-xl p-3 hover:border-primary/40 transition-colors">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-md flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                      style={{ backgroundColor: colorFromString(it.title) }}>
+                      {(it.title[0] || '?').toUpperCase()}
                     </div>
-                  )}
-                  {it.password && (
-                    <div className="flex items-center justify-between gap-2 text-sm bg-muted/40 rounded-md px-2.5 py-1">
-                      <span className="truncate font-mono">{revealed.has(it.id) ? it.password : '•'.repeat(10)}</span>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <button className="text-muted-foreground hover:text-foreground" title="Mostrar/ocultar" onClick={() => toggleReveal(it.id)}>
-                          {revealed.has(it.id) ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                        <button className="text-muted-foreground hover:text-primary" title="Copiar senha"
-                          onClick={() => copy(it.id + 'p', it.password, 'Senha')}>
-                          {justCopied === it.id + 'p' ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm truncate leading-tight" title={it.title}>{it.title}</div>
+                      {it.url && <div className="text-xs text-muted-foreground truncate leading-tight" title={it.url}>{prettyHost(it.url)}</div>}
+                    </div>
+                    <div className="flex items-center flex-shrink-0">
+                      {it.url && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title={it.password ? 'Acessar: copia a senha e abre o site' : 'Abrir site'}
+                          onClick={() => launchItem(it)}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" title="Editar" onClick={() => setEditing(it)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" title="Excluir" onClick={() => setToDelete(it)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 space-y-1">
+                    {it.username && (
+                      <div className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded-md px-2.5 py-1">
+                        <span className="truncate text-muted-foreground">{it.username}</span>
+                        <button className="text-muted-foreground hover:text-primary flex-shrink-0" title="Copiar usuário"
+                          onClick={() => copy(it.id + 'u', it.username, 'Usuário')}>
+                          {justCopied === it.id + 'u' ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
                       </div>
-                    </div>
-                  )}
-                  {it.mfa && (
-                    <div className="flex items-center gap-1.5 px-0.5 pt-0.5 text-xs">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                      <span className="text-muted-foreground truncate" title={`MFA: ${it.mfa}`}>
-                        MFA: <span className="text-foreground font-medium">{it.mfa}</span>
-                      </span>
-                    </div>
-                  )}
+                    )}
+                    {it.password && (
+                      <div className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded-md px-2.5 py-1">
+                        <span className="truncate font-mono">{revealed.has(it.id) ? it.password : '•'.repeat(10)}</span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button className="text-muted-foreground hover:text-foreground" title="Mostrar/ocultar" onClick={() => toggleReveal(it.id)}>
+                            {revealed.has(it.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button className="text-muted-foreground hover:text-primary" title="Copiar senha"
+                            onClick={() => copy(it.id + 'p', it.password, 'Senha')}>
+                            {justCopied === it.id + 'p' ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {it.mfa && (
+                      <div className="flex items-center gap-1.5 px-0.5 pt-0.5 text-xs">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                        <span className="text-muted-foreground truncate" title={`MFA: ${it.mfa}`}>
+                          MFA: <span className="text-foreground font-medium">{it.mfa}</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {totalPages > 1 && (
-            <TablePagination
-              currentPage={page}
-              totalPages={totalPages}
-              pageSize={pageSize}
-              totalItems={filtered.length}
-              onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-              pageSizeOptions={[12, 24, 48, 96]}
-              className="border-t border-border"
-            />
-          )}
-        </>
-      )}
+            {totalPages > 1 && (
+              <TablePagination
+                currentPage={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={filtered.length}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[12, 24, 48, 96]}
+                className="border-t border-border"
+              />
+            )}
+          </>
+        )}
+      </PageBody>
 
       {editing && (
         <ItemDialog
@@ -469,7 +489,7 @@ function UnlockedView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
 
@@ -509,7 +529,7 @@ function ItemDialog({ item, onClose, onSave }: {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <KeyRound className="w-5 h-5 text-primary" />
+            <KeyRound className="w-4 h-4 text-primary" />
             {item ? 'Editar senha' : 'Nova senha'}
           </DialogTitle>
         </DialogHeader>
@@ -542,7 +562,7 @@ function ItemDialog({ item, onClose, onSave }: {
           </div>
           <div className="space-y-2">
             <Label className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               Autenticação em dois fatores (MFA)
             </Label>
             <Select value={mfaChoice} onValueChange={setMfaChoice}>
@@ -560,7 +580,7 @@ function ItemDialog({ item, onClose, onSave }: {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button className="gradient-primary text-white" onClick={save} disabled={saving}>
+          <Button onClick={save} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
           </Button>
         </DialogFooter>

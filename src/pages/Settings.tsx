@@ -30,6 +30,11 @@ import {
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageBody } from '@/components/layout/PageBody';
+import { Panel } from '@/components/ui/panel';
+import { InfoList, InfoRow } from '@/components/ui/info-list';
+import { Badge, badgeVariants } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -483,25 +488,25 @@ const Settings = () => {
 
   const getStatusBadge = () => {
     if (isAdmin) {
-      return <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Admin</span>;
+      return <Badge variant="default">Admin</Badge>;
     }
     if (!subscription) {
-      return <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">Sem assinatura</span>;
+      return <Badge variant="secondary">Sem assinatura</Badge>;
     }
     if (subscription.cancel_at_period_end) {
-      return <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Cancela em breve</span>;
+      return <Badge variant="warning">Cancela em breve</Badge>;
     }
     switch (subscription.status) {
       case 'active':
-        return <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Ativo</span>;
+        return <Badge variant="success">Ativo</Badge>;
       case 'trialing':
-        return <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Período de teste</span>;
+        return <Badge variant="outline">Período de teste</Badge>;
       case 'canceled':
-        return <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Cancelado</span>;
+        return <Badge variant="destructive">Cancelado</Badge>;
       case 'past_due':
-        return <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Pagamento pendente</span>;
+        return <Badge variant="destructive">Pagamento pendente</Badge>;
       default:
-        return <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">Inativo</span>;
+        return <Badge variant="secondary">Inativo</Badge>;
     }
   };
 
@@ -510,62 +515,58 @@ const Settings = () => {
   return (
     <MainLayout>
       <Header title="Configurações" subtitle="Gerencie sua conta e preferências" />
-      
-      <div className="p-6">
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="profile" className="gap-2">
+
+      <PageBody>
+        <Tabs defaultValue="profile">
+          <TabsList>
+            <TabsTrigger value="profile">
               <User className="w-4 h-4" />
               Perfil
             </TabsTrigger>
-            <TabsTrigger value="subscription" className="gap-2">
+            <TabsTrigger value="subscription">
               <CreditCard className="w-4 h-4" />
               Assinatura
             </TabsTrigger>
-            <TabsTrigger value="ai" className="gap-2">
+            <TabsTrigger value="ai">
               <Sparkles className="w-4 h-4" />
               IA
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="gap-2">
+            <TabsTrigger value="appearance">
               <Palette className="w-4 h-4" />
               Aparência
             </TabsTrigger>
-            <TabsTrigger value="data" className="gap-2">
+            <TabsTrigger value="data">
               <Database className="w-4 h-4" />
               Dados
             </TabsTrigger>
-            <TabsTrigger value="workspaces" className="gap-2">
+            <TabsTrigger value="workspaces">
               <BriefcaseBusiness className="w-4 h-4" />
               Workspaces
             </TabsTrigger>
-            <TabsTrigger value="security" className="gap-2">
+            <TabsTrigger value="security">
               <Lock className="w-4 h-4" />
               Segurança
             </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TabsContent value="profile">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Profile Info & Avatar */}
-              <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Foto e Nome
-                </h3>
-                <div className="space-y-6">
+              <Panel icon={User} title="Foto e Nome" bodyClassName="p-5">
+                <div className="space-y-4">
                   {/* Avatar Upload */}
                   <div className="flex items-center gap-4">
                     <div className="relative group">
-                      <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center overflow-hidden border-4 border-background shadow-lg">
+                      <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center overflow-hidden border border-border">
                         {profile?.avatar_url ? (
-                          <img 
-                            src={profile.avatar_url} 
-                            alt="Avatar" 
+                          <img
+                            src={profile.avatar_url}
+                            alt="Avatar"
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <User className="w-10 h-10 text-primary-foreground" />
+                          <User className="w-8 h-8 text-primary-foreground" />
                         )}
                       </div>
                       <button
@@ -574,9 +575,9 @@ const Settings = () => {
                         className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       >
                         {isUploadingAvatar ? (
-                          <Loader2 className="w-6 h-6 text-white animate-spin" />
+                          <Loader2 className="w-5 h-5 text-white animate-spin" />
                         ) : (
-                          <Camera className="w-6 h-6 text-white" />
+                          <Camera className="w-5 h-5 text-white" />
                         )}
                       </button>
                       <input
@@ -587,9 +588,9 @@ const Settings = () => {
                         className="hidden"
                       />
                     </div>
-                    <div>
-                      <p className="font-semibold text-lg">{displayName}</p>
-                      <p className="text-sm text-muted-foreground">Clique na foto para alterar</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{displayName}</p>
+                      <p className="text-xs text-muted-foreground">Clique na foto para alterar</p>
                     </div>
                   </div>
 
@@ -606,150 +607,132 @@ const Settings = () => {
                   </div>
 
                   {/* Email (readonly) */}
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{user?.email}</span>
-                    </div>
-                  </div>
+                  <InfoList>
+                    <InfoRow label="Email" value={user?.email} />
+                  </InfoList>
 
                   <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="w-full">
                     {isSavingProfile ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                         Salvando...
                       </>
                     ) : (
                       <>
-                        <Save className="w-4 h-4 mr-2" />
+                        <Save className="w-4 h-4" />
                         Salvar Alterações
                       </>
                     )}
                   </Button>
                 </div>
-              </div>
+              </Panel>
 
               {/* Stats */}
-              <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
-                <h3 className="text-lg font-semibold mb-4">Estatísticas</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-muted/30 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-primary">{projects.length}</p>
-                    <p className="text-sm text-muted-foreground">Projetos</p>
+              <Panel title="Estatísticas" bodyClassName="p-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Projetos</p>
+                    <p className="text-2xl font-semibold tabular-nums mt-1">{projects.length}</p>
                   </div>
-                  <div className="p-4 bg-muted/30 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-blue-500">{tasks.length}</p>
-                    <p className="text-sm text-muted-foreground">Tarefas</p>
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Tarefas</p>
+                    <p className="text-2xl font-semibold tabular-nums mt-1">{tasks.length}</p>
                   </div>
-                  <div className="p-4 bg-muted/30 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-emerald-500">{tasks.filter(t => t.status === 'completed').length}</p>
-                    <p className="text-sm text-muted-foreground">Concluídas</p>
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Concluídas</p>
+                    <p className="text-2xl font-semibold tabular-nums mt-1 text-emerald-600 dark:text-emerald-400">{tasks.filter(t => t.status === 'completed').length}</p>
                   </div>
-                  <div className="p-4 bg-muted/30 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-amber-500">{people.length}</p>
-                    <p className="text-sm text-muted-foreground">Pessoas</p>
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Pessoas</p>
+                    <p className="text-2xl font-semibold tabular-nums mt-1">{people.length}</p>
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-sm text-muted-foreground">
-                    Membro desde: {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'}
-                  </p>
-                </div>
-              </div>
+                <InfoList className="mt-3">
+                  <InfoRow
+                    label="Membro desde"
+                    value={user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '-'}
+                  />
+                </InfoList>
+              </Panel>
             </div>
           </TabsContent>
 
           {/* Subscription Tab */}
-          <TabsContent value="subscription" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TabsContent value="subscription">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Subscription Info */}
-              <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
-                  Detalhes da Assinatura
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Status</span>
-                    {getStatusBadge()}
-                  </div>
+              <Panel icon={CreditCard} title="Detalhes da Assinatura" bodyClassName="p-5">
+                <div className="space-y-3">
+                  <InfoList>
+                    <InfoRow label="Status" value={getStatusBadge()} />
+                    {subscription && (
+                      <>
+                        <InfoRow label="Plano" value="Tarefaa Pro" />
+                        <InfoRow
+                          label="Período atual"
+                          value={`${formatDate(subscription.current_period_start)} - ${formatDate(subscription.current_period_end)}`}
+                        />
+                      </>
+                    )}
+                  </InfoList>
 
-                  {subscription && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Plano</span>
-                        <span className="font-medium">Tarefaa Pro</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Período atual</span>
-                        <span className="text-sm">
-                          {formatDate(subscription.current_period_start)} - {formatDate(subscription.current_period_end)}
-                        </span>
-                      </div>
-                      {subscription.cancel_at_period_end && (
-                        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mt-2">
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                            <div className="text-sm">
-                              <p className="font-medium text-amber-800 dark:text-amber-200">
-                                Cancelamento agendado
-                              </p>
-                              <p className="text-amber-700 dark:text-amber-300">
-                                Sua assinatura será cancelada em {formatDate(subscription.current_period_end)}.
-                                Você pode continuar usando até essa data.
-                              </p>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="mt-2 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900"
-                                onClick={handleReactivateSubscription}
-                                disabled={isReactivating}
-                              >
-                                {isReactivating ? (
-                                  <>
-                                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                    Reativando...
-                                  </>
-                                ) : (
-                                  'Manter assinatura'
-                                )}
-                              </Button>
-                            </div>
-                          </div>
+                  {subscription?.cancel_at_period_end && (
+                    <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm">
+                          <p className="font-medium text-amber-800 dark:text-amber-200">
+                            Cancelamento agendado
+                          </p>
+                          <p className="text-amber-700 dark:text-amber-300">
+                            Sua assinatura será cancelada em {formatDate(subscription.current_period_end)}.
+                            Você pode continuar usando até essa data.
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2"
+                            onClick={handleReactivateSubscription}
+                            disabled={isReactivating}
+                          >
+                            {isReactivating ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Reativando...
+                              </>
+                            ) : (
+                              'Manter assinatura'
+                            )}
+                          </Button>
                         </div>
-                      )}
-                    </>
+                      </div>
+                    </div>
                   )}
 
                   {isAdmin && !subscription && (
-                    <div className="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
-                      <p className="text-sm text-purple-700 dark:text-purple-300">
+                    <div className="rounded-lg border border-border bg-muted/40 p-3">
+                      <p className="text-sm text-muted-foreground">
                         Você tem acesso administrativo ao sistema.
                       </p>
                     </div>
                   )}
 
                   {!subscription && !isAdmin && (
-                    <div className="bg-muted/50 rounded-lg p-4 text-center">
-                      <p className="text-muted-foreground">Você não possui uma assinatura ativa.</p>
+                    <div className="rounded-lg bg-muted/40 p-4 text-center">
+                      <p className="text-sm text-muted-foreground">Você não possui uma assinatura ativa.</p>
                     </div>
                   )}
                 </div>
-              </div>
+              </Panel>
 
               {/* Subscription Actions */}
-              <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Gerenciar Assinatura
-                </h3>
+              <Panel icon={Calendar} title="Gerenciar Assinatura" bodyClassName="p-5">
                 <div className="space-y-4">
                   {subscription?.stripe_customer_id && (
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="font-medium">Portal de Pagamentos</p>
-                        <p className="text-sm text-muted-foreground">Atualizar cartão, ver faturas</p>
+                        <p className="text-sm font-medium">Portal de Pagamentos</p>
+                        <p className="text-xs text-muted-foreground">Atualizar cartão, ver faturas</p>
                       </div>
                       <Button
                         variant="outline"
@@ -760,7 +743,7 @@ const Settings = () => {
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <>
-                            <ExternalLink className="w-4 h-4 mr-2" />
+                            <ExternalLink className="w-4 h-4" />
                             Abrir Portal
                           </>
                         )}
@@ -770,15 +753,15 @@ const Settings = () => {
 
                   {subscription && (subscription.status === 'active' || subscription.status === 'trialing') && !subscription.cancel_at_period_end && (
                     <div className="pt-4 border-t border-border">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-4">
                         <div>
-                          <p className="font-medium text-red-600 dark:text-red-400">Cancelar Assinatura</p>
-                          <p className="text-sm text-muted-foreground">Você poderá usar até o fim do período</p>
+                          <p className="text-sm font-medium text-destructive">Cancelar Assinatura</p>
+                          <p className="text-xs text-muted-foreground">Você poderá usar até o fim do período</p>
                         </div>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="sm">
-                              <XCircle className="w-4 h-4 mr-2" />
+                              <XCircle className="w-4 h-4" />
                               Cancelar
                             </Button>
                           </AlertDialogTrigger>
@@ -795,12 +778,12 @@ const Settings = () => {
                               <AlertDialogCancel>Voltar</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={handleCancelSubscription}
-                                className="bg-red-600 hover:bg-red-700"
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 disabled={isCancelling}
                               >
                                 {isCancelling ? (
                                   <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    <Loader2 className="w-4 h-4 animate-spin" />
                                     Cancelando...
                                   </>
                                 ) : (
@@ -816,7 +799,7 @@ const Settings = () => {
 
                   {!subscription && !isAdmin && (
                     <div className="text-center py-4">
-                      <p className="text-muted-foreground mb-4">
+                      <p className="text-sm text-muted-foreground mb-4">
                         Assine o Tarefaa para gerenciar seus projetos e tarefas.
                       </p>
                       <Button asChild>
@@ -825,18 +808,19 @@ const Settings = () => {
                     </div>
                   )}
                 </div>
-              </div>
+              </Panel>
             </div>
           </TabsContent>
 
-          {/* Appearance Tab */}
-          <TabsContent value="ai" className="space-y-6">
-            <div className="bg-card rounded-xl border border-border p-6 shadow-soft max-w-2xl">
-              <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
-                Inteligência Artificial
-              </h3>
-              <p className="text-sm text-muted-foreground mb-5">
+          {/* AI Tab */}
+          <TabsContent value="ai">
+            <Panel
+              icon={Sparkles}
+              title="Inteligência Artificial"
+              className="max-w-2xl"
+              bodyClassName="p-5"
+            >
+              <p className="text-sm text-muted-foreground mb-4">
                 Usada para gerar as atas de reunião a partir das transcrições (aba Anotações → ATA de Reuniões).
               </p>
 
@@ -845,7 +829,7 @@ const Settings = () => {
                   <KeyRound className="w-4 h-4" />
                   Chave da API OpenAI
                   {hasKey && (
-                    <span className="ml-1 inline-flex items-center gap-1 text-xs font-normal text-emerald-600">
+                    <span className={cn(badgeVariants({ variant: 'success' }), 'ml-1')}>
                       <Sparkles className="w-3 h-3" /> configurada
                     </span>
                   )}
@@ -871,7 +855,7 @@ const Settings = () => {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   A chave é <strong>write-only</strong>: fica guardada com segurança no servidor e nunca
-                  é devolvida ao navegador. Modelo utilizado: <span className="font-medium">gpt-4o</span>. Crie sua chave em{' '}
+                  é devolvida ao navegador. Modelo utilizado: <span className="font-medium font-mono">gpt-4o</span>. Crie sua chave em{' '}
                   <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-primary underline">
                     platform.openai.com/api-keys
                   </a>.
@@ -880,105 +864,92 @@ const Settings = () => {
 
               <Button onClick={handleSaveKey} disabled={isSavingKey} className="mt-4">
                 {isSavingKey ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</>
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
                 ) : (
-                  <><Save className="w-4 h-4 mr-2" /> Salvar chave</>
+                  <><Save className="w-4 h-4" /> Salvar chave</>
                 )}
               </Button>
-            </div>
+            </Panel>
           </TabsContent>
 
-          <TabsContent value="appearance" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                  Tema
-                </h3>
-                <div className="flex items-center justify-between">
+          {/* Appearance Tab */}
+          <TabsContent value="appearance">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Panel icon={isDarkMode ? Moon : Sun} title="Tema" bodyClassName="p-5">
+                <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-medium">Modo Escuro</p>
-                    <p className="text-sm text-muted-foreground">Alterne entre o tema claro e escuro</p>
+                    <p className="text-sm font-medium">Modo Escuro</p>
+                    <p className="text-xs text-muted-foreground">Alterne entre o tema claro e escuro</p>
                   </div>
                   <Switch checked={isDarkMode} onCheckedChange={toggleTheme} />
                 </div>
-              </div>
+              </Panel>
             </div>
           </TabsContent>
 
           {/* Data Tab */}
-          <TabsContent value="data" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <FileSpreadsheet className="w-5 h-5" />
-                  Exportação
-                </h3>
-                <div className="flex items-center justify-between">
+          <TabsContent value="data">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Panel icon={FileSpreadsheet} title="Exportação" bodyClassName="p-5">
+                <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-medium">Exportar para Excel</p>
-                    <p className="text-sm text-muted-foreground">Baixe todas as tarefas em formato CSV</p>
+                    <p className="text-sm font-medium">Exportar para Excel</p>
+                    <p className="text-xs text-muted-foreground">Baixe todas as tarefas em formato CSV</p>
                   </div>
                   <Button onClick={handleExportExcel}>
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="w-4 h-4" />
                     Exportar
                   </Button>
                 </div>
-              </div>
+              </Panel>
 
-              <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Database className="w-5 h-5" />
-                  Backup
-                </h3>
+              <Panel icon={Database} title="Backup" bodyClassName="p-5">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="font-medium">Fazer Backup</p>
-                      <p className="text-sm text-muted-foreground">Baixe todos os dados</p>
+                      <p className="text-sm font-medium">Fazer Backup</p>
+                      <p className="text-xs text-muted-foreground">Baixe todos os dados</p>
                     </div>
                     <Button variant="outline" onClick={handleBackup}>
-                      <Download className="w-4 h-4 mr-2" />
+                      <Download className="w-4 h-4" />
                       Backup
                     </Button>
                   </div>
-                  <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <div className="flex items-center justify-between gap-4 pt-4 border-t border-border">
                     <div>
-                      <p className="font-medium">Restaurar Backup</p>
-                      <p className="text-sm text-muted-foreground">Restaure de um arquivo</p>
+                      <p className="text-sm font-medium">Restaurar Backup</p>
+                      <p className="text-xs text-muted-foreground">Restaure de um arquivo</p>
                     </div>
                     <Button variant="outline" onClick={handleRestore}>
-                      <Upload className="w-4 h-4 mr-2" />
+                      <Upload className="w-4 h-4" />
                       Restaurar
                     </Button>
                   </div>
                 </div>
-              </div>
+              </Panel>
             </div>
           </TabsContent>
 
           {/* Workspaces Tab */}
-          <TabsContent value="workspaces" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
-              <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
-                <div className="flex items-start justify-between gap-4 mb-5">
-                  <div>
-                    <h3 className="text-lg font-semibold">Seus workspaces</h3>
-                    <p className="text-sm text-muted-foreground mt-1">Projetos, tarefas e métricas não são misturados entre workspaces.</p>
-                  </div>
-                  {activeWorkspace && <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium whitespace-nowrap">Atual: {activeWorkspace.name}</span>}
-                </div>
-                <div className="space-y-3">
+          <TabsContent value="workspaces">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4">
+              <Panel
+                icon={BriefcaseBusiness}
+                title="Seus workspaces"
+                description="Projetos, tarefas e métricas não são misturados entre workspaces."
+                actions={activeWorkspace && <Badge variant="default" className="whitespace-nowrap">Atual: {activeWorkspace.name}</Badge>}
+              >
+                <div className="divide-y divide-border">
                   {workspaces.map((workspace) => {
                     const projectCount = workspaceProjectCounts[workspace.id] || 0;
                     const isCurrent = workspace.id === activeWorkspace?.id;
                     return (
-                      <div key={workspace.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+                      <div key={workspace.id} className="flex items-center gap-3 px-5 py-2.5">
                         <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: workspace.color }} />
                         {workspace.kind === 'personal' ? <UserRound className="w-4 h-4 text-muted-foreground" /> : <BriefcaseBusiness className="w-4 h-4 text-muted-foreground" />}
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-sm truncate">{workspace.name}</p>
-                          <p className="text-xs text-muted-foreground">{workspace.kind === 'personal' ? 'Pessoal' : 'Corporativo'} · {projectCount} {projectCount === 1 ? 'projeto' : 'projetos'}</p>
+                          <p className="text-xs text-muted-foreground">{workspace.kind === 'personal' ? 'Pessoal' : 'Corporativo'} · <span className="tabular-nums">{projectCount}</span> {projectCount === 1 ? 'projeto' : 'projetos'}</p>
                         </div>
                         {!isCurrent && <Button variant="outline" size="sm" onClick={() => void setActiveWorkspace(workspace.id)}>Abrir</Button>}
                         {!workspace.isDefault && (
@@ -990,11 +961,15 @@ const Settings = () => {
                     );
                   })}
                 </div>
-              </div>
+              </Panel>
 
-              <div className="bg-card rounded-xl border border-border p-6 shadow-soft h-fit">
-                <h3 className="text-lg font-semibold mb-1">Novo workspace</h3>
-                <p className="text-sm text-muted-foreground mb-5">Crie um workspace por empresa, cliente ou contexto pessoal que precise separar.</p>
+              <Panel
+                icon={Plus}
+                title="Novo workspace"
+                className="h-fit"
+                bodyClassName="p-5"
+              >
+                <p className="text-sm text-muted-foreground mb-4">Crie um workspace por empresa, cliente ou contexto pessoal que precise separar.</p>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="workspaceName">Nome</Label>
@@ -1002,28 +977,24 @@ const Settings = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="workspaceKind">Tipo</Label>
-                    <select id="workspaceKind" value={workspaceKind} onChange={(event) => setWorkspaceKind(event.target.value as 'personal' | 'corporate')} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    <select id="workspaceKind" value={workspaceKind} onChange={(event) => setWorkspaceKind(event.target.value as 'personal' | 'corporate')} className="flex h-9 w-full rounded-lg border border-input bg-card px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                       <option value="corporate">Corporativo</option>
                       <option value="personal">Pessoal</option>
                     </select>
                   </div>
-                  <Button className="w-full gradient-primary text-white" onClick={handleCreateWorkspace} disabled={isSavingWorkspace}>
-                    <Plus className="w-4 h-4 mr-2" />
+                  <Button className="w-full" onClick={handleCreateWorkspace} disabled={isSavingWorkspace}>
+                    <Plus className="w-4 h-4" />
                     {isSavingWorkspace ? 'Criando...' : 'Criar workspace'}
                   </Button>
                 </div>
-              </div>
+              </Panel>
             </div>
           </TabsContent>
 
           {/* Security Tab */}
-          <TabsContent value="security" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-card rounded-xl border border-border p-6 shadow-soft">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Lock className="w-5 h-5" />
-                  Alterar Senha
-                </h3>
+          <TabsContent value="security">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Panel icon={Lock} title="Alterar Senha" bodyClassName="p-5">
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     Para alterar sua senha, enviaremos um link de verificação para o seu email <span className="font-medium text-foreground">{user?.email}</span>.
@@ -1037,22 +1008,22 @@ const Settings = () => {
                   <Button onClick={handleChangePassword} className="w-full" disabled={isChangingPassword}>
                     {isChangingPassword ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                         Enviando...
                       </>
                     ) : (
                       <>
-                        <Mail className="w-4 h-4 mr-2" />
+                        <Mail className="w-4 h-4" />
                         Enviar link de redefinição
                       </>
                     )}
                   </Button>
                 </div>
-              </div>
+              </Panel>
             </div>
           </TabsContent>
         </Tabs>
-      </div>
+      </PageBody>
 
       <AlertDialog open={!!workspaceToDelete} onOpenChange={(open) => !open && setWorkspaceToDelete(null)}>
         <AlertDialogContent>

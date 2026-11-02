@@ -17,7 +17,7 @@ export function GeneralTemplate({ data, onChange, isExpanded, onToggleExpand }: 
       <div className={cn('flex flex-col min-h-0', isExpanded ? 'flex-1' : 'space-y-2')}>
         {!isExpanded && (
           <Label className="text-sm font-medium flex items-center gap-2">
-            <StickyNote className="h-4 w-4 text-slate-500" />
+            <StickyNote className="h-4 w-4 text-muted-foreground" />
             Conteúdo
           </Label>
         )}
