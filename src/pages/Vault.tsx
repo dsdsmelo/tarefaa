@@ -5,6 +5,7 @@ import { PageBody } from '@/components/layout/PageBody';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ActionsMenu } from '@/components/ui/actions-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -378,15 +379,15 @@ function UnlockedView() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
               {paged.map((it) => (
-                <div key={it.id} className="group flex flex-col bg-card border border-border rounded-xl p-3 hover:border-primary/40 transition-colors">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-md flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                <div key={it.id} className="flex flex-col gap-3 bg-card border border-border rounded-xl p-4 hover:border-primary/40 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
                       style={{ backgroundColor: colorFromString(it.title) }}>
                       {(it.title[0] || '?').toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm truncate leading-tight" title={it.title}>{it.title}</div>
-                      {it.url && <div className="text-xs text-muted-foreground truncate leading-tight" title={it.url}>{prettyHost(it.url)}</div>}
+                      <div className="font-semibold text-sm truncate" title={it.title}>{it.title}</div>
+                      {it.url && <div className="text-xs text-muted-foreground truncate mt-0.5" title={it.url}>{prettyHost(it.url)}</div>}
                     </div>
                     <div className="flex items-center flex-shrink-0">
                       {it.url && (
@@ -400,16 +401,16 @@ function UnlockedView() {
                           <ExternalLink className="w-3.5 h-3.5 text-primary" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" title="Editar" onClick={() => setEditing(it)}>
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" title="Excluir" onClick={() => setToDelete(it)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <ActionsMenu
+                        items={[
+                          { label: 'Editar', icon: Pencil, onClick: () => setEditing(it) },
+                          { label: 'Excluir', icon: Trash2, onClick: () => setToDelete(it), destructive: true },
+                        ]}
+                      />
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-2 space-y-1">
+                  <div className="mt-auto space-y-1">
                     {it.username && (
                       <div className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded-md px-2.5 py-1">
                         <span className="truncate text-muted-foreground">{it.username}</span>

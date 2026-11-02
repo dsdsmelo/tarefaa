@@ -16,12 +16,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -33,10 +27,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { marked } from 'marked';
 import { RichTextEditor } from './RichTextEditor';
+import { ActionsMenu } from '@/components/ui/actions-menu';
 import { sanitizeHtml, escapeHtml } from '@/lib/sanitize';
 import {
   ScrollText, Plus, Upload, Sparkles, Loader2, Copy, Download, Mail,
-  Pencil, Trash2, MoreVertical,
+  Pencil, Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -218,32 +213,15 @@ export function MeetingMinutesTab({ projectId }: MeetingMinutesTabProps) {
                 <div className="text-xs font-mono text-muted-foreground flex-shrink-0 mt-0.5">
                   {format(new Date(m.meeting_date + 'T12:00:00'), 'dd MMM yyyy', { locale: ptBR })}
                 </div>
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-                        <MoreVertical className="w-3.5 h-3.5" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setEditing(m); setModalOpen(true); }}>
-                        <Pencil className="w-4 h-4 mr-2" /> Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleCopy(m)}>
-                        <Copy className="w-4 h-4 mr-2" /> Copiar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleExportPDF(m)}>
-                        <Download className="w-4 h-4 mr-2" /> Exportar PDF
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEmail(m)}>
-                        <Mail className="w-4 h-4 mr-2" /> Enviar por e-mail
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(m)}>
-                        <Trash2 className="w-4 h-4 mr-2" /> Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                <ActionsMenu
+                  items={[
+                    { label: 'Editar', icon: Pencil, onClick: () => { setEditing(m); setModalOpen(true); } },
+                    { label: 'Copiar', icon: Copy, onClick: () => handleCopy(m) },
+                    { label: 'Exportar PDF', icon: Download, onClick: () => handleExportPDF(m) },
+                    { label: 'Enviar por e-mail', icon: Mail, onClick: () => handleEmail(m) },
+                    { label: 'Excluir', icon: Trash2, onClick: () => setDeleteTarget(m), destructive: true },
+                  ]}
+                />
               </div>
             );
           })}

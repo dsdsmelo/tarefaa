@@ -11,6 +11,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { PageBody } from '@/components/layout/PageBody';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ActionsMenu } from '@/components/ui/actions-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { AvatarCircle } from '@/components/ui/avatar-circle';
@@ -182,52 +183,35 @@ const People = () => {
               <div
                 key={person.id}
                 className={cn(
-                  "group flex flex-col bg-card rounded-xl border border-border p-3 hover:border-primary/40 transition-colors animate-fade-in",
+                  "flex flex-col gap-3 bg-card rounded-xl border border-border p-4 hover:border-primary/40 transition-colors",
                   !person.active && "opacity-60"
                 )}
               >
-                <div className="flex items-center gap-2.5">
+                {/* Mesma estrutura do card de Projetos: identidade, nome, selo e ações */}
+                <div className="flex items-start gap-3">
                   <AvatarCircle name={person.name} color={person.color} size="md" avatarUrl={person.avatarUrl} />
-
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold truncate leading-tight" title={person.name}>{person.name}</h3>
-                    {person.email && (
-                      <p className="text-xs text-muted-foreground truncate leading-tight" title={person.email}>{person.email}</p>
-                    )}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold truncate" title={person.name}>{person.name}</h3>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5" title={person.email || undefined}>
+                      {person.email || 'Sem e-mail'}
+                    </p>
                   </div>
-
-                  <div className="flex items-center flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Editar"
-                      onClick={() => handleEdit(person)}
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Excluir"
-                      onClick={() => handleDeleteClick(person)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <Badge variant={person.type === 'internal' ? 'default' : 'secondary'}>
+                      {personTypeLabels[person.type]}
+                    </Badge>
+                    <ActionsMenu
+                      items={[
+                        { label: 'Editar', icon: Edit, onClick: () => handleEdit(person) },
+                        { label: 'Excluir', icon: Trash2, onClick: () => handleDeleteClick(person), destructive: true },
+                      ]}
+                    />
                   </div>
                 </div>
 
-                <div className="mt-auto pt-2 flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
-                  <Badge variant={person.type === 'internal' ? 'default' : 'secondary'}>
-                    {personTypeLabels[person.type]}
-                  </Badge>
-                  <span className="flex items-center gap-1">
-                    <CheckSquare className="w-3.5 h-3.5" />
-                    {activeTasks} ativas
-                  </span>
-                  <span className="text-border">•</span>
-                  <span>{completedTasks} concluídas</span>
+                <div className="mt-auto flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  {activeTasks} {activeTasks === 1 ? 'ativa' : 'ativas'} · {completedTasks} {completedTasks === 1 ? 'concluída' : 'concluídas'}
                 </div>
               </div>
             );

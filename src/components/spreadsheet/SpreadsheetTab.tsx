@@ -33,6 +33,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ActionsMenu } from '@/components/ui/actions-menu';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -266,18 +267,23 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
               {/* Card Content */}
               <div className="p-4 flex flex-1 flex-col gap-3">
                 {/* Icon + Title */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                      <Table2 className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{spreadsheet.name}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Tabela
-                      </p>
-                    </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Table2 className="w-4 h-4 text-primary" />
                   </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{spreadsheet.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Tabela
+                    </p>
+                  </div>
+                  <ActionsMenu
+                    items={[
+                      { label: 'Editar tabela', icon: Pencil, onClick: () => handleOpenModal(spreadsheet) },
+                      { label: 'Duplicar', icon: Copy, onClick: () => handleDuplicateSpreadsheet(spreadsheet), disabled: duplicatingId === spreadsheet.id },
+                      { label: 'Excluir', icon: Trash2, onClick: () => handleDeleteClick(spreadsheet), destructive: true },
+                    ]}
+                  />
                 </div>
 
                 {/* Description */}
@@ -288,40 +294,16 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
                 )}
 
                 {/* Footer: colado no rodapé para alinhar cards da mesma linha */}
-                <div className="mt-auto flex items-center justify-between pt-2 border-t border-border/50">
+                <div className="mt-auto flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <Calendar className="w-3 h-3" />
                     <span className="text-xs font-mono">
                       {format(new Date(spreadsheet.updatedAt), 'dd MMM yyyy', { locale: ptBR })}
                     </span>
                   </div>
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      onClick={(e) => { e.stopPropagation(); handleOpenModal(spreadsheet); }}
-                      title="Editar tabela"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
-                      onClick={(e) => { e.stopPropagation(); handleDuplicateSpreadsheet(spreadsheet); }}
-                      disabled={duplicatingId === spreadsheet.id}
-                      title="Duplicar tabela"
-                    >
-                      {duplicatingId === spreadsheet.id
-                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        : <Copy className="w-3.5 h-3.5" />
-                      }
-                    </button>
-                    <button
-                      className="p-1 rounded hover:bg-muted text-destructive/70 hover:text-destructive transition-colors"
-                      onClick={(e) => { e.stopPropagation(); handleDeleteClick(spreadsheet); }}
-                      title="Excluir tabela"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {duplicatingId === spreadsheet.id && (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                  )}
                 </div>
               </div>
             </div>

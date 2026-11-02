@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { Phase } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import { ActionsMenu } from '@/components/ui/actions-menu';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -281,24 +282,12 @@ export const PhaseManagerSheet = ({
                               {milestoneCount}
                             </span>
                           )}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => handleStartEdit(phase)}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteClick(phase)}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
+                          <ActionsMenu
+                            items={[
+                              { label: 'Editar', icon: Pencil, onClick: () => handleStartEdit(phase) },
+                              { label: 'Excluir', icon: Trash2, onClick: () => handleDeleteClick(phase), destructive: true },
+                            ]}
+                          />
                         </>
                       )}
                     </div>

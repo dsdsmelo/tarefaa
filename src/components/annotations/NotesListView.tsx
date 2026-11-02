@@ -15,7 +15,6 @@ import {
   StickyNote,
   Download,
   Mail,
-  Share2,
   Copy,
   ChevronRight,
   Link2,
@@ -38,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ActionsMenu } from '@/components/ui/actions-menu';
 import { NoteFormModal } from './NoteFormModal';
 import { sanitizeHtml, escapeHtml } from '@/lib/sanitize';
 
@@ -333,45 +333,16 @@ export function NotesListView({ projectId }: NotesListViewProps) {
                   {format(new Date(note.meetingDate), 'dd MMM yyyy', { locale: ptBR })}
                 </div>
 
-                {/* Actions — visible on hover */}
-                <div
-                  className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-                        <Share2 className="w-3.5 h-3.5" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleCopyToClipboard(note)}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copiar texto
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleExportPDF(note)}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Exportar PDF
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleShareEmail(note)}>
-                        <Mail className="w-4 h-4 mr-2" />
-                        Enviar por email
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <button
-                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => handleOpenModal(note)}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    className="p-1 rounded hover:bg-muted text-destructive/70 hover:text-destructive transition-colors"
-                    onClick={() => handleDeleteClick(note)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                {/* Ações: menu padrão, sempre visível */}
+                <ActionsMenu
+                  items={[
+                    { label: 'Editar', icon: Pencil, onClick: () => handleOpenModal(note) },
+                    { label: 'Copiar texto', icon: Copy, onClick: () => handleCopyToClipboard(note) },
+                    { label: 'Exportar PDF', icon: Download, onClick: () => handleExportPDF(note) },
+                    { label: 'Enviar por email', icon: Mail, onClick: () => handleShareEmail(note) },
+                    { label: 'Excluir', icon: Trash2, onClick: () => handleDeleteClick(note), destructive: true },
+                  ]}
+                />
 
                 {/* Chevron */}
                 <ChevronRight className="w-4 h-4 text-muted-foreground/40 flex-shrink-0 mt-0.5" />

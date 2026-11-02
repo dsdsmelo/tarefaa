@@ -31,6 +31,37 @@ Visual sóbrio e compacto: fundo azul-acinzentado, superfícies brancas com bord
 | Filtros ou abas dentro de outra aba | `<TabsList variant="segmented">` |
 | Status/selo | `Badge` com `variant` `default`, `secondary`, `success`, `warning`, `destructive`, `outline`; ou `StatusBadge`/`PriorityBadge` para tarefas |
 
+## Card de item (projeto, pessoa, senha, planilha)
+
+Referência: cards de `src/pages/Projects.tsx`. Todos os cards de uma grade têm a mesma estrutura, para ficarem com a mesma altura e alinhados:
+
+```tsx
+<div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 hover:border-primary/40">
+  <div className="flex items-start gap-3">
+    {/* identidade 40px: ProjectAvatar, AvatarCircle ou quadrado rounded-lg */}
+    <div className="min-w-0 flex-1">
+      <h3 className="text-sm font-semibold truncate">Nome</h3>
+      <p className="text-xs text-muted-foreground truncate mt-0.5">uma linha de info</p>
+    </div>
+    <div className="flex items-center gap-0.5 shrink-0">
+      {/* selo (Badge) opcional */}
+      <ActionsMenu items={[...]} />
+    </div>
+  </div>
+  <div className="mt-auto">{/* rodapé: progresso, contadores ou data */}</div>
+</div>
+```
+
+- Sem faixas coloridas, brilhos ou capas no card: a cor do item aparece só no ícone de identidade.
+- Uma linha de informação, truncada (nunca quebra em duas). Omita contadores zerados que não dizem nada e use o plural certo ("1 tarefa").
+- Projeto: use `ProjectAvatar` e `ProjectStatusBadge` (`@/components/projects/ProjectIdentity`).
+
+## Ações de um item
+
+- Use `ActionsMenu` (`@/components/ui/actions-menu`): um botão "⋮" **sempre visível**, com as ações no menu e as destrutivas por último (separadas, em vermelho).
+- Não esconda ações em `opacity-0 group-hover:opacity-100`. O hover só é aceitável para affordances de edição inline em células de tabela, alças de arrastar e sobreposições de upload de imagem.
+- Uma ação principal pode ficar visível ao lado do menu quando é o uso mais comum do item (ex.: "Acessar" no Cofre).
+
 ## Regras
 
 - **Botões:** use as variantes do `Button` (`default`, `outline`, `ghost`, `secondary`, `destructive`). Não use `gradient-primary`, `bg-gradient-*`, `text-white` ou sombras em botões. Tamanhos: padrão (36px), `sm` (32px), `icon` (36px). `lg`/`xl` e `variant="gradient"` são só da landing page.

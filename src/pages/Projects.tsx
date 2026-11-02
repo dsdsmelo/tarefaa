@@ -4,7 +4,6 @@ import {
   Search,
   LayoutGrid,
   List,
-  MoreVertical,
   Pencil,
   Trash2,
   Eye
@@ -14,6 +13,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { PageBody } from '@/components/layout/PageBody';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ActionsMenu, type ActionItem } from '@/components/ui/actions-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { ProgressBar } from '@/components/ui/progress-bar';
@@ -31,12 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -102,6 +96,12 @@ const Projects = () => {
     setEditingProject(project);
     setModalOpen(true);
   };
+
+  const projectActions = (project: Project): ActionItem[] => [
+    { label: 'Ver Detalhes', icon: Eye, onClick: () => navigate(`/projects/${project.id}`) },
+    { label: 'Editar', icon: Pencil, onClick: () => handleEdit(project) },
+    { label: 'Excluir', icon: Trash2, onClick: () => handleDeleteClick(project.id), destructive: true },
+  ];
 
   const handleDeleteClick = (projectId: string) => {
     setProjectToDelete(projectId);
@@ -247,29 +247,9 @@ const Projects = () => {
                       </h3>
                       <p className="text-xs text-muted-foreground truncate tabular-nums mt-0.5">{meta}</p>
                     </div>
-                    <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-0.5 shrink-0">
                       <ProjectStatusBadge status={project.status} />
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" title="Ações">
-                            <MoreVertical className="w-3.5 h-3.5" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            Ver Detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(project)}>
-                            <Pencil className="w-4 h-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(project.id)}>
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <ActionsMenu items={projectActions(project)} />
                     </div>
                   </div>
 
@@ -336,30 +316,8 @@ const Projects = () => {
                           <span className="text-xs font-mono text-muted-foreground w-9 text-right">{progress}%</span>
                         </div>
                       </td>
-                      <td className="px-5 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/projects/${project.id}`}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Ver Detalhes
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(project)}>
-                              <Pencil className="w-4 h-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(project.id)}>
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <td className="px-5 py-2.5 text-right">
+                        <ActionsMenu items={projectActions(project)} className="inline-flex" />
                       </td>
                     </tr>
                   );
