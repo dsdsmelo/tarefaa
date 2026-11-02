@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft,
   Calendar,
@@ -65,11 +65,34 @@ const statusColors = {
   cancelled: 'bg-status-cancelled',
 };
 
+const PROJECT_TABS = ['dashboard', 'tasks', 'gantt', 'meetings'];
+
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { projects = [], tasks = [], people = [], phases = [], cells = [], customColumns = [], milestones = [], deleteMilestone, updateMilestone, deletePhase, updatePhase, loading, error, activateWorkspaceForProject } = useData();
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  // Aba e tarefa em foco vêm da URL (?tab=tasks&tarefa=<id>) para que links
+  // do Dashboard levem direto ao ponto que precisa de ação.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab = tabParam && PROJECT_TABS.includes(tabParam) ? tabParam : 'dashboard';
+  const focusTaskId = activeTab === 'tasks' ? searchParams.get('tarefa') : null;
+  const setActiveTab = (tab: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'dashboard') next.delete('tab');
+      else next.set('tab', tab);
+      next.delete('tarefa');
+      return next;
+    }, { replace: true });
+  };
+  const clearFocusTask = useCallback(() => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete('tarefa');
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskDefaultResponsibleIds, setTaskDefaultResponsibleIds] = useState<string[] | undefined>(undefined);
   const [milestoneModalOpen, setMilestoneModalOpen] = useState(false);
@@ -639,7 +662,7 @@ const ProjectDetail = () => {
 
           {/* Tasks Tab */}
           <TabsContent value="tasks" className="mt-4">
-            <ProjectTasksTable projectId={projectId || ''} />
+            <ProjectTasksTable projectId={projectId || ''} focusTaskId={focusTaskId} onFocusTaskHandled={clearFocusTask} />
           </TabsContent>
 
           {/* Gantt Tab */}

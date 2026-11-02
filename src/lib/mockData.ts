@@ -1,4 +1,5 @@
 import { Person, Project, Phase, Cell, Device, Task } from './types';
+import { daysUntilDue, isTaskOpen } from './taskDates';
 
 export const mockPeople: Person[] = [
   { id: '1', name: 'Daniel Melo', email: 'daniel@company.com', type: 'internal', color: '#3B82F6', active: true },
@@ -226,18 +227,14 @@ export const calculatePercentage = (task: Task): number => {
 
 // Helper function to check if task is overdue
 export const isTaskOverdue = (task: Task): boolean => {
-  if (!task.endDate) return false;
-  if (task.status === 'completed' || task.status === 'cancelled') return false;
-  return new Date(task.endDate) < new Date();
+  if (!isTaskOpen(task)) return false;
+  const days = daysUntilDue(task);
+  return days !== null && days < 0;
 };
 
 // Helper function to check if task is due soon (next 3 days)
 export const isTaskDueSoon = (task: Task): boolean => {
-  if (!task.endDate) return false;
-  if (task.status === 'completed' || task.status === 'cancelled') return false;
-  const endDate = new Date(task.endDate);
-  const today = new Date();
-  const threeDaysFromNow = new Date();
-  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-  return endDate >= today && endDate <= threeDaysFromNow;
+  if (!isTaskOpen(task)) return false;
+  const days = daysUntilDue(task);
+  return days !== null && days >= 0 && days <= 3;
 };

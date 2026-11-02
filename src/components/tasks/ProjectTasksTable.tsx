@@ -70,9 +70,12 @@ import {
 
 interface ProjectTasksTableProps {
   projectId: string;
+  // Tarefa a abrir em edição ao carregar (link direto vindo do Dashboard)
+  focusTaskId?: string | null;
+  onFocusTaskHandled?: () => void;
 }
 
-export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
+export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }: ProjectTasksTableProps) => {
   const { tasks, addTask, updateTask, deleteTask, people, customColumns, updateCustomColumn, setCustomColumns, getProjectMemberIds } = useData();
   const projectMemberIds = getProjectMemberIds(projectId);
 
@@ -297,6 +300,16 @@ export const ProjectTasksTable = ({ projectId }: ProjectTasksTableProps) => {
     setEditingTask(task);
     setTaskModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!focusTaskId) return;
+    // Aguarda os dados carregarem; se a tarefa não existir, não faz nada
+    const task = tasks.find(t => t.id === focusTaskId && t.projectId === projectId);
+    if (!task) return;
+    handleEditTask(task);
+    onFocusTaskHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTaskId, tasks, projectId]);
 
   const handleDeleteClick = (taskId: string) => {
     setTaskToDelete(taskId);
