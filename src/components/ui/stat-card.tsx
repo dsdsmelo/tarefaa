@@ -16,19 +16,19 @@ interface StatCardProps {
 }
 
 const variantStyles = {
-  default: 'bg-card',
-  primary: 'bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20',
-  success: 'bg-gradient-to-br from-status-completed/10 to-status-completed/5 border-status-completed/20',
-  warning: 'bg-gradient-to-br from-status-pending/10 to-status-pending/5 border-status-pending/20',
-  danger: 'bg-gradient-to-br from-status-blocked/10 to-status-blocked/5 border-status-blocked/20',
+  default: '',
+  primary: '',
+  success: '',
+  warning: '',
+  danger: '',
 };
 
 const iconVariantStyles = {
-  default: 'bg-secondary text-muted-foreground',
-  primary: 'bg-primary/20 text-primary',
-  success: 'bg-status-completed/20 text-status-completed',
-  warning: 'bg-status-pending/20 text-status-pending',
-  danger: 'bg-status-blocked/20 text-status-blocked',
+  default: 'bg-muted text-muted-foreground',
+  primary: 'bg-primary/10 text-primary',
+  success: 'bg-status-completed/10 text-status-completed',
+  warning: 'bg-status-pending/10 text-status-pending',
+  danger: 'bg-status-blocked/10 text-status-blocked',
 };
 
 export const StatCard = ({
@@ -43,17 +43,17 @@ export const StatCard = ({
   return (
     <div
       className={cn(
-        'p-6 rounded-xl border shadow-soft transition-all duration-200 hover:shadow-medium animate-fade-in',
+        'p-4 rounded-xl border border-border bg-card',
         variantStyles[variant],
         className
       )}
     >
       <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold text-foreground">{value}</p>
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">{title}</p>
+          <p className="text-2xl font-semibold tabular-nums text-foreground">{value}</p>
           {subtitle && (
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           )}
           {trend && (
             <div className="flex items-center gap-1">
@@ -69,8 +69,8 @@ export const StatCard = ({
             </div>
           )}
         </div>
-        <div className={cn('p-3 rounded-xl', iconVariantStyles[variant])}>
-          <Icon className="w-6 h-6" />
+        <div className={cn('w-8 h-8 rounded-md flex items-center justify-center', iconVariantStyles[variant])}>
+          <Icon className="w-4 h-4" />
         </div>
       </div>
     </div>

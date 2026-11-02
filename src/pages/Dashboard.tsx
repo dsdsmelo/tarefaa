@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { PageBody } from '@/components/layout/PageBody';
+import { Panel } from '@/components/ui/panel';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useData } from '@/contexts/DataContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -214,7 +217,7 @@ const Dashboard = () => {
     return (
       <MainLayout>
         <Header title="Dashboard" subtitle={subtitle} />
-        <div className="px-6 pb-6 pt-3 space-y-4">
+        <PageBody>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {[...Array(5)].map((_, i) => (
               <Skeleton key={i} className="h-[92px] rounded-xl" />
@@ -224,7 +227,7 @@ const Dashboard = () => {
             <Skeleton className="h-96 rounded-xl lg:col-span-2" />
             <Skeleton className="h-96 rounded-xl" />
           </div>
-        </div>
+        </PageBody>
       </MainLayout>
     );
   }
@@ -247,7 +250,7 @@ const Dashboard = () => {
     <MainLayout>
       <Header title="Dashboard" subtitle={subtitle} />
 
-      <div className="px-6 pb-6 pt-3 space-y-4">
+      <PageBody>
         {/* Indicadores de atenção: cada card filtra a lista abaixo */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {ATTENTION_VIEWS.map(view => {
@@ -277,20 +280,13 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
           {/* Lista do que precisa de atenção */}
-          <section className="lg:col-span-2 bg-card rounded-xl border border-border">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
-              <div className="flex items-center gap-2">
-                <activeViewMeta.icon className={cn('w-4 h-4', activeViewMeta.tone)} />
-                <h3 className="font-semibold">{activeViewMeta.label}</h3>
-                <span className="text-sm text-muted-foreground tabular-nums">({activeTasks.length})</span>
-              </div>
-            </div>
-
+          <Panel
+            className="lg:col-span-2"
+            icon={activeViewMeta.icon}
+            title={<>{activeViewMeta.label} <span className="font-normal text-muted-foreground tabular-nums">({activeTasks.length})</span></>}
+          >
             {activeTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-14 text-muted-foreground">
-                <CheckCircle2 className="w-8 h-8 mb-2 text-emerald-500" />
-                <p className="text-sm">{EMPTY_MESSAGES[activeView]}</p>
-              </div>
+              <EmptyState icon={CheckCircle2} title="Tudo em dia" description={EMPTY_MESSAGES[activeView]} />
             ) : (
               <ul className="divide-y divide-border">
                 {activeTasks.slice(0, MAX_ROWS).map(task => {
@@ -360,15 +356,11 @@ const Dashboard = () => {
                 )}
               </ul>
             )}
-          </section>
+          </Panel>
 
           <div className="space-y-4">
             {/* Lembretes das anotações */}
-            <section className="bg-card rounded-xl border border-border">
-              <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border">
-                <Bell className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Lembretes</h3>
-              </div>
+            <Panel icon={Bell} title="Lembretes">
               {reminders.length === 0 ? (
                 <p className="px-5 py-6 text-sm text-muted-foreground text-center">
                   Nenhum lembrete pendente. Crie um em Anotações, categoria Lembrete.
@@ -400,21 +392,18 @@ const Dashboard = () => {
                   ))}
                 </ul>
               )}
-            </section>
+            </Panel>
 
             {/* Projetos em andamento */}
-            <section className="bg-card rounded-xl border border-border">
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <FolderKanban className="w-4 h-4 text-primary" />
-                  <h3 className="font-semibold">Projetos</h3>
-                </div>
-                <Link to="/projects">
-                  <Button variant="ghost" size="sm" className="h-7 text-xs">
-                    Ver todos <ArrowRight className="w-3 h-3 ml-1" />
-                  </Button>
-                </Link>
-              </div>
+            <Panel
+              icon={FolderKanban}
+              title="Projetos"
+              actions={
+                <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                  <Link to="/projects">Ver todos <ArrowRight className="w-3 h-3" /></Link>
+                </Button>
+              }
+            >
               {projectHealth.length === 0 ? (
                 <div className="px-5 py-6 text-center">
                   <p className="text-sm text-muted-foreground">Nenhum projeto em andamento.</p>
@@ -451,11 +440,10 @@ const Dashboard = () => {
                   ))}
                 </ul>
               )}
-            </section>
+            </Panel>
 
             {/* Resumo por status */}
-            <section className="bg-card rounded-xl border border-border px-5 py-4">
-              <h3 className="font-semibold text-sm mb-3">Resumo das tarefas</h3>
+            <Panel title="Resumo das tarefas" bodyClassName="px-5 py-4">
               <div className="flex h-2 rounded-full overflow-hidden bg-muted">
                 {statusTotal > 0 && statusSummary.map(s => (
                   s.value > 0 && <div key={s.label} className={s.color} style={{ width: `${(s.value / statusTotal) * 100}%` }} />
@@ -472,10 +460,10 @@ const Dashboard = () => {
                   </div>
                 ))}
               </dl>
-            </section>
+            </Panel>
           </div>
         </div>
-      </div>
+      </PageBody>
     </MainLayout>
   );
 };
