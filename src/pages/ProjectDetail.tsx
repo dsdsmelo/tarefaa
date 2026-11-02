@@ -511,7 +511,7 @@ const ProjectDetail = () => {
             </div>
 
             {/* Listas rápidas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Tarefas mais longas em execução */}
               <Panel icon={Clock} title="Mais tempo em execução">
                 {(() => {
@@ -527,7 +527,7 @@ const ProjectDetail = () => {
                     .slice(0, 4);
 
                   if (inProgressTasks.length === 0) {
-                    return <p className="px-5 py-6 text-center text-xs text-muted-foreground">Nenhuma tarefa em execução</p>;
+                    return <p className="h-full flex items-center justify-center px-5 py-6 text-center text-xs text-muted-foreground">Nenhuma tarefa em execução</p>;
                   }
 
                   return (
@@ -584,7 +584,7 @@ const ProjectDetail = () => {
                     })}
                   </ul>
                 ) : (
-                  <div className="flex flex-col items-center justify-center px-5 py-6 text-muted-foreground">
+                  <div className="h-full flex flex-col items-center justify-center px-5 py-6 text-muted-foreground">
                     <CheckCircle2 className="w-4 h-4 mb-1 text-emerald-600 dark:text-emerald-400" />
                     <p className="text-xs">Nenhuma vencida</p>
                   </div>
@@ -619,7 +619,7 @@ const ProjectDetail = () => {
                     })}
                   </ul>
                 ) : (
-                  <div className="flex flex-col items-center justify-center px-5 py-6 text-muted-foreground">
+                  <div className="h-full flex flex-col items-center justify-center px-5 py-6 text-muted-foreground">
                     <CheckCircle2 className="w-4 h-4 mb-1 text-emerald-600 dark:text-emerald-400" />
                     <p className="text-xs">Nenhuma próxima</p>
                   </div>
@@ -662,7 +662,7 @@ const ProjectDetail = () => {
                     ))}
                   </ul>
                 ) : (
-                  <div className="flex flex-col items-center justify-center px-5 py-6 text-muted-foreground">
+                  <div className="h-full flex flex-col items-center justify-center px-5 py-6 text-muted-foreground">
                     <p className="text-xs">Nenhum marco criado</p>
                     <Button variant="link" size="sm" className="mt-1 text-xs h-6" onClick={() => { setEditingMilestone(undefined); setMilestoneModalOpen(true); }}>
                       Criar marco

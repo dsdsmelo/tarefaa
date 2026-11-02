@@ -628,21 +628,21 @@ const Settings = () => {
               </Panel>
 
               {/* Stats */}
-              <Panel title="Estatísticas" bodyClassName="p-5">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-border p-3">
+              <Panel title="Estatísticas" bodyClassName="p-5 flex flex-col">
+                <div className="flex-1 grid grid-cols-2 auto-rows-fr gap-3">
+                  <div className="rounded-lg border border-border p-3 flex flex-col justify-center">
                     <p className="text-xs text-muted-foreground">Projetos</p>
                     <p className="text-2xl font-semibold tabular-nums mt-1">{projects.length}</p>
                   </div>
-                  <div className="rounded-lg border border-border p-3">
+                  <div className="rounded-lg border border-border p-3 flex flex-col justify-center">
                     <p className="text-xs text-muted-foreground">Tarefas</p>
                     <p className="text-2xl font-semibold tabular-nums mt-1">{tasks.length}</p>
                   </div>
-                  <div className="rounded-lg border border-border p-3">
+                  <div className="rounded-lg border border-border p-3 flex flex-col justify-center">
                     <p className="text-xs text-muted-foreground">Concluídas</p>
                     <p className="text-2xl font-semibold tabular-nums mt-1 text-emerald-600 dark:text-emerald-400">{tasks.filter(t => t.status === 'completed').length}</p>
                   </div>
-                  <div className="rounded-lg border border-border p-3">
+                  <div className="rounded-lg border border-border p-3 flex flex-col justify-center">
                     <p className="text-xs text-muted-foreground">Pessoas</p>
                     <p className="text-2xl font-semibold tabular-nums mt-1">{people.length}</p>
                   </div>
@@ -874,7 +874,7 @@ const Settings = () => {
 
           {/* Appearance Tab */}
           <TabsContent value="appearance">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
               <Panel icon={isDarkMode ? Moon : Sun} title="Tema" bodyClassName="p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -889,42 +889,47 @@ const Settings = () => {
 
           {/* Data Tab */}
           <TabsContent value="data">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Panel icon={FileSpreadsheet} title="Exportação" bodyClassName="p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium">Exportar para Excel</p>
-                    <p className="text-xs text-muted-foreground">Baixe todas as tarefas em formato CSV</p>
+            <div>
+              {/* Um card só, para não ficarem cards desiguais lado a lado */}
+              <Panel icon={Database} title="Exportação e Backup" bodyClassName="divide-y divide-border">
+                <div className="flex items-center justify-between gap-4 px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <FileSpreadsheet className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">Exportar para Excel</p>
+                      <p className="text-xs text-muted-foreground">Baixe todas as tarefas em formato CSV</p>
+                    </div>
                   </div>
                   <Button onClick={handleExportExcel}>
                     <Download className="w-4 h-4" />
                     Exportar
                   </Button>
                 </div>
-              </Panel>
-
-              <Panel icon={Database} title="Backup" bodyClassName="p-5">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <Download className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Fazer Backup</p>
                       <p className="text-xs text-muted-foreground">Baixe todos os dados</p>
                     </div>
-                    <Button variant="outline" onClick={handleBackup}>
-                      <Download className="w-4 h-4" />
-                      Backup
-                    </Button>
                   </div>
-                  <div className="flex items-center justify-between gap-4 pt-4 border-t border-border">
+                  <Button variant="outline" onClick={handleBackup}>
+                    <Download className="w-4 h-4" />
+                    Backup
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between gap-4 px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <Upload className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Restaurar Backup</p>
                       <p className="text-xs text-muted-foreground">Restaure de um arquivo</p>
                     </div>
-                    <Button variant="outline" onClick={handleRestore}>
-                      <Upload className="w-4 h-4" />
-                      Restaurar
-                    </Button>
                   </div>
+                  <Button variant="outline" onClick={handleRestore}>
+                    <Upload className="w-4 h-4" />
+                    Restaurar
+                  </Button>
                 </div>
               </Panel>
             </div>
@@ -993,19 +998,21 @@ const Settings = () => {
 
           {/* Security Tab */}
           <TabsContent value="security">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
               <Panel icon={Lock} title="Alterar Senha" bodyClassName="p-5">
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
+                {/* Largura total: texto à esquerda, verificação e botão à direita */}
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                  <p className="flex-1 text-sm text-muted-foreground">
                     Para alterar sua senha, enviaremos um link de verificação para o seu email <span className="font-medium text-foreground">{user?.email}</span>.
                   </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
                   <Turnstile
                     ref={changePwCaptchaRef}
                     action="change_password"
                     onVerify={setChangePwCaptcha}
                     onExpire={() => setChangePwCaptcha(null)}
                   />
-                  <Button onClick={handleChangePassword} className="w-full" disabled={isChangingPassword}>
+                  <Button onClick={handleChangePassword} className="w-full sm:w-auto" disabled={isChangingPassword}>
                     {isChangingPassword ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -1018,6 +1025,7 @@ const Settings = () => {
                       </>
                     )}
                   </Button>
+                  </div>
                 </div>
               </Panel>
             </div>

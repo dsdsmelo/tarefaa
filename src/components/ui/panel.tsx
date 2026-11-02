@@ -14,10 +14,11 @@ interface PanelProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
   bodyClassName?: string;
 }
 
-// Card padrão com título: superfície branca, borda fina, cabeçalho com divisória
+// Card padrão com título: superfície branca, borda fina, cabeçalho com divisória.
+// O corpo estica até a altura do card, para cards lado a lado ficarem alinhados.
 export const Panel = React.forwardRef<HTMLElement, PanelProps>(
   ({ title, description, icon: Icon, iconClassName, actions, bodyClassName, className, children, ...props }, ref) => (
-    <section ref={ref} className={cn('rounded-xl border border-border bg-card', className)} {...props}>
+    <section ref={ref} className={cn('flex flex-col rounded-xl border border-border bg-card', className)} {...props}>
       {(title || actions) && (
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
           <div className="flex min-w-0 items-center gap-2">
@@ -30,7 +31,7 @@ export const Panel = React.forwardRef<HTMLElement, PanelProps>(
           {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
         </div>
       )}
-      <div className={bodyClassName}>{children}</div>
+      <div className={cn('min-h-0 flex-1', bodyClassName)}>{children}</div>
     </section>
   ),
 );

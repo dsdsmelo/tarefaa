@@ -378,7 +378,7 @@ function UnlockedView() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
               {paged.map((it) => (
-                <div key={it.id} className="group bg-card border border-border rounded-xl p-3 hover:border-primary/40 transition-colors">
+                <div key={it.id} className="group flex flex-col bg-card border border-border rounded-xl p-3 hover:border-primary/40 transition-colors">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-md flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
                       style={{ backgroundColor: colorFromString(it.title) }}>
@@ -409,7 +409,7 @@ function UnlockedView() {
                     </div>
                   </div>
 
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-auto pt-2 space-y-1">
                     {it.username && (
                       <div className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded-md px-2.5 py-1">
                         <span className="truncate text-muted-foreground">{it.username}</span>

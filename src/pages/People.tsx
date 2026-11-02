@@ -182,7 +182,7 @@ const People = () => {
               <div
                 key={person.id}
                 className={cn(
-                  "group bg-card rounded-xl border border-border p-3 hover:border-primary/40 transition-colors animate-fade-in",
+                  "group flex flex-col bg-card rounded-xl border border-border p-3 hover:border-primary/40 transition-colors animate-fade-in",
                   !person.active && "opacity-60"
                 )}
               >
@@ -218,7 +218,7 @@ const People = () => {
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                <div className="mt-auto pt-2 flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
                   <Badge variant={person.type === 'internal' ? 'default' : 'secondary'}>
                     {personTypeLabels[person.type]}
                   </Badge>

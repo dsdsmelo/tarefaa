@@ -243,7 +243,7 @@ const Projects = () => {
                 <div
                   key={project.id}
                   onClick={() => navigate(`/projects/${project.id}`)}
-                  className="bg-card rounded-xl border border-border hover:border-primary/40 transition-colors animate-fade-in overflow-hidden group relative cursor-pointer"
+                  className="flex flex-col bg-card rounded-xl border border-border hover:border-primary/40 transition-colors animate-fade-in overflow-hidden group relative cursor-pointer"
                 >
                   {/* Modern gradient: soft colored glow coming from the top-right corner */}
                   {glowColor && (
@@ -301,8 +301,8 @@ const Projects = () => {
                       A imagem fica em fluxo (flex) e não mais absoluta: assim o card
                       pode encurtar sem que o conteúdo colida com a miniatura, e some
                       o pr-20 que roubava largura do nome. */}
-                  <div className="relative p-3 flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
+                  <div className="relative p-3 flex flex-1 gap-3">
+                    <div className="flex-1 min-w-0 flex flex-col">
                       {/* Project name */}
                       <h3 className="text-sm font-semibold truncate group-hover:text-primary transition-colors" title={project.name}>
                         {project.name}
@@ -332,8 +332,8 @@ const Projects = () => {
                         )}
                       </div>
 
-                      {/* Progress bar inline */}
-                      <div className="flex items-center gap-2 mt-2">
+                      {/* Progress bar inline: colada no rodapé para alinhar cards da mesma linha */}
+                      <div className="flex items-center gap-2 mt-auto pt-2">
                         <div className="flex-1">
                           <ProgressBar
                             value={progress}
@@ -350,7 +350,7 @@ const Projects = () => {
 
                     {/* Project / client image - miniatura arredondada no canto superior direito */}
                     {hasImage && (
-                      <div className="pointer-events-none w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-white ring-1 ring-border flex items-center justify-center p-1.5">
+                      <div className="pointer-events-none self-start w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-white ring-1 ring-border flex items-center justify-center p-1.5">
                         <img
                           src={project.imageUrl!}
                           alt={project.name}

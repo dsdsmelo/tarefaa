@@ -260,11 +260,11 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
           {filteredSpreadsheets.map((spreadsheet) => (
             <div
               key={spreadsheet.id}
-              className="group bg-card rounded-xl border border-border overflow-hidden hover:border-primary/40 transition-colors cursor-pointer"
+              className="group flex flex-col bg-card rounded-xl border border-border overflow-hidden hover:border-primary/40 transition-colors cursor-pointer"
               onClick={() => handleOpenSpreadsheet(spreadsheet)}
             >
               {/* Card Content */}
-              <div className="p-4 space-y-3">
+              <div className="p-4 flex flex-1 flex-col gap-3">
                 {/* Icon + Title */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -287,8 +287,8 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
                   </p>
                 )}
 
-                {/* Footer */}
-                <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                {/* Footer: colado no rodapé para alinhar cards da mesma linha */}
+                <div className="mt-auto flex items-center justify-between pt-2 border-t border-border/50">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <Calendar className="w-3 h-3" />
                     <span className="text-xs font-mono">

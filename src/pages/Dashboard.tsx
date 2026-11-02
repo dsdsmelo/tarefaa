@@ -278,10 +278,13 @@ const Dashboard = () => {
           })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-          {/* Lista do que precisa de atenção */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Lista do que precisa de atenção: no desktop acompanha a altura da
+              coluna da direita e rola por dentro, para as colunas alinharem */}
+          <div className="lg:col-span-2 lg:relative lg:min-h-[420px]">
           <Panel
-            className="lg:col-span-2"
+            className="lg:absolute lg:inset-0"
+            bodyClassName="overflow-y-auto"
             icon={activeViewMeta.icon}
             title={<>{activeViewMeta.label} <span className="font-normal text-muted-foreground tabular-nums">({activeTasks.length})</span></>}
           >
@@ -357,8 +360,9 @@ const Dashboard = () => {
               </ul>
             )}
           </Panel>
+          </div>
 
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             {/* Lembretes das anotações */}
             <Panel icon={Bell} title="Lembretes">
               {reminders.length === 0 ? (
@@ -396,6 +400,7 @@ const Dashboard = () => {
 
             {/* Projetos em andamento */}
             <Panel
+              className="flex-1"
               icon={FolderKanban}
               title="Projetos"
               actions={
