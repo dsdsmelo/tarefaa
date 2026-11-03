@@ -31,3 +31,6 @@ verify_jwt = false
 verify_jwt = false
 [functions.log-auth-event]
 verify_jwt = false
+
+[functions.send-task-reminders]
+verify_jwt = false
