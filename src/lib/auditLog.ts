@@ -104,22 +104,39 @@ async function getCurrentUserInfo(): Promise<{ userId: string | null; userEmail:
   }
 }
 
+// Eventos que acontecem sem sessão (antes do login ou após falha). O RLS só aceita
+// insert autenticado com o próprio user_id, então estes vão pela Edge Function
+// log-auth-event, que grava com a service role e aplica rate limit por IP.
+const PUBLIC_AUTH_EVENTS: ReadonlySet<AuditLogAction> = new Set([
+  'login_failed',
+  'signup',
+  'signup_failed',
+  'login_blocked',
+]);
+
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
   try {
-    // Auto-fill user info if not provided
-    let userId = entry.user_id;
-    let userEmail = entry.user_email;
+    const userInfo = await getCurrentUserInfo();
 
-    if (!userId || !userEmail) {
-      const userInfo = await getCurrentUserInfo();
-      userId = userId || userInfo.userId || undefined;
-      userEmail = userEmail || userInfo.userEmail || undefined;
+    if (!userInfo.userId) {
+      if (PUBLIC_AUTH_EVENTS.has(entry.action)) {
+        await supabase.functions.invoke('log-auth-event', {
+          body: { action: entry.action, email: entry.user_email, details: entry.details },
+        });
+      } else {
+        console.warn('Audit log ignorado: evento sem sessão', entry.action);
+      }
+      return;
     }
+
+    // Com sessão, o user_id é sempre o da sessão (exigido pelo RLS)
+    const userId = userInfo.userId;
+    const userEmail = entry.user_email || userInfo.userEmail || undefined;
 
     const { error } = await supabase
       .from('activity_logs')
       .insert({
-        user_id: userId || null,
+        user_id: userId,
         user_email: userEmail || null,
         action: entry.action,
         entity_type: entry.entity_type || null,

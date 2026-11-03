@@ -30,3 +30,6 @@ supabase/.temp/
 .env
 .env.*
 !.env.example
+
+# Snapshot do schema de produção (referência local, não versionar)
+schema_prod.json

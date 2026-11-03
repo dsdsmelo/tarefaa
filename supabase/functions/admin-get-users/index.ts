@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { fetchAllRows } from "../_shared/fetchAllRows.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,25 +57,29 @@ serve(async (req) => {
       );
     }
 
-    // Fetch all auth users (includes email, last_sign_in_at, etc.)
-    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-    if (authError) throw authError;
+    // Fetch all auth users (includes email, last_sign_in_at, etc.).
+    // listUsers devolve 50 por padrão: pagina até a última página.
+    const allAuthUsers = [];
+    const AUTH_PER_PAGE = 1000;
+    for (let page = 1; ; page++) {
+      const { data, error: authError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: AUTH_PER_PAGE });
+      if (authError) throw authError;
+      const batch = data?.users ?? [];
+      allAuthUsers.push(...batch);
+      if (batch.length < AUTH_PER_PAGE) break;
+    }
+    const authUsers = { users: allAuthUsers };
 
-    // Fetch all profiles
-    const { data: profiles } = await supabaseAdmin
-      .from("profiles")
-      .select("*");
-
-    // Fetch all subscriptions
-    const { data: subscriptions } = await supabaseAdmin
-      .from("subscriptions")
-      .select("*");
-
-    // Fetch all admin roles
-    const { data: roles } = await supabaseAdmin
-      .from("user_roles")
-      .select("*")
-      .eq("role", "admin");
+    // Fetch all profiles, subscriptions and admin roles (paginado: 1000 linhas por requisição)
+    // deno-lint-ignore no-explicit-any
+    type Row = Record<string, any>;
+    const [profiles, subscriptions, roles] = await Promise.all([
+      fetchAllRows<Row>(() => supabaseAdmin.from("profiles").select("*", { count: "exact" }).order("id")),
+      fetchAllRows<Row>(() => supabaseAdmin.from("subscriptions").select("*", { count: "exact" }).order("id")),
+      fetchAllRows<Row>(() =>
+        supabaseAdmin.from("user_roles").select("*", { count: "exact" }).eq("role", "admin").order("id")
+      ),
+    ]);
 
     const adminUserIds = new Set(roles?.map(r => r.user_id) || []);
 

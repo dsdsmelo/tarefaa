@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   DEFAULT_KDF, deriveKey, generateVaultKey, wrapVaultKey, unwrapVaultKey,
@@ -109,14 +110,12 @@ export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [user, getMeta]);
 
   const loadItems = useCallback(async (vaultKey: CryptoKey) => {
-    const { data, error } = await supabase
-      .from('vault_items')
-      .select('id, blob')
-      .eq('user_id', user!.id)
-      .order('created_at', { ascending: true });
-    if (error) throw error;
+    const data = await fetchAllRows<{ id: string; blob: string }>(() =>
+      supabase.from('vault_items').select('id, blob', { count: 'exact' })
+        .eq('user_id', user!.id).order('created_at', { ascending: true }).order('id')
+    );
     const decrypted: VaultItem[] = [];
-    for (const row of (data ?? []) as { id: string; blob: string }[]) {
+    for (const row of data) {
       try {
         const d = await decryptJSON<ItemData>(row.blob, vaultKey);
         decrypted.push({ id: row.id, ...d });

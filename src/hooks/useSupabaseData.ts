@@ -1,7 +1,49 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/auditLog';
+import { fetchAllRows, fetchAllRowsByIds } from '@/lib/fetchAllRows';
 import { Person, Project, Phase, Cell, Task, CustomColumn, Milestone, MeetingNote, Spreadsheet, SpreadsheetSheet, SpreadsheetColumn, SpreadsheetRow, SpreadsheetCell, SpreadsheetMerge, Workspace } from '@/lib/types';
+
+// Linha crua do banco, antes do mapeamento para os tipos do domínio
+type DbRow = Record<string, unknown>;
+// Linhas de planilha usadas na duplicação (colunas, linhas, células, mesclagens)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SheetPartRow = { id: string } & Record<string, any>;
+
+// Colunas/linhas/mesclagens de uma aba (ou da planilha inteira, quando não há abas)
+function fetchSheetPart<T>(table: string, spreadsheetId: string, sheetId: string | null, ordered: boolean) {
+  return fetchAllRows<T>(() => {
+    let q = supabase.from(table).select('*', { count: 'exact' });
+    q = sheetId ? q.eq('sheet_id', sheetId) : q.eq('spreadsheet_id', spreadsheetId);
+    if (ordered) q = q.order('order_index');
+    return q.order('id');
+  });
+}
+
+function fetchCellsForRows<T>(rowIds: string[]) {
+  return fetchAllRowsByIds<T>(rowIds, (chunk) =>
+    supabase.from('spreadsheet_cells').select('*', { count: 'exact' }).in('row_id', chunk).order('id')
+  );
+}
+
+// Insere em lotes (o retorno de um insert grande também passa pelo limite da API).
+// A ordem do retorno acompanha a do payload, usada para mapear ids antigos -> novos.
+const INSERT_CHUNK_SIZE = 500;
+async function insertInChunks(table: string, payload: object[], returnRows = true): Promise<SheetPartRow[]> {
+  const inserted: SheetPartRow[] = [];
+  for (let i = 0; i < payload.length; i += INSERT_CHUNK_SIZE) {
+    const chunk = payload.slice(i, i + INSERT_CHUNK_SIZE);
+    if (returnRows) {
+      const { data, error } = await supabase.from(table).insert(chunk).select();
+      if (error) throw error;
+      inserted.push(...((data ?? []) as SheetPartRow[]));
+    } else {
+      const { error } = await supabase.from(table).insert(chunk);
+      if (error) throw error;
+    }
+  }
+  return inserted;
+}
 
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string | null> {
@@ -83,43 +125,47 @@ export function useSupabaseData() {
         setActiveWorkspaceId(null);
       }
 
-      const [
-        { data: peopleData, error: peopleError },
-        { data: projectsData, error: projectsError },
-        { data: phasesData, error: phasesError },
-        { data: cellsData, error: cellsError },
-        { data: tasksData, error: tasksError },
-        { data: columnsData, error: columnsError },
-        { data: milestonesData, error: milestonesError },
-        { data: meetingNotesData, error: meetingNotesError },
-        { data: spreadsheetsData, error: spreadsheetsError },
-        { data: projectMembersData, error: projectMembersError },
-      ] = await Promise.all([
-        supabase.from('people').select('*').order('name'),
-        supabase.from('projects').select('*').order('name'),
-        supabase.from('phases').select('*').order('order'),
-        supabase.from('cells').select('*').order('name'),
-        supabase.from('tasks').select('*').order('updated_at', { ascending: false }),
-        supabase.from('custom_columns').select('*').order('order'),
-        supabase.from('milestones').select('*').order('name'),
-        supabase.from('meeting_notes').select('*').order('meeting_date', { ascending: false }),
-        supabase.from('project_spreadsheets').select('*').order('created_at', { ascending: false }),
-        supabase.from('project_members').select('project_id, person_id'),
-      ]);
+      // Todas paginadas (limite de 1000 linhas por requisição da API) e com
+      // desempate por id, para a paginação ser estável
+      const all = <T,>(table: string, columns = '*', order: [string, boolean][] = []) =>
+        fetchAllRows<T>(() => {
+          let q = supabase.from(table).select(columns, { count: 'exact' });
+          for (const [column, ascending] of order) q = q.order(column, { ascending });
+          return q.order('id');
+        });
 
-      if (peopleError) throw peopleError;
-      if (projectsError) throw projectsError;
-      if (phasesError) throw phasesError;
-      if (cellsError) throw cellsError;
-      if (tasksError) throw tasksError;
-      if (columnsError) throw columnsError;
-      if (milestonesError) throw milestonesError;
-      if (meetingNotesError) throw meetingNotesError;
-      if (spreadsheetsError) throw spreadsheetsError;
-      // projectMembersError é ignorado se a tabela não existir ainda
-      if (projectMembersError && !projectMembersError.message?.includes('does not exist')) {
-        console.warn('Error fetching project members:', projectMembersError);
-      }
+      const [
+        peopleData,
+        projectsData,
+        phasesData,
+        cellsData,
+        tasksData,
+        columnsData,
+        milestonesData,
+        meetingNotesData,
+        spreadsheetsData,
+        projectMembersData,
+      ] = await Promise.all([
+        all<DbRow>('people', '*', [['name', true]]),
+        all<DbRow>('projects', '*', [['name', true]]),
+        all<DbRow>('phases', '*', [['order', true]]),
+        all<DbRow>('cells', '*', [['name', true]]),
+        all<DbRow>('tasks', '*', [['updated_at', false]]),
+        all<DbRow>('custom_columns', '*', [['order', true]]),
+        all<DbRow>('milestones', '*', [['name', true]]),
+        all<DbRow>('meeting_notes', '*', [['meeting_date', false]]),
+        all<DbRow>('project_spreadsheets', '*', [['created_at', false]]),
+        // project_members é opcional: se a tabela não existir, segue sem membros
+        fetchAllRows<{ project_id: string; person_id: string }>(() =>
+          supabase.from('project_members').select('project_id, person_id', { count: 'exact' })
+            .order('project_id').order('person_id')
+        ).catch((membersError) => {
+          if (!membersError?.message?.includes('does not exist')) {
+            console.warn('Error fetching project members:', membersError);
+          }
+          return [];
+        }),
+      ]);
 
       // Map snake_case to camelCase - ensure arrays are never undefined
       setPeople(Array.isArray(peopleData) ? peopleData.map(mapPerson) : []);
@@ -303,11 +349,11 @@ export function useSupabaseData() {
     if (pmError) throw pmError;
 
     // 3) Remove a pessoa dos arrays participants de meeting_notes
-    const { data: notesWithPerson } = await supabase
-      .from('meeting_notes')
-      .select('id, participants')
-      .contains('participants', [id]);
-    if (notesWithPerson && notesWithPerson.length > 0) {
+    const notesWithPerson = await fetchAllRows<{ id: string; participants: string[] | null }>(() =>
+      supabase.from('meeting_notes').select('id, participants', { count: 'exact' })
+        .contains('participants', [id]).order('id')
+    );
+    if (notesWithPerson.length > 0) {
       for (const note of notesWithPerson) {
         const newParticipants = (note.participants || []).filter((pid: string) => pid !== id);
         const { error: noteError } = await supabase
@@ -681,32 +727,19 @@ export function useSupabaseData() {
     if (spError) throw spError;
     const newSpreadsheet = mapSpreadsheet(newSpData);
 
-    // 2. Fetch all sheets from original
-    const { data: sheetsData, error: sheetsError } = await supabase
-      .from('spreadsheet_sheets')
-      .select('*')
-      .eq('spreadsheet_id', original.id)
-      .order('order_index');
-    if (sheetsError) throw sheetsError;
-    const sheets = sheetsData || [];
+    // 2. Fetch all sheets from original (paginado)
+    const sheets = await fetchAllRows<DbRow & { id: string; name: string; order_index: number }>(() =>
+      supabase.from('spreadsheet_sheets').select('*', { count: 'exact' })
+        .eq('spreadsheet_id', original.id).order('order_index').order('id')
+    );
 
     // Helper to copy columns/rows/cells/merges for one sheet (or spreadsheet-level)
     const copySheetContent = async (originalSheetId: string | null, newSheetId: string | null) => {
-      const colQuery = originalSheetId
-        ? supabase.from('spreadsheet_columns').select('*').eq('sheet_id', originalSheetId).order('order_index')
-        : supabase.from('spreadsheet_columns').select('*').eq('spreadsheet_id', original.id).order('order_index');
-      const rowQuery = originalSheetId
-        ? supabase.from('spreadsheet_rows').select('*').eq('sheet_id', originalSheetId).order('order_index')
-        : supabase.from('spreadsheet_rows').select('*').eq('spreadsheet_id', original.id).order('order_index');
-      const mergeQuery = originalSheetId
-        ? supabase.from('spreadsheet_merges').select('*').eq('sheet_id', originalSheetId)
-        : supabase.from('spreadsheet_merges').select('*').eq('spreadsheet_id', original.id);
-
-      const [{ data: colsData, error: colsError }, { data: rowsData, error: rowsError }, { data: mergesData, error: mergesError }] =
-        await Promise.all([colQuery, rowQuery, mergeQuery]);
-      if (colsError) throw colsError;
-      if (rowsError) throw rowsError;
-      if (mergesError) throw mergesError;
+      const [colsData, rowsData, mergesData] = await Promise.all([
+        fetchSheetPart<SheetPartRow>('spreadsheet_columns', original.id, originalSheetId, true),
+        fetchSheetPart<SheetPartRow>('spreadsheet_rows', original.id, originalSheetId, true),
+        fetchSheetPart<SheetPartRow>('spreadsheet_merges', original.id, originalSheetId, false),
+      ]);
 
       const colIdMap: Record<string, string> = {};
       const rowIdMap: Record<string, string> = {};
@@ -722,9 +755,8 @@ export function useSupabaseData() {
           formula: col.formula || null,
           format: col.format || null,
         }));
-        const { data: newCols, error: newColsError } = await supabase.from('spreadsheet_columns').insert(payload).select();
-        if (newColsError) throw newColsError;
-        (colsData || []).forEach((oldCol, i) => { colIdMap[oldCol.id] = newCols![i].id; });
+        const newCols = await insertInChunks('spreadsheet_columns', payload);
+        (colsData || []).forEach((oldCol, i) => { colIdMap[oldCol.id] = newCols[i].id; });
       }
 
       if ((rowsData || []).length > 0) {
@@ -734,15 +766,13 @@ export function useSupabaseData() {
           order_index: row.order_index,
           is_header: row.is_header || false,
         }));
-        const { data: newRows, error: newRowsError } = await supabase.from('spreadsheet_rows').insert(payload).select();
-        if (newRowsError) throw newRowsError;
-        (rowsData || []).forEach((oldRow, i) => { rowIdMap[oldRow.id] = newRows![i].id; });
+        const newRows = await insertInChunks('spreadsheet_rows', payload);
+        (rowsData || []).forEach((oldRow, i) => { rowIdMap[oldRow.id] = newRows[i].id; });
       }
 
       const oldRowIds = (rowsData || []).map(r => r.id);
       if (oldRowIds.length > 0) {
-        const { data: cellsData, error: cellsError } = await supabase.from('spreadsheet_cells').select('*').in('row_id', oldRowIds);
-        if (cellsError) throw cellsError;
+        const cellsData = await fetchCellsForRows<SheetPartRow>(oldRowIds);
         const newCellsPayload = (cellsData || [])
           .filter(cell => rowIdMap[cell.row_id] && colIdMap[cell.column_id])
           .map(cell => ({
@@ -752,8 +782,7 @@ export function useSupabaseData() {
             computed_value: cell.computed_value || null,
           }));
         if (newCellsPayload.length > 0) {
-          const { error: newCellsError } = await supabase.from('spreadsheet_cells').insert(newCellsPayload);
-          if (newCellsError) throw newCellsError;
+          await insertInChunks('spreadsheet_cells', newCellsPayload, false);
         }
       }
 
@@ -791,54 +820,27 @@ export function useSupabaseData() {
 
   // Fetch full spreadsheet data (sheets, columns, rows, cells, merges) for editor
   const fetchSpreadsheetData = async (spreadsheetId: string, sheetId?: string) => {
-    // Fetch sheets first
-    const { data: sheetsData, error: sheetsError } = await supabase
-      .from('spreadsheet_sheets')
-      .select('*')
-      .eq('spreadsheet_id', spreadsheetId)
-      .order('order_index');
+    // Fetch sheets first (paginado)
+    const sheetsData = await fetchAllRows<DbRow>(() =>
+      supabase.from('spreadsheet_sheets').select('*', { count: 'exact' })
+        .eq('spreadsheet_id', spreadsheetId).order('order_index').order('id')
+    );
 
-    if (sheetsError) throw sheetsError;
-
-    const sheets = (sheetsData || []).map(mapSpreadsheetSheet);
+    const sheets = sheetsData.map(mapSpreadsheetSheet);
 
     // Determine which sheet to load (first one if not specified)
     const activeSheetId = sheetId || sheets[0]?.id;
 
-    // Build query filters - filter by sheet_id if available, otherwise by spreadsheet_id
-    const columnQuery = activeSheetId
-      ? supabase.from('spreadsheet_columns').select('*').eq('sheet_id', activeSheetId).order('order_index')
-      : supabase.from('spreadsheet_columns').select('*').eq('spreadsheet_id', spreadsheetId).order('order_index');
+    // Filtra por sheet_id quando há abas, senão por spreadsheet_id (tudo paginado)
+    const [columnsData, rowsData, mergesData] = await Promise.all([
+      fetchSheetPart<SheetPartRow>('spreadsheet_columns', spreadsheetId, activeSheetId ?? null, true),
+      fetchSheetPart<SheetPartRow>('spreadsheet_rows', spreadsheetId, activeSheetId ?? null, true),
+      fetchSheetPart<SheetPartRow>('spreadsheet_merges', spreadsheetId, activeSheetId ?? null, false),
+    ]);
 
-    const rowQuery = activeSheetId
-      ? supabase.from('spreadsheet_rows').select('*').eq('sheet_id', activeSheetId).order('order_index')
-      : supabase.from('spreadsheet_rows').select('*').eq('spreadsheet_id', spreadsheetId).order('order_index');
-
-    const mergeQuery = activeSheetId
-      ? supabase.from('spreadsheet_merges').select('*').eq('sheet_id', activeSheetId)
-      : supabase.from('spreadsheet_merges').select('*').eq('spreadsheet_id', spreadsheetId);
-
-    const [
-      { data: columnsData, error: columnsError },
-      { data: rowsData, error: rowsError },
-      { data: mergesData, error: mergesError },
-    ] = await Promise.all([columnQuery, rowQuery, mergeQuery]);
-
-    if (columnsError) throw columnsError;
-    if (rowsError) throw rowsError;
-    if (mergesError) throw mergesError;
-
-    // Fetch cells for all rows
-    const rowIds = rowsData?.map(r => r.id) || [];
-    let cellsData: any[] = [];
-    if (rowIds.length > 0) {
-      const { data, error: cellsError } = await supabase
-        .from('spreadsheet_cells')
-        .select('*')
-        .in('row_id', rowIds);
-      if (cellsError) throw cellsError;
-      cellsData = data || [];
-    }
+    // Células de todas as linhas: em lotes de ids (URL) e paginadas (1000 linhas)
+    const rowIds = rowsData.map(r => r.id);
+    const cellsData = rowIds.length > 0 ? await fetchCellsForRows<DbRow>(rowIds) : [];
 
     return {
       sheets,

@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts'
+import { fetchAllRows, fetchAllRowsByIds } from '../_shared/fetchAllRows.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -191,20 +192,24 @@ serve(async (req) => {
     const tomorrowDate = new Date(now.getTime() + 24 * 60 * 60 * 1000)
     const tomorrow = formatDateSaoPaulo(tomorrowDate)
 
-    // 1) Busca todas as tarefas que vencem hoje ou amanhã
-    const { data: tasks, error: tasksError } = await supabase
-      .from('tasks')
-      .select('id, name, priority, end_date, responsible_ids, project_id, status, projects(name)')
-      .in('end_date', [today, tomorrow])
-      .not('status', 'in', '(completed,cancelled)')
-      .not('responsible_ids', 'is', null)
-
-    if (tasksError) {
+    // 1) Busca todas as tarefas que vencem hoje ou amanhã (de todos os usuários: paginado)
+    let tasks: TaskRow[]
+    try {
+      tasks = await fetchAllRows<TaskRow>(() =>
+        supabase
+          .from('tasks')
+          .select('id, name, priority, end_date, responsible_ids, project_id, status, projects(name)', { count: 'exact' })
+          .in('end_date', [today, tomorrow])
+          .not('status', 'in', '(completed,cancelled)')
+          .not('responsible_ids', 'is', null)
+          .order('id')
+      )
+    } catch (tasksError) {
       console.error('[send-task-reminders] erro ao buscar tasks:', tasksError)
       throw tasksError
     }
 
-    const activeTasks = (tasks ?? []).filter((t: any) =>
+    const activeTasks = tasks.filter((t) =>
       Array.isArray(t.responsible_ids) && t.responsible_ids.length > 0
     ) as TaskRow[]
 
@@ -217,18 +222,18 @@ serve(async (req) => {
     // 2) Junta todos os personIds únicos
     const personIds = [...new Set(activeTasks.flatMap((t) => t.responsible_ids ?? []))]
 
-    const { data: people, error: peopleError } = await supabase
-      .from('people')
-      .select('id, name, email, active')
-      .in('id', personIds)
-
-    if (peopleError) {
+    let people: PersonRow[]
+    try {
+      people = await fetchAllRowsByIds<PersonRow>(personIds, (chunk) =>
+        supabase.from('people').select('id, name, email, active', { count: 'exact' }).in('id', chunk).order('id')
+      )
+    } catch (peopleError) {
       console.error('[send-task-reminders] erro ao buscar people:', peopleError)
       throw peopleError
     }
 
     const peopleById = new Map<string, PersonRow>()
-    for (const p of (people ?? []) as PersonRow[]) peopleById.set(p.id, p)
+    for (const p of people) peopleById.set(p.id, p)
 
     // 3) Agrupa tarefas por pessoa (com email válido e ativa)
     const tasksByPerson = new Map<string, { person: PersonRow; today: TaskRow[]; tomorrow: TaskRow[] }>()

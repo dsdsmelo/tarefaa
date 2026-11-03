@@ -68,10 +68,26 @@ No dashboard do projeto, vá em **Settings > API** e anote:
 - **anon/public key:** (chave pública)
 - **service_role key:** (chave secreta - NÃO exponha no frontend)
 
-### 2.3 Executar Schema do Banco
-1. Vá em **SQL Editor**
-2. Execute o conteúdo do arquivo `database/schema.sql` (fornecido abaixo)
-3. Verifique se todas as tabelas foram criadas em **Table Editor**
+### 2.3 Banco de dados (migrations)
+A **única** fonte de migrations é `supabase/migrations/`. Os SQL antigos ficam em `database/archive/` e **não devem ser executados**.
+
+**Ambiente novo (banco vazio):** aplique os arquivos de `supabase/migrations/` em ordem. O primeiro, `20261103000000_baseline_prod.sql`, recria o schema de produção (tabelas, funções, triggers, RLS, buckets e policies do Storage). Com a CLI: `supabase db push` (projeto novo) ou `supabase start` (local).
+
+**Produção:** a baseline **nunca** é executada, porque produção já está nesse estado. Rode no SQL Editor só as migrations novas, posteriores à baseline. Se algum dia você usar a CLI contra produção (`supabase db push`), antes marque a baseline e as migrations já aplicadas manualmente:
+```bash
+supabase migration repair --status applied 20261103000000
+# e cada migration nova já rodada à mão, ex.:
+supabase migration repair --status applied 20261103000100
+```
+
+**Regerar a baseline** (somente leitura em produção; a connection string fica só no shell):
+```bash
+read -rs PROD_DB_URL && export PROD_DB_URL
+bash scripts/dump-baseline.sh
+unset PROD_DB_URL
+```
+
+**Testes de RLS** (banco local, nunca produção): `supabase start` e depois `supabase test db`. Os testes ficam em `supabase/tests/database/`.
 
 ### 2.4 Configurar Autenticação
 1. Vá em **Authentication > Providers**
@@ -94,7 +110,7 @@ No dashboard do projeto, vá em **Settings > API** e anote:
    - Allowed MIME types: `image/jpeg, image/png, image/webp, image/gif`
 
 ### 2.6 Configurar RLS
-Execute o arquivo `database/rls-policies.sql` no SQL Editor.
+As policies vêm na baseline e nas migrations de `supabase/migrations/` (seção 2.3). Não há arquivo de RLS separado.
 
 ---
 
@@ -185,14 +201,11 @@ cd app
 ```
 
 ### 5.2 Configurar Variáveis de Ambiente
+O `.env` **não** fica no Git (só o `.env.example`). Use `.env.local`: o Vite o lê, e o `.gitignore` ignora `*.local`, então um `git pull` nunca o apaga ou sobrescreve.
 ```bash
-# Criar arquivo .env
-cat > .env << EOF
-VITE_SUPABASE_URL=https://xxxxx.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJxxxxxx
-VITE_SUPABASE_PROJECT_ID=xxxxx
-EOF
+cp .env.example .env.local   # e preencha os valores
 ```
+Hoje o app **não depende** dessas variáveis: o cliente em uso (`src/lib/supabase.ts`) tem a URL e a chave pública do projeto no código. As variáveis só são lidas por `src/integrations/supabase/client.ts`, que não é usado. Por isso o build de produção gera o mesmo bundle com ou sem `.env.local`.
 
 ### 5.3 Build da Aplicação
 ```bash

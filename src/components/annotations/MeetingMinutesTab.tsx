@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -86,16 +87,15 @@ export function MeetingMinutesTab({ projectId }: MeetingMinutesTabProps) {
 
   const fetchMinutes = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('meeting_minutes')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('meeting_date', { ascending: false });
-    if (error) {
+    try {
+      const data = await fetchAllRows<MeetingMinute>(() =>
+        supabase.from('meeting_minutes').select('*', { count: 'exact' })
+          .eq('project_id', projectId).order('meeting_date', { ascending: false }).order('id')
+      );
+      setMinutes(data);
+    } catch (error) {
       console.error('Erro ao carregar atas:', error);
       toast.error('Erro ao carregar atas');
-    } else {
-      setMinutes((data ?? []) as MeetingMinute[]);
     }
     setLoading(false);
   }, [projectId]);
