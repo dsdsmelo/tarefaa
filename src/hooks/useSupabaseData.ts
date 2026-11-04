@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/auditLog';
 import { fetchAllRows, fetchAllRowsByIds } from '@/lib/fetchAllRows';
+import { permissionError } from '@/lib/dbErrors';
 import { Person, Project, Phase, Cell, Task, CustomColumn, Milestone, MeetingNote, Spreadsheet, SpreadsheetSheet, SpreadsheetColumn, SpreadsheetRow, SpreadsheetCell, SpreadsheetMerge, Workspace } from '@/lib/types';
 
 // Linha crua do banco, antes do mapeamento para os tipos do domínio
@@ -695,17 +696,21 @@ export function useSupabaseData() {
   };
 
   const updateSpreadsheet = async (id: string, updates: Partial<Spreadsheet>) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('project_spreadsheets')
       .update(spreadsheetToDb(updates))
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
     if (error) throw error;
+    // RLS sem acesso não gera erro, só 0 linhas: trata como permissão negada
+    if (!data?.length) throw permissionError();
     setSpreadsheets(prev => prev.map(s => s.id === id ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s));
   };
 
   const deleteSpreadsheet = async (id: string) => {
-    const { error } = await supabase.from('project_spreadsheets').delete().eq('id', id);
+    const { data, error } = await supabase.from('project_spreadsheets').delete().eq('id', id).select('id');
     if (error) throw error;
+    if (!data?.length) throw permissionError();
     setSpreadsheets(prev => prev.filter(s => s.id !== id));
   };
 
@@ -1133,6 +1138,7 @@ function mapProject(data: any): Project {
   return {
     id: data.id,
     workspaceId: data.workspace_id,
+    userId: data.user_id ?? undefined,
     name: data.name,
     description: data.description,
     startDate: data.start_date,

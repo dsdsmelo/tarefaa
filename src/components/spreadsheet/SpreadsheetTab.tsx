@@ -38,6 +38,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { friendlyDbError } from '@/lib/dbErrors';
 import { Spreadsheet } from '@/lib/types';
 import { SpreadsheetEditor } from './SpreadsheetEditor';
 
@@ -46,7 +48,9 @@ interface SpreadsheetTabProps {
 }
 
 export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
+  const { user } = useAuth();
   const {
+    projects,
     spreadsheets: allSpreadsheets,
     addSpreadsheet,
     updateSpreadsheet,
@@ -59,6 +63,12 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
     allSpreadsheets.filter(s => s.projectId === projectId),
     [allSpreadsheets, projectId]
   );
+
+  // Permissões espelham o RLS: criar exige ser dono do projeto; editar e
+  // duplicar exigem ser dono da tabela E do projeto; excluir, dono da tabela.
+  const isProjectOwner = !!user && projects.find(p => p.id === projectId)?.userId === user.id;
+  const ownsSpreadsheet = (s: Spreadsheet) => !!user && s.userId === user.id;
+  const canEditSpreadsheet = (s: Spreadsheet) => ownsSpreadsheet(s) && isProjectOwner;
 
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -124,8 +134,15 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
       }
       setIsModalOpen(false);
       resetForm();
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao salvar tabela');
+    } catch (error) {
+      console.error('Erro ao salvar tabela:', error);
+      toast.error(friendlyDbError(
+        error,
+        editingSpreadsheet
+          ? 'Você não pode editar esta tabela: só quem é dono da tabela e do projeto pode alterá-la.'
+          : 'Só o dono do projeto pode criar tabelas aqui.',
+        'Não foi possível salvar a tabela. Tente novamente.',
+      ));
     } finally {
       setSaving(false);
     }
@@ -141,8 +158,13 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
     try {
       await duplicateSpreadsheet(spreadsheet);
       toast.success(`"${spreadsheet.name}" duplicada com sucesso!`);
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao duplicar tabela');
+    } catch (error) {
+      console.error('Erro ao duplicar tabela:', error);
+      toast.error(friendlyDbError(
+        error,
+        'Só o dono do projeto pode duplicar tabelas aqui.',
+        'Não foi possível duplicar a tabela. Tente novamente.',
+      ));
     } finally {
       setDuplicatingId(null);
     }
@@ -156,8 +178,13 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
       toast.success('Tabela excluída!');
       setDeleteDialogOpen(false);
       setSpreadsheetToDelete(null);
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao excluir tabela');
+    } catch (error) {
+      console.error('Erro ao excluir tabela:', error);
+      toast.error(friendlyDbError(
+        error,
+        'Você não pode excluir esta tabela: só quem a criou pode excluí-la.',
+        'Não foi possível excluir a tabela. Tente novamente.',
+      ));
     }
   };
 
@@ -223,10 +250,12 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
               </button>
             )}
           </div>
-          <Button onClick={() => handleOpenModal()}>
-            <Plus className="w-4 h-4" />
-            Nova Tabela
-          </Button>
+          {isProjectOwner && (
+            <Button onClick={() => handleOpenModal()}>
+              <Plus className="w-4 h-4" />
+              Nova Tabela
+            </Button>
+          )}
         </div>
       </div>
 
@@ -236,13 +265,15 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
           className="rounded-xl border border-dashed border-border bg-card"
           icon={Table2}
           title="Nenhuma tabela ainda"
-          description="Crie tabelas estilo Excel para organizar dados, fazer cálculos e muito mais"
-          action={
+          description={isProjectOwner
+            ? 'Crie tabelas estilo Excel para organizar dados, fazer cálculos e muito mais'
+            : 'Só o dono do projeto pode criar tabelas aqui.'}
+          action={isProjectOwner ? (
             <Button onClick={() => handleOpenModal()}>
               <Plus className="w-4 h-4" />
               Criar primeira tabela
             </Button>
-          }
+          ) : undefined}
         />
       ) : filteredSpreadsheets.length === 0 ? (
         <EmptyState
@@ -277,13 +308,17 @@ export function SpreadsheetTab({ projectId }: SpreadsheetTabProps) {
                       Tabela
                     </p>
                   </div>
-                  <ActionsMenu
-                    items={[
-                      { label: 'Editar tabela', icon: Pencil, onClick: () => handleOpenModal(spreadsheet) },
-                      { label: 'Duplicar', icon: Copy, onClick: () => handleDuplicateSpreadsheet(spreadsheet), disabled: duplicatingId === spreadsheet.id },
-                      { label: 'Excluir', icon: Trash2, onClick: () => handleDeleteClick(spreadsheet), destructive: true },
-                    ]}
-                  />
+                  {ownsSpreadsheet(spreadsheet) && (
+                    <ActionsMenu
+                      items={[
+                        ...(canEditSpreadsheet(spreadsheet) ? [
+                          { label: 'Editar tabela', icon: Pencil, onClick: () => handleOpenModal(spreadsheet) },
+                          { label: 'Duplicar', icon: Copy, onClick: () => handleDuplicateSpreadsheet(spreadsheet), disabled: duplicatingId === spreadsheet.id },
+                        ] : []),
+                        { label: 'Excluir', icon: Trash2, onClick: () => handleDeleteClick(spreadsheet), destructive: true },
+                      ]}
+                    />
+                  )}
                 </div>
 
                 {/* Description */}

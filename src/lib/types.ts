@@ -91,6 +91,8 @@ export interface Workspace {
 export interface Project {
   id: string;
   workspaceId: string;
+  /** Dono do projeto (projects.user_id); participantes têm outro id */
+  userId?: string;
   name: string;
   description?: string;
   startDate?: string;
