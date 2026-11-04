@@ -93,6 +93,8 @@ export interface Project {
   workspaceId: string;
   /** Dono do projeto (projects.user_id); participantes têm outro id */
   userId?: string;
+  /** Caixa de entrada do usuário (projects.is_inbox): fica fora das listas de projetos */
+  isInbox?: boolean;
   name: string;
   description?: string;
   startDate?: string;
@@ -143,6 +145,7 @@ export interface Task {
   status: 'pending' | 'in_progress' | 'blocked' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   observation?: string;
+  createdAt?: string;
   updatedAt: string;
   customValues?: Record<string, string | number>;
 }

@@ -14,11 +14,15 @@ import {
   ChevronsUpDown,
   Sun,
   Moon,
+  Inbox,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { useTheme } from '@/hooks/useTheme';
+import { useQuickCapture } from '@/components/quick-capture/context';
+import { isTaskOpen } from '@/lib/taskDates';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +52,7 @@ const navGroups = [
   {
     label: 'Gestão',
     items: [
+      { icon: Inbox, label: 'Caixa de entrada', path: '/inbox' },
       { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
       { icon: FolderKanban, label: 'Projetos', path: '/projects' },
       { icon: GanttChart, label: 'Gantt', path: '/gantt' },
@@ -72,7 +77,9 @@ export const AppSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
-  const { workspaces, activeWorkspace, setActiveWorkspace } = useData();
+  const { workspaces, activeWorkspace, setActiveWorkspace, inboxTasks } = useData();
+  const { openQuickCapture } = useQuickCapture();
+  const inboxCount = inboxTasks.filter(isTaskOpen).length;
   const { theme, setTheme } = useTheme();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === 'collapsed';
@@ -180,6 +187,27 @@ export const AppSidebar = () => {
             </DropdownMenu>
           </div>
         )}
+
+        {/* Captura rápida (também com Q ou Ctrl/Cmd+K) */}
+        <div className={cn('pb-2', isCollapsed ? 'flex justify-center' : 'px-1')}>
+          <button
+            onClick={openQuickCapture}
+            title="Nova tarefa (Q ou Ctrl/Cmd+K)"
+            aria-label="Nova tarefa"
+            className={cn(
+              'flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors',
+              isCollapsed ? 'h-8 w-8 justify-center' : 'w-full px-2.5 py-1.5'
+            )}
+          >
+            <Plus className="w-4 h-4 shrink-0" />
+            {!isCollapsed && (
+              <>
+                <span className="flex-1 text-left">Nova tarefa</span>
+                <kbd className="rounded border border-primary-foreground/30 px-1 text-[10px] leading-4 opacity-80">Q</kbd>
+              </>
+            )}
+          </button>
+        </div>
       </SidebarHeader>
 
       {/* Navigation */}
@@ -206,9 +234,16 @@ export const AppSidebar = () => {
                           : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                       )}
                     >
-                      <NavLink to={item.path}>
+                      <NavLink to={item.path} className="relative">
                         <item.icon />
                         <span>{item.label}</span>
+                        {item.path === '/inbox' && inboxCount > 0 && (
+                          isCollapsed ? (
+                            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" aria-label={`${inboxCount} para triar`} />
+                          ) : (
+                            <span className="ml-auto rounded-full bg-primary/15 px-1.5 text-xs font-semibold tabular-nums text-primary">{inboxCount}</span>
+                          )
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

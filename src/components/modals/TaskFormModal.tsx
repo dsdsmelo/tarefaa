@@ -57,7 +57,11 @@ interface TaskFormModalProps {
 const getTodayStr = () => new Date().toLocaleDateString('sv-SE');
 
 export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defaultResponsibleIds }: TaskFormModalProps) {
-  const { projects, people, addTask, updateTask, getProjectMemberIds } = useData();
+  const { projects, allProjects, inboxProject, workspaces, people, addTask, updateTask, getProjectMemberIds } = useData();
+  // Tarefa da caixa de entrada: pode ir para projeto de qualquer workspace (triagem)
+  const fromInbox = !!task && !!inboxProject && task.projectId === inboxProject.id;
+  const projectOptions = fromInbox && inboxProject ? [inboxProject, ...allProjects] : projects;
+  const workspaceName = (workspaceId: string) => workspaces.find(w => w.id === workspaceId)?.name;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [responsiblePopoverOpen, setResponsiblePopoverOpen] = useState(false);
 
@@ -222,9 +226,12 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
                   <SelectValue placeholder="Selecione um projeto" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((project) => (
+                  {projectOptions.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
+                      {fromInbox && !project.isInbox && workspaceName(project.workspaceId) && (
+                        <span className="text-muted-foreground"> · {workspaceName(project.workspaceId)}</span>
+                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1041,7 +1041,8 @@ export function SpreadsheetEditor({ spreadsheet }: SpreadsheetEditorProps) {
   const totalWidth = columns.reduce((sum, col) => sum + col.width, 0) + 48; // 48 for row number column
 
   return (
-    <div className="space-y-2">
+    // data-quick-capture-off: com a planilha aberta, a tecla Q edita a célula (não abre a captura rápida)
+    <div className="space-y-2" data-quick-capture-off="">
       {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 bg-card rounded-xl border border-border flex-wrap">
         {/* Structural */}

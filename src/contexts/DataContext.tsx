@@ -15,6 +15,13 @@ interface DataContextType {
   people: Person[];
   setPeople: React.Dispatch<React.SetStateAction<Person[]>>;
   projects: Project[];
+  /** Projetos de todos os workspaces, sem a caixa de entrada */
+  allProjects: Project[];
+  /** Caixa de entrada do usuário (null se o banco ainda não tiver a migration) */
+  inboxProject: Project | null;
+  /** Tarefas da caixa de entrada, de todos os workspaces */
+  inboxTasks: Task[];
+  ensureInboxProject: () => Promise<string>;
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   phases: Phase[];
   setPhases: React.Dispatch<React.SetStateAction<Phase[]>>;
@@ -48,7 +55,7 @@ interface DataContextType {
   addCell: (cell: Omit<Cell, 'id'>) => Promise<Cell>;
   updateCell: (id: string, updates: Partial<Cell>) => Promise<void>;
   deleteCell: (id: string) => Promise<void>;
-  addTask: (task: Omit<Task, 'id' | 'updatedAt'>) => Promise<Task>;
+  addTask: (task: Omit<Task, 'id' | 'updatedAt'>, options?: { source?: 'quick_capture' }) => Promise<Task>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   addCustomColumn: (column: Omit<CustomColumn, 'id'>) => Promise<CustomColumn>;

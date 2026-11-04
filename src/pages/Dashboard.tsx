@@ -13,6 +13,7 @@ import {
   FolderKanban,
   ArrowRight,
   CheckCircle2,
+  Inbox,
   type LucideIcon,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
@@ -87,7 +88,10 @@ const Dashboard = () => {
     error,
     activeWorkspace,
     updateTask,
+    inboxTasks = [],
   } = useData();
+  // Caixa de entrada vale para todos os workspaces
+  const toTriage = inboxTasks.filter(isTaskOpen).length;
   const [searchParams, setSearchParams] = useSearchParams();
 
   const projectName = (projectId: string) => projects.find(p => p.id === projectId)?.name || '-';
@@ -218,8 +222,8 @@ const Dashboard = () => {
       <MainLayout>
         <Header title="Dashboard" subtitle={subtitle} />
         <PageBody>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {[...Array(5)].map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[...Array(6)].map((_, i) => (
               <Skeleton key={i} className="h-[92px] rounded-xl" />
             ))}
           </div>
@@ -252,7 +256,23 @@ const Dashboard = () => {
 
       <PageBody>
         {/* Indicadores de atenção: cada card filtra a lista abaixo */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Link
+            to="/inbox"
+            className={cn(
+              'text-left bg-card rounded-xl border p-4 transition-colors hover:border-primary/40',
+              toTriage > 0 ? 'border-primary/30' : 'border-border'
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Para triar</span>
+              <span className="w-7 h-7 rounded-md flex items-center justify-center bg-primary/10">
+                <Inbox className="w-3.5 h-3.5 text-primary" />
+              </span>
+            </div>
+            <p className={cn('text-2xl font-semibold mt-1 tabular-nums', toTriage > 0 ? 'text-primary' : 'text-foreground')}>{toTriage}</p>
+            <p className="text-xs text-muted-foreground">na caixa de entrada</p>
+          </Link>
           {ATTENTION_VIEWS.map(view => {
             const count = groups[view.key].length;
             const selected = view.key === activeView;

@@ -67,6 +67,8 @@ export function useSupabaseData() {
   const [spreadsheets, setSpreadsheets] = useState<Spreadsheet[]>([]);
   // Mapa de projectId -> array de personIds (membros do projeto)
   const [projectMembers, setProjectMembers] = useState<Record<string, string[]>>({});
+  // Caixa de entrada do usuário (projects.is_inbox), criada pelo banco
+  const [inboxProjectId, setInboxProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const initialLoadDone = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +102,11 @@ export function useSupabaseData() {
       // chamada também torna o primeiro acesso após a migration determinístico.
       const { error: defaultsError } = await supabase.rpc('ensure_default_workspaces');
       if (defaultsError) throw defaultsError;
+
+      // Caixa de entrada: se a função ainda não existir no banco, o app segue sem ela
+      const { data: inboxId, error: inboxError } = await supabase.rpc('ensure_inbox_project');
+      if (inboxError) console.warn('Caixa de entrada indisponível:', inboxError.message);
+      setInboxProjectId(inboxError ? null : (inboxId as string | null));
 
       const { data: workspacesData, error: workspacesError } = await supabase
         .from('workspaces')
@@ -218,6 +225,7 @@ export function useSupabaseData() {
         setMeetingNotes([]);
         setSpreadsheets([]);
         setProjectMembers({});
+        setInboxProjectId(null);
         setWorkspaces([]);
         activeWorkspaceIdRef.current = null;
         setActiveWorkspaceId(null);
@@ -537,7 +545,7 @@ export function useSupabaseData() {
   };
 
   // CRUD operations for Tasks
-  const addTask = async (task: Omit<Task, 'id' | 'updatedAt'>) => {
+  const addTask = async (task: Omit<Task, 'id' | 'updatedAt'>, options: { source?: 'quick_capture' } = {}) => {
     const userId = await getCurrentUserId();
     if (!userId) throw new Error('User not authenticated');
 
@@ -550,7 +558,11 @@ export function useSupabaseData() {
     const newTask = mapTask(data);
     setTasks(prev => [newTask, ...prev]);
 
-    logAuditEvent({ action: 'task_created', entity_type: 'task', entity_id: newTask.id, entity_name: newTask.name, level: 'success', details: `Tarefa "${newTask.name}" criada` });
+    logAuditEvent({
+      action: 'task_created', entity_type: 'task', entity_id: newTask.id, entity_name: newTask.name, level: 'success',
+      details: `Tarefa "${newTask.name}" criada`,
+      ...(options.source ? { metadata: { source: options.source } } : {}),
+    });
 
     return newTask;
   };
@@ -1034,20 +1046,45 @@ export function useSupabaseData() {
     ));
   };
 
+  // Garante a caixa de entrada (ex.: primeiro uso antes do carregamento terminar)
+  const ensureInboxProject = async (): Promise<string> => {
+    const { data: inboxId, error: inboxError } = await supabase.rpc('ensure_inbox_project');
+    if (inboxError) throw inboxError;
+    const id = inboxId as string;
+    setInboxProjectId(id);
+    if (!projects.some(project => project.id === id)) {
+      const { data, error: projectError } = await supabase.from('projects').select('*').eq('id', id).single();
+      if (projectError) throw projectError;
+      setProjects(prev => prev.some(project => project.id === id) ? prev : [...prev, mapProject(data)]);
+    }
+    return id;
+  };
+
   const activeWorkspace = useMemo(
     () => workspaces.find(workspace => workspace.id === activeWorkspaceId) || null,
     [workspaces, activeWorkspaceId]
   );
+  // A caixa de entrada fica fora das listas de projetos (Projetos, Gantt,
+  // Dashboard, seletores); suas tarefas aparecem só em /inbox até a triagem.
+  const inboxProject = useMemo(
+    () => projects.find(project => project.isInbox && (!inboxProjectId || project.id === inboxProjectId)) || null,
+    [projects, inboxProjectId]
+  );
+  const regularProjects = useMemo(() => projects.filter(project => !project.isInbox), [projects]);
+  const inboxTasks = useMemo(
+    () => inboxProject ? tasks.filter(task => task.projectId === inboxProject.id) : [],
+    [tasks, inboxProject]
+  );
   const scopedProjects = useMemo(
-    () => activeWorkspaceId ? projects.filter(project => project.workspaceId === activeWorkspaceId) : [],
-    [projects, activeWorkspaceId]
+    () => activeWorkspaceId ? regularProjects.filter(project => project.workspaceId === activeWorkspaceId) : [],
+    [regularProjects, activeWorkspaceId]
   );
   const workspaceProjectCounts = useMemo(() => {
-    return projects.reduce<Record<string, number>>((counts, project) => {
+    return regularProjects.reduce<Record<string, number>>((counts, project) => {
       counts[project.workspaceId] = (counts[project.workspaceId] || 0) + 1;
       return counts;
     }, {});
-  }, [projects]);
+  }, [regularProjects]);
   const scopedProjectIds = useMemo(
     () => new Set(scopedProjects.map(project => project.id)),
     [scopedProjects]
@@ -1066,6 +1103,8 @@ export function useSupabaseData() {
     addWorkspace, updateWorkspace, deleteWorkspace,
     // Data
     people, projects: scopedProjects, phases: scopedPhases, cells, tasks: scopedTasks,
+    // Caixa de entrada e projetos de todos os workspaces (captura rápida e triagem)
+    allProjects: regularProjects, inboxProject, inboxTasks, ensureInboxProject,
     customColumns: scopedColumns, milestones: scopedMilestones,
     meetingNotes: scopedMeetingNotes, spreadsheets: scopedSpreadsheets,
     loading, error,
@@ -1139,6 +1178,7 @@ function mapProject(data: any): Project {
     id: data.id,
     workspaceId: data.workspace_id,
     userId: data.user_id ?? undefined,
+    isInbox: data.is_inbox === true,
     name: data.name,
     description: data.description,
     startDate: data.start_date,
@@ -1193,6 +1233,7 @@ function mapTask(data: any): Task {
     status: data.status,
     priority: data.priority,
     observation: data.observation,
+    createdAt: data.created_at,
     updatedAt: data.updated_at,
     customValues: data.custom_values,
   };
