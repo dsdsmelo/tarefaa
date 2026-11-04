@@ -80,12 +80,30 @@ supabase migration repair --status applied 20261103000000
 supabase migration repair --status applied 20261103000100
 ```
 
-**Regerar a baseline** (somente leitura em produção; a connection string fica só no shell):
-```bash
-read -rs PROD_DB_URL && export PROD_DB_URL
-bash scripts/dump-baseline.sh
-unset PROD_DB_URL
-```
+**Regerar a baseline** (💻 Mac, somente leitura em produção, sem connection string): `scripts/dump-schema.sh`.
+
+1. Vincular o projeto **uma vez**. A CLI pede a senha do banco num prompt oculto e a guarda no **Keychain do macOS** (fora do repositório):
+   ```bash
+   cd /Users/macbook/Tarefaa
+   supabase link --project-ref khnsqupkdnouimonughn
+   ```
+   ⚠️ Digite a senha do banco (Supabase Dashboard > Project Settings > Database). **Nunca deixe em branco**: sem senha, a CLI cria um usuário temporário no banco para entrar, o que é uma escrita em produção. O script se recusa a rodar se a senha não estiver no Keychain.
+2. Conferir que a senha ficou no Keychain (mostra só os atributos, não a senha):
+   ```bash
+   security find-generic-password -s "Supabase CLI" -a khnsqupkdnouimonughn | grep -E '"acct"|"svce"'
+   ```
+3. Com o Docker aberto (a CLI roda o `pg_dump` num container):
+   ```bash
+   bash scripts/dump-schema.sh
+   git diff --stat -- supabase/migrations/
+   ```
+   O script confere se o projeto vinculado é o `khnsqupkdnouimonughn`, faz três `supabase db dump --linked` (schema do app; schemas `auth`/`storage` só para extrair os triggers de `auth.users` que chamam `public.*` e as policies de `storage.objects`; linhas de `storage.buckets`, sem `storage.objects`) e monta `supabase/migrations/20261103000000_baseline_prod.sql` com `scripts/dump-schema-assemble.sh`. O arquivo **não é gravado** se tiver algo parecido com credencial (`postgres://`, `password=`, `PGPASSWORD`).
+4. Remover a senha do Keychain, se não quiser deixá-la salva (depois disso o script volta a pedir o passo 1):
+   ```bash
+   security delete-generic-password -s "Supabase CLI" -a khnsqupkdnouimonughn
+   ```
+
+Notas: não use `supabase db dump --dry-run` com o projeto vinculado, porque ele imprime a senha na tela. Isto é backup do **schema**, não dos dados (ver 9.2).
 
 **Testes de RLS** (banco local, nunca produção): `supabase start` e depois `supabase test db`. Os testes ficam em `supabase/tests/database/`.
 
@@ -207,14 +225,33 @@ cp .env.example .env.local   # e preencha os valores
 ```
 Hoje o app **não depende** dessas variáveis: o cliente em uso (`src/lib/supabase.ts`) tem a URL e a chave pública do projeto no código. As variáveis só são lidas por `src/integrations/supabase/client.ts`, que não é usado. Por isso o build de produção gera o mesmo bundle com ou sem `.env.local`.
 
-### 5.3 Build da Aplicação
-```bash
-# Instalar dependências
-npm install
+### 5.3 Deploy do front (VPS)
+O deploy roda **só** pelo `/opt/scripts/deploy-tarefaa.sh`. A fonte versionada é `deploy/deploy-tarefaa.sh`. O `deploy.sh` da raiz está desativado: ele apagava o `package-lock.json` e rodava `npm install`, o que deixava o lockfile da VPS diferente do commitado e travava o `git pull`.
 
-# Build de produção
-npm run build
+**Instalar ou atualizar o script** (🖥️ VPS, depois do `git pull` que trouxe uma versão nova de `deploy/deploy-tarefaa.sh`):
+```bash
+cd /opt/repos/tarefaa && git pull --ff-only origin main
+sudo install -m 755 /opt/repos/tarefaa/deploy/deploy-tarefaa.sh /opt/scripts/deploy-tarefaa.sh
+diff /opt/repos/tarefaa/deploy/deploy-tarefaa.sh /opt/scripts/deploy-tarefaa.sh && echo instalado
 ```
+
+**Rodar o deploy** (🖥️ VPS, como o usuário dono de `/var/www/tarefaa`, **sem sudo**):
+```bash
+/opt/scripts/deploy-tarefaa.sh
+```
+
+O que o script garante:
+- **Nada é descartado em silêncio.** Se o repo tiver alteração em arquivo versionado, ele para e mostra o `git status`. O `git pull` é `--ff-only`.
+- **Dependências só com `npm ci`**, que instala exatamente o lockfile e não o altera. Depois do build, ele confere que nenhum arquivo versionado mudou.
+- **Publicação atômica.** O build é copiado para `/var/www/tarefaa/dist.new`. A troca é feita com `mv` (`dist` → `dist.old`, `dist.new` → `dist`), depois vem o `docker service update --force tarefaa_tarefaa`, e só então o `dist.old` é apagado. Qualquer falha antes da troca deixa o `dist` no ar intacto.
+- **Recusa rodar** como root (os arquivos publicados ficariam do root), sem permissão de escrita em `/var/www/tarefaa`, fora da branch `main`, com outro deploy em andamento ou com um `dist.old` esquecido.
+
+**Se o `docker service update` falhar**, a versão anterior fica em `/var/www/tarefaa/dist.old`, e o script mostra o comando para voltar:
+```bash
+mv /var/www/tarefaa/dist /var/www/tarefaa/dist.failed && mv /var/www/tarefaa/dist.old /var/www/tarefaa/dist && docker service update --force tarefaa_tarefaa
+```
+
+**Se o repo tiver alteração local** (ex.: `package-lock.json`), veja antes o que mudou (`git diff`). Descarte com `git checkout -- <arquivo>` só se for lixo de um `npm install` manual.
 
 ### 5.4 Configurar Nginx
 ```bash
@@ -385,21 +422,14 @@ sudo tail -f /var/log/nginx/error.log
 ## 9. Manutenção
 
 ### 9.1 Atualizar Aplicação
-```bash
-cd /home/tarefaa/app
-git pull origin main
-npm install
-npm run build
-# Não precisa reiniciar - são arquivos estáticos
-```
+🖥️ VPS: `/opt/scripts/deploy-tarefaa.sh` (ver 5.3). Não rode `npm install` no repo da VPS.
 
 ### 9.2 Backup do Banco de Dados
 ```bash
 # Via Supabase Dashboard: Settings > Database > Backups
 
-# Ou via pg_dump (requer conexão direta)
-pg_dump -h db.xxxxx.supabase.co -U postgres -d postgres > backup_$(date +%Y%m%d).sql
 ```
+Os **dados** dependem dos backups do plano do Supabase. O `scripts/dump-schema.sh` (seção 2.3) guarda só o **schema**.
 
 ### 9.3 Monitoramento
 - **Uptime:** Use UptimeRobot ou similar
