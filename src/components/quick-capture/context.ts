@@ -6,8 +6,17 @@ export interface QuickCaptureContextValue {
 
 export const QuickCaptureContext = createContext<QuickCaptureContextValue | null>(null);
 
+const noop: QuickCaptureContextValue = {
+  openQuickCapture: () => {
+    // Quem chama está fora do QuickCaptureProvider (montado pelo MainLayout).
+    // Uma página que usa o hook no próprio corpo fica ACIMA do provider e cai
+    // aqui: o clique não faz nada. Em desenvolvimento, avisa.
+    if (import.meta.env.DEV) {
+      console.warn('[captura rápida] openQuickCapture chamado fora do QuickCaptureProvider: nada foi aberto.');
+    }
+  },
+};
+
 export function useQuickCapture(): QuickCaptureContextValue {
-  const value = useContext(QuickCaptureContext);
-  // Fora do provider (telas públicas) o botão simplesmente não faz nada
-  return value ?? { openQuickCapture: () => {} };
+  return useContext(QuickCaptureContext) ?? noop;
 }

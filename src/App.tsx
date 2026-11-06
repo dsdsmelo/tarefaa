@@ -17,6 +17,7 @@ import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Tasks from "./pages/Tasks";
 import Inbox from "./pages/Inbox";
+import Today from "./pages/Today";
 import Gantt from "./pages/Gantt";
 import People from "./pages/People";
 import Settings from "./pages/Settings";
@@ -139,6 +140,7 @@ const AppRoutes = () => {
         <Route path="/projects/:projectId" element={<ExternalRedirect to={`https://app.tarefaa.com.br${window.location.pathname}`} />} />
         <Route path="/tasks" element={<ExternalRedirect to="https://app.tarefaa.com.br/tasks" />} />
         <Route path="/inbox" element={<ExternalRedirect to="https://app.tarefaa.com.br/inbox" />} />
+        <Route path="/today" element={<ExternalRedirect to="https://app.tarefaa.com.br/today" />} />
         <Route path="/gantt" element={<ExternalRedirect to="https://app.tarefaa.com.br/gantt" />} />
         <Route path="/people" element={<ExternalRedirect to="https://app.tarefaa.com.br/people" />} />
         <Route path="/vault" element={<ExternalRedirect to="https://app.tarefaa.com.br/vault" />} />
@@ -171,6 +173,8 @@ const AppRoutes = () => {
         <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
         <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
         <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
+      <Route path="/today" element={<ProtectedRoute><Today /></ProtectedRoute>} />
+        <Route path="/today" element={<ProtectedRoute><Today /></ProtectedRoute>} />
         <Route path="/gantt" element={<ProtectedRoute><Gantt /></ProtectedRoute>} />
         <Route path="/people" element={<ProtectedRoute><People /></ProtectedRoute>} />
         <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />

@@ -1,5 +1,5 @@
 // Parser da captura rápida: "ligar pro João amanhã p1 #Cliente X @Maria"
-// vira nome "ligar pro João", prazo amanhã, prioridade urgente, projeto
+// vira nome "ligar pro João", planejada para amanhã, prioridade urgente, projeto
 // "Cliente X" e responsável "Maria". Puro e testado (src/test/quickCapture.test.ts).
 //
 // Regras:
@@ -9,11 +9,16 @@
 //   fica no nome e a tarefa vai para a Caixa de entrada.
 // - Pessoa: nome completo, ou só o primeiro nome quando ele é único.
 // - Prioridade: p1 urgente, p2 alta, p3 média, p4 baixa; sem p, média.
-// - Data: a ÚLTIMA expressão de data reconhecida; as outras ficam no nome.
-//   Hora não é salva (o prazo é só data) e fica no nome.
+// - Datas: data simples ("sexta", "amanhã", "15/11") é a data PLANEJADA
+//   (planned_date); com marcador de prazo ("até sexta", "prazo sexta",
+//   "vence sexta") é o PRAZO (end_date). As duas podem vir na mesma frase.
+//   Vale a ÚLTIMA de cada tipo; as outras ficam no nome.
+//   Hora não é salva (as datas guardam só o dia) e fica no nome.
+// - Estimativa: "~30m", "~2h", "~1h30" (1 min a 24 h). Vale a última.
 // - Mais de um #projeto: vale o último; mais de um @pessoa: todas.
 // - Chip removido na prévia: a expressão volta para o nome (ver ParseIgnore).
 import type { TaskPriority } from '@/lib/types';
+import { parseEstimate } from '@/lib/estimate';
 import { findDates, findTimes, type DateKind } from './dates';
 import { fold, isWordChar, mask, removeSpans, type Span } from './text';
 
@@ -24,8 +29,10 @@ export interface CaptureEntity {
 
 /** Itens que o usuário removeu da prévia: voltam a ser texto do nome */
 export interface ParseIgnore {
-  /** `key` das datas removidas */
+  /** `key` das datas removidas ("planned:sexta", "due:sexta") */
   dates?: string[];
+  /** `key` das estimativas removidas */
+  estimates?: string[];
   /** prioridades removidas ('p1'...'p4') */
   priorities?: string[];
   projectIds?: string[];
@@ -43,13 +50,23 @@ export interface ParseContext {
 export interface ParsedDate extends Span {
   iso: string;
   kind: DateKind;
+  /** "<kind>:<expressão>": identifica o chip para removê-lo */
+  key: string;
+}
+
+export interface ParsedEstimate extends Span {
+  minutes: number;
   key: string;
 }
 
 export interface ParsedCapture {
   /** Nome da tarefa: o texto sem os itens reconhecidos */
   name: string;
-  date: ParsedDate | null;
+  /** Data planejada (planned_date): data simples */
+  planned: ParsedDate | null;
+  /** Prazo (end_date): data com marcador de prazo */
+  due: ParsedDate | null;
+  estimate: ParsedEstimate | null;
   priority: (Span & { value: TaskPriority; key: string }) | null;
   /** null = Caixa de entrada */
   project: (Span & CaptureEntity) | null;
@@ -128,6 +145,8 @@ function findMentions(
 }
 
 const PRIORITY_RE = /p[1-4]/g;
+// "~" no começo de palavra seguido do valor ("~30m", "~1h30", "~2h")
+const ESTIMATE_RE = /(^|\s)~(\d(?:[\d.,:hmin]*[\dhmin])?)(?![\p{L}\p{N}])/gu;
 
 export function parseQuickCapture(input: string, ctx: ParseContext): ParsedCapture {
   const ignore = ctx.ignore ?? {};
@@ -171,23 +190,46 @@ export function parseQuickCapture(input: string, ctx: ParseContext): ParsedCaptu
     folded = mask(folded, priority.start, priority.end);
   }
 
-  // 3. Data (vale a última não removida). Usa o texto mascarado para não achar
-  // data dentro de nome de projeto ou pessoa.
-  const maskedOriginal = [...removed].reduce((text, s) => mask(text, s.start, s.end), input);
-  const dates = findDates(maskedOriginal, ctx.today).filter(d => !ignore.dates?.includes(d.key));
-  const lastDate = dates[dates.length - 1];
-  const date: ParsedDate | null = lastDate
-    ? { start: lastDate.start, end: lastDate.end, text: input.slice(lastDate.start, lastDate.end), iso: lastDate.iso, kind: lastDate.kind, key: lastDate.key }
-    : null;
-  if (date) removed.push(date);
+  // 3. Estimativa "~30m" (vale a última). Antes das datas e horas, para "~2h"
+  // não virar hora.
+  let estimate: ParsedEstimate | null = null;
+  ESTIMATE_RE.lastIndex = 0;
+  let em: RegExpExecArray | null;
+  while ((em = ESTIMATE_RE.exec(folded))) {
+    const start = em.index + em[1].length;
+    const end = start + 1 + em[2].length;
+    const minutes = parseEstimate(em[2]);
+    const key = em[2];
+    if (minutes === null || ignore.estimates?.includes(key)) continue;
+    estimate = { start, end, text: input.slice(start, end), minutes, key };
+  }
+  if (estimate) {
+    removed.push(estimate);
+    folded = mask(folded, estimate.start, estimate.end);
+  }
 
-  // 4. Horas (só aviso; ficam no nome)
-  const dateFree = date ? mask(maskedOriginal, date.start, date.end) : maskedOriginal;
+  // 4. Datas: a última planejada e o último prazo não removidos. Usa o texto
+  // mascarado para não achar data dentro de nome de projeto ou pessoa.
+  const maskedOriginal = [...removed].reduce((text, s) => mask(text, s.start, s.end), input);
+  const toParsed = (d: ReturnType<typeof findDates>[number]): ParsedDate => ({
+    start: d.start, end: d.end, text: input.slice(d.start, d.end), iso: d.iso, kind: d.kind, key: `${d.kind}:${d.key}`,
+  });
+  const dates = findDates(maskedOriginal, ctx.today).map(toParsed).filter(d => !ignore.dates?.includes(d.key));
+  const lastOf = (kind: DateKind) => [...dates].reverse().find(d => d.kind === kind) ?? null;
+  const planned = lastOf('planned');
+  const due = lastOf('due');
+  if (planned) removed.push(planned);
+  if (due) removed.push(due);
+
+  // 5. Horas (só aviso; ficam no nome)
+  const dateFree = [planned, due].reduce((text, d) => (d ? mask(text, d.start, d.end) : text), maskedOriginal);
   const times = findTimes(dateFree).map(t => ({ ...t, text: input.slice(t.start, t.end) }));
 
   return {
     name: removeSpans(input, removed),
-    date,
+    planned,
+    due,
+    estimate,
     priority,
     project,
     people: parsedPeople,

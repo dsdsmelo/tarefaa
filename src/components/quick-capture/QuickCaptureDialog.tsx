@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AlertTriangle, CalendarDays, Clock, Flag, FolderKanban, Inbox, UserRound, X } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, CalendarDays, Clock, Flag, FolderKanban, Hourglass, Inbox, UserRound, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -20,6 +20,7 @@ import {
   type ParseIgnore,
 } from '@/lib/quickCapture/parse';
 import { formatShortDate } from '@/lib/quickCapture/format';
+import { formatMinutes } from '@/lib/estimate';
 
 const CREATE_MORE_KEY = 'tarefaa.quick-capture.create-more';
 
@@ -129,8 +130,10 @@ export function QuickCaptureDialog({ open, onOpenChange }: QuickCaptureDialogPro
           projectId,
           status: 'pending',
           priority: parsed.priority?.value ?? DEFAULT_PRIORITY,
-          // Etapa 2: data simples e prazo vão para end_date (dateKind fica para a Etapa 3)
-          endDate: parsed.date?.iso,
+          // Data simples = planejada (planned_date); com marcador de prazo = end_date
+          plannedDate: parsed.planned?.iso,
+          endDate: parsed.due?.iso,
+          estimateMinutes: parsed.estimate?.minutes,
           responsibleIds: parsed.people.length > 0 ? parsed.people.map(p => p.id) : undefined,
         },
         { source: 'quick_capture' }
@@ -181,7 +184,7 @@ export function QuickCaptureDialog({ open, onOpenChange }: QuickCaptureDialogPro
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-base">Captura rápida</DialogTitle>
           <DialogDescription className="text-xs">
-            Use <b>#projeto</b>, <b>@pessoa</b>, <b>p1</b> a <b>p4</b> e datas como "amanhã", "sexta" ou "até 15/11". Sem #projeto, vai para a Caixa de entrada.
+            Use <b>#projeto</b>, <b>@pessoa</b>, <b>p1</b> a <b>p4</b>, <b>~30m</b> para a estimativa, "sexta" para o dia planejado e "até sexta" para o prazo. Sem #projeto, vai para a Caixa de entrada.
           </DialogDescription>
         </DialogHeader>
 
@@ -239,10 +242,21 @@ export function QuickCaptureDialog({ open, onOpenChange }: QuickCaptureDialogPro
               ) : (
                 <Chip icon={Inbox} muted>Caixa de entrada</Chip>
               )}
-              {parsed.date && (
-                <Chip icon={CalendarDays} onRemove={() => addIgnore('dates', parsed.date!.key)} title={`Remover: "${parsed.date.text}" volta para o nome`}>
-                  Prazo {formatShortDate(parsed.date.iso, today)}
-                  <span className="text-muted-foreground"> · "{parsed.date.text}"</span>
+              {parsed.planned && (
+                <Chip icon={CalendarCheck} onRemove={() => addIgnore('dates', parsed.planned!.key)} title={`Remover: "${parsed.planned.text}" volta para o nome`}>
+                  Planejado {formatShortDate(parsed.planned.iso, today)}
+                  <span className="text-muted-foreground"> · "{parsed.planned.text}"</span>
+                </Chip>
+              )}
+              {parsed.due && (
+                <Chip icon={CalendarDays} onRemove={() => addIgnore('dates', parsed.due!.key)} title={`Remover: "${parsed.due.text}" volta para o nome`}>
+                  Prazo {formatShortDate(parsed.due.iso, today)}
+                  <span className="text-muted-foreground"> · "{parsed.due.text}"</span>
+                </Chip>
+              )}
+              {parsed.estimate && (
+                <Chip icon={Hourglass} onRemove={() => addIgnore('estimates', parsed.estimate!.key)} title={`Remover: "${parsed.estimate.text}" volta para o nome`}>
+                  Estimativa {formatMinutes(parsed.estimate.minutes)}
                 </Chip>
               )}
               {parsed.priority ? (
@@ -261,7 +275,7 @@ export function QuickCaptureDialog({ open, onOpenChange }: QuickCaptureDialogPro
             {parsed.times.length > 0 && (
               <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
                 <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Hora "{parsed.times.map(t => t.text).join('", "')}" não é salva: o prazo guarda só a data. Ela fica no nome.
+                Hora "{parsed.times.map(t => t.text).join('", "')}" não é salva: as datas guardam só o dia. Ela fica no nome.
               </p>
             )}
             {[...parsed.unmatchedProjects, ...parsed.unmatchedPeople].length > 0 && (

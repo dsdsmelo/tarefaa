@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pencil, Check, X, CalendarIcon } from 'lucide-react';
+import { Pencil, Check, X, CalendarIcon, Hourglass } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AvatarCircle } from '@/components/ui/avatar-circle';
@@ -7,6 +7,7 @@ import { StatusBadge, PriorityBadge } from '@/components/ui/status-badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { formatMinutes, parseEstimate } from '@/lib/estimate';
 import { Task, TaskStatus, TaskPriority, Person, Phase } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -409,6 +410,73 @@ export const DateEditCell = ({ value, placeholder, onSave }: DateEditCellProps) 
             </Button>
           </div>
         )}
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+// Estimate Edit ("30m", "1h30", "2h" ou minutos)
+interface EstimateEditCellProps {
+  value?: number | null;
+  placeholder?: string;
+  onSave: (minutes: number | null) => void;
+  /** Rótulo acessível do botão (ex.: nome da tarefa) */
+  label?: string;
+  /** Abre já em edição (atalho de teclado) */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export const EstimateEditCell = ({ value, placeholder, onSave, label, open, onOpenChange }: EstimateEditCellProps) => {
+  const [innerOpen, setInnerOpen] = useState(false);
+  const isOpen = open ?? innerOpen;
+  const setIsOpen = (next: boolean) => { setInnerOpen(next); onOpenChange?.(next); };
+  const [text, setText] = useState('');
+  const minutes = text.trim() ? parseEstimate(text) : null;
+  const invalid = text.trim() !== '' && minutes === null;
+
+  const save = () => {
+    if (invalid) return;
+    if ((minutes ?? null) !== (value ?? null)) onSave(minutes);
+    setIsOpen(false);
+  };
+
+  return (
+    <Popover
+      open={isOpen}
+      onOpenChange={(next) => { if (next) setText(value ? formatMinutes(value) : ''); setIsOpen(next); }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={label ? `Estimativa: ${label}` : 'Estimativa'}
+          className="group flex items-center gap-1 cursor-pointer hover:bg-muted/60 rounded-md px-1 py-0.5 -mx-1 transition-colors min-h-[22px]"
+        >
+          <Hourglass className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+          <span className={cn('text-xs tabular-nums', !value && 'text-muted-foreground')}>
+            {value ? formatMinutes(value) : (placeholder || '-')}
+          </span>
+          <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-52 p-2 space-y-1.5" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <Input
+          autoFocus
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onFocus={(e) => e.currentTarget.select()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); save(); }
+            if (e.key === 'Escape') { e.preventDefault(); setIsOpen(false); }
+          }}
+          placeholder="30m, 1h30"
+          aria-label="Estimativa em horas e minutos"
+          aria-invalid={invalid}
+          className="h-8 text-sm"
+        />
+        <p className={cn('text-[11px]', invalid ? 'text-destructive' : 'text-muted-foreground')}>
+          {invalid ? 'De 1 minuto a 24 horas' : minutes ? `Enter: ${formatMinutes(minutes)}` : 'Enter: sem estimativa'}
+        </p>
       </PopoverContent>
     </Popover>
   );

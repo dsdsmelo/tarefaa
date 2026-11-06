@@ -33,6 +33,7 @@ import { Project, CustomColumn } from '@/lib/types';
 import { toast } from 'sonner';
 import { Columns3, Plus, Edit, Trash2, GripVertical, X, FolderKanban, Pencil, Palette, Eye, EyeOff, Users, Camera, Loader2, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { STANDARD_COLUMNS } from '@/lib/standardColumns';
 import { supabase } from '@/lib/supabase';
 
 // Storage bucket dedicated to project/client images
@@ -482,22 +483,8 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
     setImageUrl(null);
   };
 
-  // Default columns that are created for every new project
-  const DEFAULT_COLUMNS: Array<{
-    name: string;
-    type: CustomColumn['type'];
-    standardField: CustomColumn['standardField'];
-    order: number;
-  }> = [
-    { name: 'Tarefa', type: 'text', standardField: 'name', order: 1 },
-    { name: 'Descrição', type: 'text', standardField: 'description', order: 2 },
-    { name: 'Responsável', type: 'user', standardField: 'responsible', order: 3 },
-    { name: 'Status', type: 'list', standardField: 'status', order: 4 },
-    { name: 'Prioridade', type: 'list', standardField: 'priority', order: 5 },
-    { name: 'Data Início', type: 'date', standardField: 'startDate', order: 6 },
-    { name: 'Data Fim', type: 'date', standardField: 'endDate', order: 7 },
-    { name: 'Progresso', type: 'percentage', standardField: 'progress', order: 8 },
-  ];
+  // Colunas padrão de todo projeto novo (Planejado para e Estimativa nascem ocultas)
+  const DEFAULT_COLUMNS = STANDARD_COLUMNS;
 
   const handleCreateProject = async (data: ProjectFormData) => {
     if (selectedMemberIds.length === 0) {
@@ -529,6 +516,7 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
           standardField: col.standardField,
           isMilestone: false,
           active: true,
+          ...(col.hidden ? { hidden: true } : {}),
         })
       );
       

@@ -75,7 +75,9 @@ describe("janela de captura rápida", () => {
         projectId: "p-cliente-x",
         status: "pending",
         priority: "urgent",
-        endDate: addDays(todayISO(), 1),
+        plannedDate: addDays(todayISO(), 1),
+        endDate: undefined,
+        estimateMinutes: undefined,
         responsibleIds: ["u-maria"],
       },
       { source: "quick_capture" }
@@ -88,7 +90,7 @@ describe("janela de captura rápida", () => {
     const input = typeText("comprar pão");
     await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
     expect(addTask).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "comprar pão", projectId: "p-inbox", priority: "medium", endDate: undefined }),
+      expect.objectContaining({ name: "comprar pão", projectId: "p-inbox", priority: "medium", plannedDate: undefined, endDate: undefined }),
       { source: "quick_capture" }
     );
   });
@@ -104,7 +106,7 @@ describe("janela de captura rápida", () => {
 
     await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
     expect(addTask).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "revisar relatório de sexta", endDate: undefined, projectId: "p-inbox" }),
+      expect.objectContaining({ name: "revisar relatório de sexta", plannedDate: undefined, endDate: undefined, projectId: "p-inbox" }),
       { source: "quick_capture" }
     );
   });
@@ -125,7 +127,40 @@ describe("janela de captura rápida", () => {
     renderCapture();
     fireEvent.click(screen.getByText("abrir"));
     typeText("ligar às 15h amanhã");
-    expect(screen.getByText(/não é salva: o prazo guarda só a data/)).toBeInTheDocument();
+    expect(screen.getByText(/não é salva: as datas guardam só o dia/)).toBeInTheDocument();
+  });
+
+  it("data planejada, prazo e estimativa na mesma frase, cada um com seu chip", async () => {
+    renderCapture();
+    fireEvent.click(screen.getByText("abrir"));
+    const input = typeText("relatório amanhã até sexta ~1h30");
+    expect(screen.getByText(/^Planejado/)).toBeInTheDocument();
+    expect(screen.getByText(/^Prazo/)).toBeInTheDocument();
+    expect(screen.getByText("Estimativa 1h 30m")).toBeInTheDocument();
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    const call = addTask.mock.calls[0][0];
+    expect(call).toMatchObject({ name: "relatório", plannedDate: addDays(todayISO(), 1), estimateMinutes: 90 });
+    expect(call.endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(call.endDate).not.toBe(call.plannedDate);
+  });
+
+  it("'até sexta' sozinho vai para o prazo, sem data planejada", async () => {
+    renderCapture();
+    fireEvent.click(screen.getByText("abrir"));
+    const input = typeText("entregar até sexta");
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    const call = addTask.mock.calls[0][0];
+    expect(call.plannedDate).toBeUndefined();
+    expect(call.endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("remover o chip da estimativa devolve o texto ao nome", async () => {
+    renderCapture();
+    fireEvent.click(screen.getByText("abrir"));
+    const input = typeText("revisar ~30m");
+    fireEvent.click(screen.getByLabelText('Remover: "~30m" volta para o nome'));
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    expect(addTask).toHaveBeenCalledWith(expect.objectContaining({ name: "revisar ~30m", estimateMinutes: undefined }), { source: "quick_capture" });
   });
 });
 

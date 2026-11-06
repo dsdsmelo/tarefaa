@@ -45,3 +45,9 @@ export function removeSpans(text: string, spans: { start: number; end: number }[
     .replace(/^[,;:\-–—\s]+|[,;:\-–—\s]+$/g, '')
     .trim();
 }
+
+/** Filtro dos seletores (cmdk): cada palavra digitada aparece no valor, ignorando maiúsculas e acentos */
+export function commandFilter(value: string, search: string): number {
+  const haystack = fold(value);
+  return fold(search).split(/\s+/).filter(Boolean).every(word => haystack.includes(word)) ? 1 : 0;
+}

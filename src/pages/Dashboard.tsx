@@ -14,8 +14,11 @@ import {
   ArrowRight,
   CheckCircle2,
   Inbox,
+  Sun,
   type LucideIcon,
 } from 'lucide-react';
+import { useTodayView } from '@/hooks/useToday';
+import { formatMinutes } from '@/lib/estimate';
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageBody } from '@/components/layout/PageBody';
@@ -92,6 +95,9 @@ const Dashboard = () => {
   } = useData();
   // Caixa de entrada vale para todos os workspaces
   const toTriage = inboxTasks.filter(isTaskOpen).length;
+  // Card "Hoje": planejadas + atrasadas, de todos os workspaces, com o filtro da página Hoje
+  const { summary: todaySummary } = useTodayView();
+  const todayCardLabel = `Hoje: ${todaySummary.count} ${todaySummary.count === 1 ? 'tarefa' : 'tarefas'}, ${formatMinutes(todaySummary.plannedMinutes)} planejadas`;
   const [searchParams, setSearchParams] = useSearchParams();
 
   const projectName = (projectId: string) => projects.find(p => p.id === projectId)?.name || '-';
@@ -222,8 +228,8 @@ const Dashboard = () => {
       <MainLayout>
         <Header title="Dashboard" subtitle={subtitle} />
         <PageBody>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[...Array(6)].map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
+            {[...Array(7)].map((_, i) => (
               <Skeleton key={i} className="h-[92px] rounded-xl" />
             ))}
           </div>
@@ -256,7 +262,27 @@ const Dashboard = () => {
 
       <PageBody>
         {/* Indicadores de atenção: cada card filtra a lista abaixo */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
+          <Link
+            to="/today"
+            aria-label={todayCardLabel}
+            title={todayCardLabel}
+            className={cn(
+              'text-left bg-card rounded-xl border p-4 transition-colors hover:border-primary/40',
+              todaySummary.count > 0 ? 'border-primary/30' : 'border-border'
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Hoje</span>
+              <span className="w-7 h-7 rounded-md flex items-center justify-center bg-primary/10">
+                <Sun className="w-3.5 h-3.5 text-primary" />
+              </span>
+            </div>
+            <p className={cn('text-2xl font-semibold mt-1 tabular-nums', todaySummary.count > 0 ? 'text-primary' : 'text-foreground')}>{todaySummary.count}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {todaySummary.count === 1 ? 'tarefa' : 'tarefas'}, {formatMinutes(todaySummary.plannedMinutes)} planejadas
+            </p>
+          </Link>
           <Link
             to="/inbox"
             className={cn(

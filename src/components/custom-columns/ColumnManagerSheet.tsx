@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { useData } from '@/contexts/DataContext';
 import { CustomColumn } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { STANDARD_COLUMNS, STANDARD_FIELD_LABELS, missingStandardColumns } from '@/lib/standardColumns';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -47,38 +48,10 @@ const typeLabels: Record<CustomColumn['type'], string> = {
   user: 'Usuário',
 };
 
-const standardFieldLabels: Record<string, string> = {
-  name: 'Nome da Tarefa',
-  description: 'Descrição',
-  responsible: 'Responsável',
-  status: 'Status',
-  priority: 'Prioridade',
-  startDate: 'Data de Início',
-  endDate: 'Data de Fim',
-  progress: 'Progresso',
-};
+const standardFieldLabels: Record<string, string> = STANDARD_FIELD_LABELS;
 
 // Protected standard fields that cannot be deleted
-const PROTECTED_FIELDS: CustomColumn['standardField'][] = [
-  'name', 'description', 'responsible', 'status', 'priority', 'startDate', 'endDate', 'progress',
-];
-
-// Default columns that are created for every new project
-const DEFAULT_COLUMNS: Array<{
-  name: string;
-  type: CustomColumn['type'];
-  standardField: CustomColumn['standardField'];
-  order: number;
-}> = [
-  { name: 'Tarefa', type: 'text', standardField: 'name', order: 1 },
-  { name: 'Descrição', type: 'text', standardField: 'description', order: 2 },
-  { name: 'Responsável', type: 'user', standardField: 'responsible', order: 3 },
-  { name: 'Status', type: 'list', standardField: 'status', order: 4 },
-  { name: 'Prioridade', type: 'list', standardField: 'priority', order: 5 },
-  { name: 'Data Início', type: 'date', standardField: 'startDate', order: 6 },
-  { name: 'Data Fim', type: 'date', standardField: 'endDate', order: 7 },
-  { name: 'Progresso', type: 'percentage', standardField: 'progress', order: 8 },
-];
+const PROTECTED_FIELDS: CustomColumn['standardField'][] = STANDARD_COLUMNS.map(c => c.standardField);
 
 export const ColumnManagerSheet = ({ 
   projectId, 
@@ -203,15 +176,8 @@ export const ColumnManagerSheet = ({
   const handleRestoreDefaults = async () => {
     setIsRestoringDefaults(true);
     try {
-      // Find which standard fields already exist
-      const existingStandardFields = projectColumns
-        .filter(col => col.standardField)
-        .map(col => col.standardField);
-
-      // Get missing default columns
-      const missingDefaults = DEFAULT_COLUMNS.filter(
-        def => !existingStandardFields.includes(def.standardField)
-      );
+      // Só acrescenta as colunas padrão que faltam; as existentes não mudam
+      const missingDefaults = missingStandardColumns(projectColumns);
 
       if (missingDefaults.length === 0) {
         toast.info('Todas as colunas padrão já estão configuradas');
@@ -232,11 +198,16 @@ export const ColumnManagerSheet = ({
             standardField: col.standardField,
             isMilestone: false,
             active: true,
+            ...(col.hidden ? { hidden: true } : {}),
           })
         )
       );
 
-      toast.success(`${missingDefaults.length} coluna(s) padrão restaurada(s)!`);
+      const hiddenCount = missingDefaults.filter(col => col.hidden).length;
+      toast.success(
+        `${missingDefaults.length} coluna(s) padrão restaurada(s)!` +
+        (hiddenCount > 0 ? ` ${hiddenCount} entrou oculta: use o ícone de olho para mostrar.` : '')
+      );
     } catch (err) {
       console.error('Error restoring default columns:', err);
       toast.error('Erro ao restaurar colunas padrão');

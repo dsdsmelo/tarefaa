@@ -575,8 +575,15 @@ export function useSupabaseData() {
       .eq('id', id);
     if (error) throw error;
     const task = tasks.find(t => t.id === id);
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t));
-    if (updates.completed === true && task) {
+    const now = new Date().toISOString();
+    // Espelha o trigger do banco: completed_at nasce ao concluir e some ao reabrir
+    const completion: Partial<Task> = updates.status === undefined
+      ? {}
+      : updates.status === 'completed'
+        ? (task?.status === 'completed' ? {} : { completedAt: now })
+        : { completedAt: null };
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates, ...completion, updatedAt: now } : t));
+    if (updates.status === 'completed' && task && task.status !== 'completed') {
       logAuditEvent({ action: 'task_completed', entity_type: 'task', entity_id: id, entity_name: task.name, level: 'success', details: `Tarefa "${task.name}" concluída` });
     }
   };
@@ -1105,6 +1112,8 @@ export function useSupabaseData() {
     people, projects: scopedProjects, phases: scopedPhases, cells, tasks: scopedTasks,
     // Caixa de entrada e projetos de todos os workspaces (captura rápida e triagem)
     allProjects: regularProjects, inboxProject, inboxTasks, ensureInboxProject,
+    // Tarefas de todos os workspaces (página Hoje)
+    allTasks: tasks,
     customColumns: scopedColumns, milestones: scopedMilestones,
     meetingNotes: scopedMeetingNotes, spreadsheets: scopedSpreadsheets,
     loading, error,
@@ -1229,6 +1238,10 @@ function mapTask(data: any): Task {
     collected: data.collected,
     startDate: data.start_date,
     endDate: data.end_date,
+    plannedDate: data.planned_date ?? null,
+    estimateMinutes: data.estimate_minutes ?? null,
+    todayOrder: data.today_order ?? null,
+    completedAt: data.completed_at ?? null,
     sprintDate: data.sprint_date,
     status: data.status,
     priority: data.priority,
@@ -1330,6 +1343,10 @@ function taskToDb(task: Partial<Task>): any {
   if (task.startDate !== undefined) result.start_date = task.startDate;
   if (task.endDate !== undefined) result.end_date = task.endDate;
   if (task.sprintDate !== undefined) result.sprint_date = task.sprintDate;
+  if (task.plannedDate !== undefined) result.planned_date = task.plannedDate;
+  if (task.estimateMinutes !== undefined) result.estimate_minutes = task.estimateMinutes;
+  if (task.todayOrder !== undefined) result.today_order = task.todayOrder;
+  // completed_at não é enviado: o trigger set_task_completed_at é quem grava
   if (task.status !== undefined) result.status = task.status;
   if (task.priority !== undefined) result.priority = task.priority;
   if (task.observation !== undefined) result.observation = task.observation;

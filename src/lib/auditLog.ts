@@ -57,7 +57,9 @@ export type AuditLogAction =
   | 'milestone_created'
   | 'milestone_completed'
   | 'milestone_deleted'
-  | 'person_deleted';
+  | 'person_deleted'
+  // Planejamento do dia (página Hoje)
+  | 'day_closed';
 
 export type EntityType =
   | 'subscription'
@@ -68,7 +70,8 @@ export type EntityType =
   | 'task'
   | 'phase'
   | 'milestone'
-  | 'person';
+  | 'person'
+  | 'day';
 
 interface AuditLogEntry {
   user_id?: string;

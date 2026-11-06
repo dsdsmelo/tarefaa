@@ -23,6 +23,7 @@ import { useData } from '@/contexts/DataContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useQuickCapture } from '@/components/quick-capture/context';
 import { isTaskOpen } from '@/lib/taskDates';
+import { useTodayView } from '@/hooks/useToday';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,8 +53,9 @@ const navGroups = [
   {
     label: 'Gestão',
     items: [
-      { icon: Inbox, label: 'Caixa de entrada', path: '/inbox' },
       { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+      { icon: Sun, label: 'Hoje', path: '/today' },
+      { icon: Inbox, label: 'Caixa de entrada', path: '/inbox' },
       { icon: FolderKanban, label: 'Projetos', path: '/projects' },
       { icon: GanttChart, label: 'Gantt', path: '/gantt' },
     ],
@@ -80,6 +82,12 @@ export const AppSidebar = () => {
   const { workspaces, activeWorkspace, setActiveWorkspace, inboxTasks } = useData();
   const { openQuickCapture } = useQuickCapture();
   const inboxCount = inboxTasks.filter(isTaskOpen).length;
+  // Planejadas + atrasadas, com o filtro "Só as minhas / Todas" da página Hoje
+  const { summary: todaySummary } = useTodayView();
+  const badges: Record<string, { count: number; label: string }> = {
+    '/today': { count: todaySummary.count, label: 'para hoje' },
+    '/inbox': { count: inboxCount, label: 'para triar' },
+  };
   const { theme, setTheme } = useTheme();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === 'collapsed';
@@ -237,11 +245,16 @@ export const AppSidebar = () => {
                       <NavLink to={item.path} className="relative">
                         <item.icon />
                         <span>{item.label}</span>
-                        {item.path === '/inbox' && inboxCount > 0 && (
+                        {badges[item.path] && badges[item.path].count > 0 && (
                           isCollapsed ? (
-                            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" aria-label={`${inboxCount} para triar`} />
+                            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" aria-label={`${badges[item.path].count} ${badges[item.path].label}`} />
                           ) : (
-                            <span className="ml-auto rounded-full bg-primary/15 px-1.5 text-xs font-semibold tabular-nums text-primary">{inboxCount}</span>
+                            <span
+                              className="ml-auto rounded-full bg-primary/15 px-1.5 text-xs font-semibold tabular-nums text-primary"
+                              aria-label={`${badges[item.path].count} ${badges[item.path].label}`}
+                            >
+                              {badges[item.path].count}
+                            </span>
                           )
                         )}
                       </NavLink>

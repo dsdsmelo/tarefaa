@@ -27,7 +27,11 @@ import {
   UserRound,
   Trash2,
   Plus,
+  CalendarClock,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { PlanningSettingsPanel } from '@/components/settings/PlanningSettingsPanel';
+
 import { Header } from '@/components/layout/Header';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageBody } from '@/components/layout/PageBody';
@@ -58,7 +62,11 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
+// Abas que podem ser abertas por ?tab= (ex.: /settings?tab=planning)
+const SETTINGS_TABS = ['profile', 'subscription', 'ai', 'appearance', 'data', 'workspaces', 'planning', 'security'];
+
 const Settings = () => {
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user, profile, updateProfile, refreshProfile, subscription, refreshSubscription, isAdmin } = useAuth();
   const { projects, tasks, people, cells, phases, customColumns, workspaces, activeWorkspace, workspaceProjectCounts, addWorkspace, deleteWorkspace, setActiveWorkspace } = useData();
@@ -512,12 +520,16 @@ const Settings = () => {
 
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'Usuário';
 
+  // ?tab=planning abre direto uma aba (link "configurar capacidade" da página Hoje)
+  const tabParam = searchParams.get('tab');
+  const initialTab = tabParam && SETTINGS_TABS.includes(tabParam) ? tabParam : 'profile';
+
   return (
     <MainLayout>
       <Header title="Configurações" subtitle="Gerencie sua conta e preferências" />
 
       <PageBody>
-        <Tabs defaultValue="profile">
+        <Tabs defaultValue={initialTab}>
           <TabsList>
             <TabsTrigger value="profile">
               <User className="w-4 h-4" />
@@ -542,6 +554,10 @@ const Settings = () => {
             <TabsTrigger value="workspaces">
               <BriefcaseBusiness className="w-4 h-4" />
               Workspaces
+            </TabsTrigger>
+            <TabsTrigger value="planning">
+              <CalendarClock className="w-4 h-4" />
+              Planejamento
             </TabsTrigger>
             <TabsTrigger value="security">
               <Lock className="w-4 h-4" />
@@ -870,6 +886,11 @@ const Settings = () => {
                 )}
               </Button>
             </Panel>
+          </TabsContent>
+
+          {/* Planejamento: capacidade por dia da semana (página Hoje) */}
+          <TabsContent value="planning">
+            <PlanningSettingsPanel />
           </TabsContent>
 
           {/* Appearance Tab */}

@@ -32,6 +32,7 @@ import { useData } from '@/contexts/DataContext';
 import { Task } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { formatMinutes, parseEstimate } from '@/lib/estimate';
 
 const taskSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(200, 'Nome deve ter no máximo 200 caracteres'),
@@ -40,6 +41,11 @@ const taskSchema = z.object({
   responsibleIds: z.array(z.string()).optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  plannedDate: z.string().optional(),
+  estimate: z.string().optional().refine(
+    (value) => !value?.trim() || parseEstimate(value) !== null,
+    'Use de 1 minuto a 24 horas, ex.: 45m ou 1h30'
+  ),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
 });
 
@@ -60,7 +66,12 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
   const { projects, allProjects, inboxProject, workspaces, people, addTask, updateTask, getProjectMemberIds } = useData();
   // Tarefa da caixa de entrada: pode ir para projeto de qualquer workspace (triagem)
   const fromInbox = !!task && !!inboxProject && task.projectId === inboxProject.id;
-  const projectOptions = fromInbox && inboxProject ? [inboxProject, ...allProjects] : projects;
+  // Tarefa de outro workspace (aberta pela página Hoje): lista os projetos de todos os workspaces
+  const crossWorkspace = !!task && !fromInbox && !projects.some(p => p.id === task.projectId);
+  const projectOptions = fromInbox && inboxProject
+    ? [inboxProject, ...allProjects]
+    : crossWorkspace ? allProjects : projects;
+  const showWorkspaceLabel = fromInbox || crossWorkspace;
   const workspaceName = (workspaceId: string) => workspaces.find(w => w.id === workspaceId)?.name;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [responsiblePopoverOpen, setResponsiblePopoverOpen] = useState(false);
@@ -74,6 +85,8 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
       responsibleIds: defaultResponsibleIds || [],
       startDate: getTodayStr(),
       endDate: '',
+      plannedDate: '',
+      estimate: '',
       priority: 'medium',
     },
   });
@@ -112,6 +125,8 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
         responsibleIds: task.responsibleIds || [],
         startDate: task.startDate || '',
         endDate: task.endDate || '',
+        plannedDate: task.plannedDate || '',
+        estimate: task.estimateMinutes ? formatMinutes(task.estimateMinutes) : '',
         priority: task.priority,
       });
     } else {
@@ -122,6 +137,8 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
         responsibleIds: defaultResponsibleIds || [],
         startDate: getTodayStr(),
         endDate: '',
+        plannedDate: '',
+        estimate: '',
         priority: 'medium',
       });
     }
@@ -148,6 +165,9 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
         responsibleIds: data.responsibleIds && data.responsibleIds.length > 0 ? data.responsibleIds : undefined,
         startDate: data.startDate || undefined,
         endDate: data.endDate || undefined,
+        // null limpa no banco (undefined seria ignorado)
+        plannedDate: data.plannedDate || null,
+        estimateMinutes: data.estimate?.trim() ? parseEstimate(data.estimate) : null,
         status: task?.status || 'pending' as const, // Keep existing status or default to pending
         priority: data.priority,
         observation: task?.observation, // Keep existing observation
@@ -229,7 +249,7 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
                   {projectOptions.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
-                      {fromInbox && !project.isInbox && workspaceName(project.workspaceId) && (
+                      {showWorkspaceLabel && !project.isInbox && workspaceName(project.workspaceId) && (
                         <span className="text-muted-foreground"> · {workspaceName(project.workspaceId)}</span>
                       )}
                     </SelectItem>
@@ -352,6 +372,32 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
                 type="date"
                 {...form.register('endDate')}
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Planejamento do dia (página Hoje) */}
+            <div className="space-y-2">
+              <Label htmlFor="plannedDate">Planejado para</Label>
+              <Input
+                id="plannedDate"
+                type="date"
+                {...form.register('plannedDate')}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="estimate">Estimativa</Label>
+              <Input
+                id="estimate"
+                placeholder="30m, 1h30"
+                autoComplete="off"
+                aria-invalid={!!form.formState.errors.estimate}
+                {...form.register('estimate')}
+              />
+              {form.formState.errors.estimate && (
+                <p className="text-xs text-destructive">{form.formState.errors.estimate.message}</p>
+              )}
             </div>
           </div>
 

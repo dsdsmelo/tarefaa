@@ -10,7 +10,7 @@ const addTask = vi.fn(async () => ({}));
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/components/layout/MainLayout", () => ({ MainLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
-vi.mock("@/components/layout/Header", () => ({ Header: ({ title }: { title: string }) => <h1>{title}</h1> }));
+vi.mock("@/components/layout/Header", () => ({ Header: ({ title, actions }: { title: string; actions?: React.ReactNode }) => <header><h1>{title}</h1>{actions}</header> }));
 vi.mock("@/components/modals/TaskFormModal", () => ({ TaskFormModal: ({ task }: { task: Task }) => <div>formulário de {task.name}</div> }));
 
 const task = (id: string, name: string, createdAt: string, extra: Partial<Task> = {}): Task => ({
@@ -96,13 +96,45 @@ describe("página Caixa de entrada", () => {
     expect(updateTask).toHaveBeenCalledWith("t-new", { projectId: "p-casa" });
   });
 
-  it("d define o prazo digitado em português", async () => {
+  it("d define a data planejada digitada em português", async () => {
     renderInbox();
     await press("d");
+    const input = screen.getByLabelText("Data planejada da tarefa");
+    fireEvent.change(input, { target: { value: "dia 31" } });
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    expect(updateTask).toHaveBeenCalledWith("t-new", { plannedDate: expect.stringMatching(/^\d{4}-\d{2}-31$/) });
+  });
+
+  it("D (Shift+d) define o prazo", async () => {
+    renderInbox();
+    await press("D");
     const input = screen.getByLabelText("Prazo da tarefa");
     fireEvent.change(input, { target: { value: "dia 31" } });
     await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
     expect(updateTask).toHaveBeenCalledWith("t-new", { endDate: expect.stringMatching(/^\d{4}-\d{2}-31$/) });
+  });
+
+  it("d com o campo vazio tira a data planejada (null)", async () => {
+    renderInbox();
+    await press("d");
+    const input = screen.getByLabelText("Data planejada da tarefa");
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    expect(updateTask).toHaveBeenCalledWith("t-new", { plannedDate: null });
+  });
+
+  it("e define a estimativa", async () => {
+    renderInbox();
+    await press("e");
+    const input = screen.getByLabelText("Estimativa da tarefa");
+    fireEvent.change(input, { target: { value: "1h30" } });
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    expect(updateTask).toHaveBeenCalledWith("t-new", { estimateMinutes: 90 });
+  });
+
+  it("não tem mais o botão 'Nova tarefa' no cabeçalho; 'Atalhos' continua", () => {
+    renderInbox();
+    expect(screen.queryByRole("button", { name: /Nova tarefa/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Atalhos/ })).toBeInTheDocument();
   });
 
   it("Enter abre o formulário completo", async () => {

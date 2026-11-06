@@ -22,6 +22,8 @@ interface DataContextType {
   /** Tarefas da caixa de entrada, de todos os workspaces */
   inboxTasks: Task[];
   ensureInboxProject: () => Promise<string>;
+  /** Tarefas de todos os workspaces, com as da caixa de entrada (página Hoje) */
+  allTasks: Task[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   phases: Phase[];
   setPhases: React.Dispatch<React.SetStateAction<Phase[]>>;

@@ -23,7 +23,8 @@ import {
   PriorityEditCell,
   ResponsibleEditCell,
   TextEditCell,
-  DateEditCell
+  DateEditCell,
+  EstimateEditCell,
 } from '@/components/tasks/InlineTaskFieldEdit';
 import { ColumnManagerSheet } from '@/components/custom-columns/ColumnManagerSheet';
 import { TaskFormModal } from '@/components/modals/TaskFormModal';
@@ -126,6 +127,8 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
     startDate: 110,
     endDate: 110,
     progress: 100,
+    plannedDate: 120,
+    estimate: 100,
   };
 
   const getDefaultWidth = (col: CustomColumn): number => {
@@ -587,6 +590,24 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
               onSave={(value) => handleTaskFieldUpdate(task.id, { endDate: value })}
             />
           );
+        case 'plannedDate':
+          return (
+            <DateEditCell
+              value={task.plannedDate ?? undefined}
+              placeholder="Planejar"
+              // undefined não chega ao banco: limpar manda null
+              onSave={(value) => handleTaskFieldUpdate(task.id, { plannedDate: value ?? null })}
+            />
+          );
+        case 'estimate':
+          return (
+            <EstimateEditCell
+              value={task.estimateMinutes}
+              placeholder="Estimar"
+              label={task.name}
+              onSave={(value) => handleTaskFieldUpdate(task.id, { estimateMinutes: value })}
+            />
+          );
         case 'progress':
           return (
             <TaskProgressEditCell
@@ -771,7 +792,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
                 {/* All columns - unified */}
                 {projectColumns.map((col, colIndex) => {
                   const isNameCol = colIndex === 0;
-                  const isCompactCol = ['status', 'priority', 'startDate', 'endDate', 'progress'].includes(col.standardField || '') || ['number', 'percentage'].includes(col.type);
+                  const isCompactCol = ['status', 'priority', 'startDate', 'endDate', 'progress', 'plannedDate', 'estimate'].includes(col.standardField || '') || ['number', 'percentage'].includes(col.type);
                   // Colunas de texto com wrapText habilitado têm largura controlada
                   const shouldWrapHeader = col.type === 'text' && !col.standardField && col.wrapText;
                   return (
@@ -894,7 +915,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
                     {/* All columns - unified */}
                     {projectColumns.map((col, colIndex) => {
                       const isNameCol = colIndex === 0;
-                      const isCompactCol = ['status', 'priority', 'startDate', 'endDate', 'progress'].includes(col.standardField || '') || ['number', 'percentage'].includes(col.type);
+                      const isCompactCol = ['status', 'priority', 'startDate', 'endDate', 'progress', 'plannedDate', 'estimate'].includes(col.standardField || '') || ['number', 'percentage'].includes(col.type);
                       // Colunas de texto com wrapText habilitado têm quebra automática
                       const shouldWrap = col.type === 'text' && !col.standardField && col.wrapText;
                       return (

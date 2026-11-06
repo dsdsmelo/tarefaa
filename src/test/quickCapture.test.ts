@@ -8,6 +8,7 @@ import {
 } from "@/lib/quickCapture/parse";
 import { findDates, parseDateText } from "@/lib/quickCapture/dates";
 import { fold } from "@/lib/quickCapture/text";
+import { formatMinutes, parseEstimate } from "@/lib/estimate";
 
 // Hoje fixo: quarta-feira, 04/11/2026
 const TODAY = "2026-11-04";
@@ -27,13 +28,14 @@ const people = [
 
 const ctx = (extra: Partial<ParseContext> = {}): ParseContext => ({ today: TODAY, projects, people, ...extra });
 const parse = (text: string, extra: Partial<ParseContext> = {}) => parseQuickCapture(text, ctx(extra));
-const dateOf = (text: string, today = TODAY) => parseQuickCapture(text, { today, projects: [], people: [] }).date?.iso ?? null;
+const dateOf = (text: string, today = TODAY) => { const r = parseQuickCapture(text, { today, projects: [], people: [] }); return (r.planned ?? r.due)?.iso ?? null; };
 
 describe("captura rápida: exemplo completo", () => {
   it("ligar pro João amanhã p1 #Cliente X @Maria", () => {
     const r = parse("ligar pro João amanhã p1 #Cliente X @Maria");
     expect(r.name).toBe("ligar pro João");
-    expect(r.date).toMatchObject({ iso: "2026-11-05", kind: "planned", text: "amanhã" });
+    expect(r.planned).toMatchObject({ iso: "2026-11-05", kind: "planned", text: "amanhã" });
+    expect(r.due).toBeNull();
     expect(r.priority?.value).toBe("urgent");
     expect(r.project?.id).toBe("p-cliente-x");
     expect(r.people.map(p => p.id)).toEqual(["u-maria"]);
@@ -108,7 +110,8 @@ describe("#projeto e @pessoa sem autocompletar", () => {
   it("data dentro do nome do projeto não é data", () => {
     const r = parse("#Entrega Sexta revisar");
     expect(r.project?.id).toBe("p-entrega");
-    expect(r.date).toBeNull();
+    expect(r.planned).toBeNull();
+    expect(r.due).toBeNull();
   });
 });
 
@@ -177,18 +180,19 @@ describe("datas em português (hoje = quarta 04/11/2026)", () => {
   it("datas inválidas e palavras parecidas não viram data", () => {
     for (const text of ["31/02", "segundo lugar", "quando der", "sexto andar", "ter reunião", "dia 32", "13/13"]) {
       const r = parseQuickCapture(text, { today: TODAY, projects: [], people: [] });
-      expect(r.date, text).toBeNull();
+      expect(r.planned ?? r.due, text).toBeNull();
       expect(r.name, text).toBe(text);
     }
   });
 
-  it("marcador de prazo dá dateKind 'due'; data simples dá 'planned'", () => {
-    expect(parse("entregar até sexta").date).toMatchObject({ kind: "due", iso: "2026-11-06" });
-    expect(parse("entregar prazo sexta").date?.kind).toBe("due");
-    expect(parse("relatório prazo: 15/11").date).toMatchObject({ kind: "due", iso: "2026-11-15" });
-    expect(parse("boleto vence dia 10").date).toMatchObject({ kind: "due", iso: "2026-11-10" });
-    expect(parse("ligar na sexta").date?.kind).toBe("planned");
-    expect(parse("ligar sexta").date?.kind).toBe("planned");
+  it("marcador de prazo vai para o prazo (due); data simples é a planejada", () => {
+    expect(parse("entregar até sexta")).toMatchObject({ planned: null, due: { kind: "due", iso: "2026-11-06" } });
+    expect(parse("entregar prazo sexta").due?.kind).toBe("due");
+    expect(parse("relatório prazo: 15/11").due).toMatchObject({ kind: "due", iso: "2026-11-15" });
+    expect(parse("boleto vence dia 10").due).toMatchObject({ kind: "due", iso: "2026-11-10" });
+    expect(parse("ligar na sexta")).toMatchObject({ due: null, planned: { kind: "planned", iso: "2026-11-06" } });
+    expect(parse("ligar sexta").planned?.kind).toBe("planned");
+    expect(parse("pagar amanhã").planned?.iso).toBe("2026-11-05");
   });
 
   it("marcador e preposição saem do nome junto com a data", () => {
@@ -198,15 +202,16 @@ describe("datas em português (hoje = quarta 04/11/2026)", () => {
     expect(parse("enviar no dia 15/11").name).toBe("enviar");
   });
 
-  it("vale a última data; as outras ficam no nome", () => {
+  it("vale a última data de cada tipo; as outras ficam no nome", () => {
     const r = parse("revisar relatório de sexta amanhã");
-    expect(r.date?.iso).toBe("2026-11-05");
+    expect(r.planned?.iso).toBe("2026-11-05");
+    expect(r.due).toBeNull();
     expect(r.name).toBe("revisar relatório de sexta");
   });
 
   it("hora não é salva: fica no nome e aparece como aviso", () => {
     const r = parse("ligar às 15h amanhã");
-    expect(r.date?.iso).toBe("2026-11-05");
+    expect(r.planned?.iso).toBe("2026-11-05");
     expect(r.times.map(t => t.text)).toEqual(["às 15h"]);
     expect(r.name).toBe("ligar às 15h");
     expect(parse("call 15:30 sexta").times.map(t => t.text)).toEqual(["15:30"]);
@@ -216,22 +221,22 @@ describe("datas em português (hoje = quarta 04/11/2026)", () => {
 });
 
 describe("falso positivo e chip removido na prévia", () => {
-  it("'revisar relatório de sexta': o chip de data aparece", () => {
+  it("'revisar relatório de sexta': o chip de data planejada aparece", () => {
     const r = parse("revisar relatório de sexta");
-    expect(r.date).toMatchObject({ iso: "2026-11-06", text: "de sexta" });
+    expect(r.planned).toMatchObject({ iso: "2026-11-06", text: "de sexta", key: "planned:sexta" });
     expect(r.name).toBe("revisar relatório");
   });
 
   it("removendo o chip de data, a palavra volta para o nome", () => {
     const first = parse("revisar relatório de sexta");
-    const r = parse("revisar relatório de sexta", { ignore: { dates: [first.date!.key] } });
-    expect(r.date).toBeNull();
+    const r = parse("revisar relatório de sexta", { ignore: { dates: [first.planned!.key] } });
+    expect(r.planned).toBeNull();
     expect(r.name).toBe("revisar relatório de sexta");
   });
 
   it("removendo a data escolhida, vale a anterior", () => {
-    const r = parse("revisar relatório de sexta amanhã", { ignore: { dates: ["amanha"] } });
-    expect(r.date?.iso).toBe("2026-11-06");
+    const r = parse("revisar relatório de sexta amanhã", { ignore: { dates: ["planned:amanha"] } });
+    expect(r.planned?.iso).toBe("2026-11-06");
     expect(r.name).toBe("revisar relatório amanhã");
   });
 
@@ -286,5 +291,113 @@ describe("auxiliares", () => {
 
   it("findDates não sobrepõe expressões", () => {
     expect(findDates("depois de amanhã", TODAY).map(d => d.iso)).toEqual(["2026-11-06"]);
+  });
+});
+
+describe("Etapa 3: data planejada e prazo na mesma frase", () => {
+  it("'relatório amanhã até sexta': planejado amanhã, prazo sexta", () => {
+    const r = parse("relatório amanhã até sexta");
+    expect(r.planned).toMatchObject({ iso: "2026-11-05", text: "amanhã", key: "planned:amanha" });
+    expect(r.due).toMatchObject({ iso: "2026-11-06", text: "até sexta", key: "due:sexta" });
+    expect(r.name).toBe("relatório");
+  });
+
+  it("ordem invertida: prazo primeiro, planejada depois", () => {
+    const r = parse("boleto vence dia 10 pagar segunda");
+    expect(r.due?.iso).toBe("2026-11-10");
+    expect(r.planned?.iso).toBe("2026-11-09");
+    expect(r.name).toBe("boleto pagar");
+  });
+
+  it("vale o último prazo e a última planejada, cada um no seu tipo", () => {
+    const r = parse("x até sexta amanhã prazo 15/11 hoje");
+    expect(r.planned?.iso).toBe("2026-11-04");
+    expect(r.due?.iso).toBe("2026-11-15");
+    expect(r.name).toBe("x até sexta amanhã");
+  });
+
+  it("removendo o chip do prazo, a planejada continua", () => {
+    const r = parse("relatório amanhã até sexta", { ignore: { dates: ["due:sexta"] } });
+    expect(r.planned?.iso).toBe("2026-11-05");
+    expect(r.due).toBeNull();
+    expect(r.name).toBe("relatório até sexta");
+  });
+
+  it("remover a planejada 'sexta' não remove o prazo 'até sexta'", () => {
+    const r = parse("ligar sexta até sexta", { ignore: { dates: ["planned:sexta"] } });
+    expect(r.planned).toBeNull();
+    expect(r.due?.iso).toBe("2026-11-06");
+  });
+});
+
+describe("Etapa 3: estimativa", () => {
+  it.each([
+    ["~30m", 30], ["~2h", 120], ["~1h30", 90], ["~1h30m", 90], ["~90min", 90], ["~45", 45], ["~1,5h", 90], ["~24h", 1440],
+  ])("%s = %i minutos", (token, minutes) => {
+    const r = parse(`revisar contrato ${token}`);
+    expect(r.estimate).toMatchObject({ minutes, text: token });
+    expect(r.name).toBe("revisar contrato");
+  });
+
+  it("fora da faixa ou sem ~ fica no nome", () => {
+    for (const text of ["x ~0m", "x ~25h", "x ~1h75", "x 30m", "x ~abc", "x~30m"]) {
+      const r = parse(text);
+      expect(r.estimate, text).toBeNull();
+      expect(r.name, text).toBe(text);
+    }
+  });
+
+  it("'~2h' não vira hora; pontuação depois é aceita", () => {
+    const r = parse("call ~2h, amanhã");
+    expect(r.estimate?.minutes).toBe(120);
+    expect(r.times).toEqual([]);
+    expect(r.name).toBe("call");
+  });
+
+  it("vale a última estimativa; a anterior fica no nome", () => {
+    const r = parse("x ~30m ~1h");
+    expect(r.estimate?.minutes).toBe(60);
+    expect(r.name).toBe("x ~30m");
+  });
+
+  it("removendo o chip, a estimativa volta para o nome", () => {
+    const r = parse("revisar ~30m", { ignore: { estimates: ["30m"] } });
+    expect(r.estimate).toBeNull();
+    expect(r.name).toBe("revisar ~30m");
+  });
+
+  it("combinação completa: projeto, pessoa, prioridade, estimativa, planejada e prazo", () => {
+    const r = parse("preparar proposta #Cliente X @Maria p2 ~1h30 amanhã prazo sexta");
+    expect(r).toMatchObject({
+      name: "preparar proposta",
+      project: { id: "p-cliente-x" },
+      priority: { value: "high" },
+      estimate: { minutes: 90 },
+      planned: { iso: "2026-11-05" },
+      due: { iso: "2026-11-06" },
+    });
+    expect(r.people.map(p => p.id)).toEqual(["u-maria"]);
+  });
+});
+
+describe("Etapa 3: parseEstimate e formatMinutes", () => {
+  it("parseEstimate aceita os formatos do formulário", () => {
+    expect(parseEstimate("30")).toBe(30);
+    expect(parseEstimate("30 min")).toBe(30);
+    expect(parseEstimate("1h 30m")).toBe(90);
+    expect(parseEstimate("1:30")).toBe(90);
+    expect(parseEstimate("2H")).toBe(120);
+    expect(parseEstimate("0")).toBeNull();
+    expect(parseEstimate("1441")).toBeNull();
+    expect(parseEstimate("1:75")).toBeNull();
+    expect(parseEstimate("")).toBeNull();
+    expect(parseEstimate("muito")).toBeNull();
+  });
+
+  it("formatMinutes", () => {
+    expect(formatMinutes(45)).toBe("45m");
+    expect(formatMinutes(120)).toBe("2h");
+    expect(formatMinutes(90)).toBe("1h 30m");
+    expect(formatMinutes(0)).toBe("0h");
   });
 });

@@ -141,6 +141,14 @@ export interface Task {
   collected?: number;
   startDate?: string;
   endDate?: string;
+  /** Dia em que a tarefa será feita (tasks.planned_date). endDate é o prazo. */
+  plannedDate?: string | null;
+  /** Estimativa em minutos, 1 a 1440 (tasks.estimate_minutes) */
+  estimateMinutes?: number | null;
+  /** Ordem manual dentro de "Planejadas para hoje" (tasks.today_order) */
+  todayOrder?: number | null;
+  /** Quando foi concluída (tasks.completed_at, mantido por trigger no banco) */
+  completedAt?: string | null;
   sprintDate?: string;
   status: 'pending' | 'in_progress' | 'blocked' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
@@ -162,7 +170,7 @@ export interface CustomColumn {
   hidden?: boolean;
   wrapText?: boolean; // Permitir quebra de linhas em colunas de texto
   // Standard field mapping - if set, this column displays a core task field
-  standardField?: 'name' | 'description' | 'responsible' | 'status' | 'priority' | 'startDate' | 'endDate' | 'progress';
+  standardField?: 'name' | 'description' | 'responsible' | 'status' | 'priority' | 'startDate' | 'endDate' | 'progress' | 'plannedDate' | 'estimate';
 }
 
 export interface Milestone {

@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
+  CalendarCheck,
   CalendarDays,
   Check,
   CheckCircle2,
   FolderInput,
+  Hourglass,
   Inbox as InboxIcon,
   Keyboard,
-  Plus,
   Trash2,
   UserRound,
 } from 'lucide-react';
@@ -21,18 +22,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { TaskFormModal } from '@/components/modals/TaskFormModal';
-import { useQuickCapture } from '@/components/quick-capture/context';
+import { DateTextDialog, type DateField } from '@/components/planning/DateTextDialog';
+import { EstimateDialog } from '@/components/planning/EstimateDialog';
 import { hasOpenOverlay, isPlainKey } from '@/components/quick-capture/hotkeys';
 import { useData } from '@/contexts/DataContext';
 import { cn } from '@/lib/utils';
 import { friendlyDbError } from '@/lib/dbErrors';
 import { priorityLabels, type Project, type Task, type TaskPriority } from '@/lib/types';
 import { daysUntilDue, isTaskOpen, todayISO } from '@/lib/taskDates';
-import { parseDateText } from '@/lib/quickCapture/dates';
 import { formatShortDate } from '@/lib/quickCapture/format';
-import { fold } from '@/lib/quickCapture/text';
+import { formatMinutes } from '@/lib/estimate';
+import { commandFilter } from '@/lib/quickCapture/text';
 
-type Picker = 'move' | 'date' | 'responsible' | 'help' | null;
+type Picker = 'move' | DateField | 'estimate' | 'responsible' | 'help' | null;
 
 const PRIORITY_BY_KEY: Record<string, TaskPriority> = { '1': 'urgent', '2': 'high', '3': 'medium', '4': 'low' };
 
@@ -46,7 +48,9 @@ const PRIORITY_DOT: Record<TaskPriority, string> = {
 const SHORTCUTS: [string, string][] = [
   ['↑ ↓ ou j k', 'Navegar'],
   ['m', 'Mover para um projeto'],
-  ['d', 'Prazo ("sexta", "15/11", vazio para tirar)'],
+  ['d', 'Planejado para ("sexta", "15/11", vazio para tirar)'],
+  ['D (Shift+d)', 'Prazo'],
+  ['e', 'Estimativa ("30m", "1h30")'],
   ['1 2 3 4', 'Prioridade: urgente, alta, média, baixa'],
   ['r', 'Responsável (liga/desliga)'],
   ['Enter', 'Abrir o formulário completo'],
@@ -56,19 +60,15 @@ const SHORTCUTS: [string, string][] = [
   ['?', 'Mostrar os atalhos'],
 ];
 
-// Busca dos seletores: ignora maiúsculas e acentos
-const commandFilter = (value: string, search: string) => (fold(value).includes(fold(search.trim())) ? 1 : 0);
 
 const Inbox = () => {
   const {
     inboxProject, inboxTasks, allProjects, workspaces, people, loading,
     updateTask, deleteTask, addTask,
   } = useData();
-  const { openQuickCapture } = useQuickCapture();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [picker, setPicker] = useState<Picker>(null);
   const [formTask, setFormTask] = useState<Task | null>(null);
-  const [dateText, setDateText] = useState('');
   const listRef = useRef<HTMLUListElement>(null);
 
   const today = todayISO();
@@ -122,19 +122,32 @@ const Inbox = () => {
     } catch (err) { fail(err, 'Não foi possível mover a tarefa.'); }
   };
 
-  const setDate = async (task: Task) => {
-    const text = dateText.trim();
-    const parsed = text ? parseDateText(text, today) : null;
-    if (text && !parsed) { toast.error(`Não entendi a data "${text}"`); return; }
+  // d: data planejada; D: prazo. null limpa a data no banco (undefined seria ignorado)
+  const setDate = async (task: Task, field: DateField, iso: string | null) => {
     setPicker(null);
-    const previous = { endDate: task.endDate ?? null };
+    const label = field === 'planned' ? 'Planejado para' : 'Prazo';
+    const updates: Partial<Task> = field === 'planned'
+      ? { plannedDate: iso }
+      : { endDate: iso as unknown as string };
+    const previous: Partial<Task> = field === 'planned'
+      ? { plannedDate: task.plannedDate ?? null }
+      : { endDate: (task.endDate ?? null) as unknown as string };
     try {
-      // null limpa o prazo no banco (undefined seria ignorado)
-      await updateTask(task.id, { endDate: (parsed?.iso ?? null) as unknown as string });
-      toast.success(parsed ? `Prazo: ${formatShortDate(parsed.iso, today)}` : 'Prazo removido', {
-        action: { label: 'Desfazer', onClick: () => { void updateTask(task.id, previous as unknown as Partial<Task>); } },
+      await updateTask(task.id, updates);
+      toast.success(iso ? `${label}: ${formatShortDate(iso, today)}` : `${label}: removido`, {
+        action: { label: 'Desfazer', onClick: () => { void updateTask(task.id, previous); } },
       });
-    } catch (err) { fail(err, 'Não foi possível mudar o prazo.'); }
+    } catch (err) { fail(err, field === 'planned' ? 'Não foi possível mudar a data planejada.' : 'Não foi possível mudar o prazo.'); }
+  };
+
+  const setEstimate = async (task: Task, minutes: number | null) => {
+    setPicker(null);
+    try {
+      await updateTask(task.id, { estimateMinutes: minutes });
+      toast.success(minutes ? `Estimativa: ${formatMinutes(minutes)}` : 'Estimativa removida', {
+        action: { label: 'Desfazer', onClick: () => { void updateTask(task.id, { estimateMinutes: task.estimateMinutes ?? null }); } },
+      });
+    } catch (err) { fail(err, 'Não foi possível mudar a estimativa.'); }
   };
 
   const setPriority = useCallback(async (task: Task, priority: TaskPriority) => {
@@ -188,10 +201,7 @@ const Inbox = () => {
     } catch (err) { fail(err, 'Não foi possível excluir a tarefa.'); }
   }, [deleteTask, addTask]);
 
-  const openPicker = (kind: Picker) => {
-    if (kind === 'date') setDateText('');
-    setPicker(kind);
-  };
+  const openPicker = (kind: Picker) => setPicker(kind);
 
   // Triagem pelo teclado (desligada com diálogo aberto ou digitando)
   useEffect(() => {
@@ -207,7 +217,9 @@ const Inbox = () => {
         case 'ArrowDown': case 'j': e.preventDefault(); step(1); break;
         case 'ArrowUp': case 'k': e.preventDefault(); step(-1); break;
         case 'm': e.preventDefault(); setPicker('move'); break;
-        case 'd': e.preventDefault(); setDateText(''); setPicker('date'); break;
+        case 'd': e.preventDefault(); setPicker('planned'); break;
+        case 'D': e.preventDefault(); setPicker('due'); break;
+        case 'e': e.preventDefault(); setPicker('estimate'); break;
         case 'r': e.preventDefault(); setPicker('responsible'); break;
         case 'Enter': e.preventDefault(); setFormTask(selected); break;
         case 'x': e.preventDefault(); void complete(selected); break;
@@ -219,8 +231,6 @@ const Inbox = () => {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [items, selected, selectedIndex, complete, remove, setPriority]);
-
-  const datePreview = dateText.trim() ? parseDateText(dateText, today) : null;
 
   const subtitle = `${items.length} para triar · todos os workspaces`;
 
@@ -239,18 +249,13 @@ const Inbox = () => {
         title="Caixa de entrada"
         subtitle={subtitle}
         actions={
-          <>
-            <Button variant="outline" size="sm" onClick={() => setPicker('help')}>
-              <Keyboard className="w-4 h-4 mr-1.5" /> Atalhos <kbd className="ml-1.5 text-[10px] opacity-70">?</kbd>
-            </Button>
-            <Button size="sm" onClick={openQuickCapture}>
-              <Plus className="w-4 h-4 mr-1.5" /> Nova tarefa <kbd className="ml-1.5 text-[10px] opacity-70">Q</kbd>
-            </Button>
-          </>
+          <Button variant="outline" size="sm" onClick={() => setPicker('help')}>
+            <Keyboard className="w-4 h-4 mr-1.5" /> Atalhos <kbd className="ml-1.5 text-[10px] opacity-70">?</kbd>
+          </Button>
         }
       />
       <PageBody>
-        <Panel icon={InboxIcon} title="Para triar" description="Mova cada item para um projeto, defina prazo e prioridade, ou conclua.">
+        <Panel icon={InboxIcon} title="Para triar" description="Mova cada item para um projeto, planeje o dia, defina prazo, estimativa e prioridade, ou conclua.">
           {!inboxProject ? (
             <EmptyState icon={InboxIcon} title="Caixa de entrada indisponível" description="Recarregue a página. Se continuar, avise o suporte." />
           ) : items.length === 0 ? (
@@ -278,9 +283,17 @@ const Inbox = () => {
                   >
                     <span className={cn('h-2 w-2 shrink-0 rounded-full', PRIORITY_DOT[task.priority])} title={priorityLabels[task.priority]} />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{task.name}</span>
+                    {task.estimateMinutes ? (
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground" title="Estimativa">~{formatMinutes(task.estimateMinutes)}</span>
+                    ) : null}
+                    {task.plannedDate && (
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground" title="Planejado para">
+                        <CalendarCheck className="mr-0.5 inline h-3 w-3" />{formatShortDate(task.plannedDate, today)}
+                      </span>
+                    )}
                     {task.endDate && (
-                      <span className={cn('shrink-0 text-xs tabular-nums', days !== null && days < 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>
-                        {formatShortDate(task.endDate, today)}
+                      <span className={cn('shrink-0 text-xs tabular-nums', days !== null && days < 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground')} title="Prazo">
+                        Prazo {formatShortDate(task.endDate, today)}
                       </span>
                     )}
                     {names.length > 0 && (
@@ -288,7 +301,9 @@ const Inbox = () => {
                     )}
                     <span className={cn('flex shrink-0 items-center gap-0.5', isSelected ? 'flex' : 'hidden group-hover:flex')}>
                       <RowAction title="Mover (m)" icon={FolderInput} onClick={() => { setSelectedId(task.id); openPicker('move'); }} />
-                      <RowAction title="Prazo (d)" icon={CalendarDays} onClick={() => { setSelectedId(task.id); openPicker('date'); }} />
+                      <RowAction title="Planejado para (d)" icon={CalendarCheck} onClick={() => { setSelectedId(task.id); openPicker('planned'); }} />
+                      <RowAction title="Prazo (D)" icon={CalendarDays} onClick={() => { setSelectedId(task.id); openPicker('due'); }} />
+                      <RowAction title="Estimativa (e)" icon={Hourglass} onClick={() => { setSelectedId(task.id); openPicker('estimate'); }} />
                       <RowAction title="Responsável (r)" icon={UserRound} onClick={() => { setSelectedId(task.id); openPicker('responsible'); }} />
                       <RowAction title="Concluir (x)" icon={Check} onClick={() => void complete(task)} />
                       <RowAction title="Excluir (Del)" icon={Trash2} onClick={() => void remove(task)} destructive />
@@ -354,27 +369,22 @@ const Inbox = () => {
         </DialogContent>
       </Dialog>
 
-      {/* d: prazo, digitado como na captura */}
-      <Dialog open={picker === 'date'} onOpenChange={(o) => !o && setPicker(null)}>
-        <DialogContent className="sm:max-w-sm gap-3">
-          <DialogHeader>
-            <DialogTitle className="text-base">Prazo</DialogTitle>
-            <DialogDescription className="text-xs">"amanhã", "sexta", "dia 10", "15/11". Vazio tira o prazo.</DialogDescription>
-          </DialogHeader>
-          <input
-            autoFocus
-            value={dateText}
-            onChange={(e) => setDateText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && selected) { e.preventDefault(); void setDate(selected); } }}
-            aria-label="Prazo da tarefa"
-            placeholder="sexta"
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <p className="text-xs text-muted-foreground">
-            {!dateText.trim() ? 'Enter: sem prazo' : datePreview ? `Enter: ${formatShortDate(datePreview.iso, today)}` : 'Data não reconhecida'}
-          </p>
-        </DialogContent>
-      </Dialog>
+      {/* d / D: data planejada ou prazo, digitados como na captura; e: estimativa */}
+      <DateTextDialog
+        open={picker === 'planned' || picker === 'due'}
+        field={picker === 'due' ? 'due' : 'planned'}
+        today={today}
+        taskName={selected?.name}
+        onOpenChange={(o) => !o && setPicker(null)}
+        onSubmit={(iso) => selected && void setDate(selected, picker === 'due' ? 'due' : 'planned', iso)}
+      />
+      <EstimateDialog
+        open={picker === 'estimate'}
+        taskName={selected?.name}
+        current={selected?.estimateMinutes}
+        onOpenChange={(o) => !o && setPicker(null)}
+        onSubmit={(minutes) => selected && void setEstimate(selected, minutes)}
+      />
 
       {/* ?: atalhos */}
       <Dialog open={picker === 'help'} onOpenChange={(o) => !o && setPicker(null)}>
