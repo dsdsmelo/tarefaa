@@ -18,6 +18,19 @@ export const addDaysISO = (iso: string, days: number): string => {
   return toISODate(new Date(y, m - 1, d + days));
 };
 
+/** Soma dias úteis (segunda a sexta; feriados não são considerados) */
+export const addBusinessDaysISO = (iso: string, days: number): string => {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  let left = days;
+  while (left > 0) {
+    date.setDate(date.getDate() + 1);
+    const weekday = date.getDay();
+    if (weekday !== 0 && weekday !== 6) left--;
+  }
+  return toISODate(date);
+};
+
 export const isTaskOpen = (task: Task): boolean =>
   task.status !== 'completed' && task.status !== 'cancelled';
 

@@ -1,3 +1,4 @@
+import { withCustomValue } from '@/lib/dbMappers';
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   Search,
@@ -26,6 +27,13 @@ import {
   DateEditCell,
   EstimateEditCell,
 } from '@/components/tasks/InlineTaskFieldEdit';
+import { TASK_STATUS_ORDER } from '@/lib/types';
+import { WaitingDialog } from '@/components/planning/WaitingDialog';
+import { peopleForWorkspace } from '@/lib/people';
+import { waitingUpdates, type WaitingInput } from '@/lib/waiting';
+import { todayISO } from '@/lib/taskDates';
+import { formatShortDate } from '@/lib/quickCapture/format';
+import { friendlyDbError } from '@/lib/dbErrors';
 import { ColumnManagerSheet } from '@/components/custom-columns/ColumnManagerSheet';
 import { TaskFormModal } from '@/components/modals/TaskFormModal';
 import { TablePagination } from '@/components/ui/table-pagination';
@@ -78,8 +86,17 @@ interface ProjectTasksTableProps {
 }
 
 export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }: ProjectTasksTableProps) => {
-  const { tasks, addTask, updateTask, deleteTask, people, customColumns, updateCustomColumn, setCustomColumns, getProjectMemberIds } = useData();
+  const { tasks, addTask, updateTask, deleteTask, people, customColumns, updateCustomColumn, setCustomColumns, getProjectMemberIds, allProjects } = useData();
   const projectMemberIds = getProjectMemberIds(projectId);
+  // Pessoas do workspace do projeto + "todos os workspaces" (+ membros do projeto)
+  const projectWorkspaceId = allProjects.find(p => p.id === projectId)?.workspaceId ?? null;
+  const selectablePeople = useMemo(
+    () => peopleForWorkspace(people, projectWorkspaceId, projectMemberIds),
+    [people, projectWorkspaceId, projectMemberIds]
+  );
+  // Aguardando: ids das tarefas que vão receber o status (uma ou o lote)
+  const [waitingTaskIds, setWaitingTaskIds] = useState<string[] | null>(null);
+  const today = todayISO();
 
   const [search, setSearch] = useState('');
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
@@ -269,10 +286,8 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
 
     try {
       await updateTask(taskId, {
-        customValues: {
-          ...task.customValues,
-          [columnId]: value,
-        },
+        // Vazio remove a chave (em vez de gravar "")
+        customValues: withCustomValue(task.customValues, columnId, value),
       });
     } catch (err) {
       console.error('Error updating custom value:', err);
@@ -334,8 +349,29 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
     }
   };
 
+  const handleConfirmWaiting = async (input: WaitingInput) => {
+    const ids = waitingTaskIds ?? [];
+    setWaitingTaskIds(null);
+    if (ids.length === 0) return;
+    setIsBulkUpdating(true);
+    const results = await Promise.allSettled(ids.map((id) => updateTask(id, waitingUpdates(input))));
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    const succeeded = results.length - failed;
+    if (succeeded > 0) {
+      toast.success(`${succeeded === 1 ? 'Tarefa aguardando' : `${succeeded} tarefas aguardando`}: cobrar em ${formatShortDate(input.followUpDate, today)}`);
+    }
+    if (failed > 0) {
+      console.error('Error setting waiting:', results.filter((r) => r.status === 'rejected'));
+      toast.error(friendlyDbError((results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason,
+        'Você não tem permissão para esta alteração.', `Erro ao marcar ${failed} ${failed === 1 ? 'tarefa' : 'tarefas'} como Aguardando`));
+    }
+    if (ids.length > 1) setSelectedTasks([]);
+    setIsBulkUpdating(false);
+  };
+
   const handleBulkUpdateStatus = async (status: TaskStatus) => {
     if (selectedTasks.length === 0) return;
+    if (status === 'waiting') { setWaitingTaskIds([...selectedTasks]); return; }
     setIsBulkUpdating(true);
     const results = await Promise.allSettled(
       selectedTasks.map((id) => updateTask(id, { status }))
@@ -555,7 +591,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
           return (
             <ResponsibleEditCell
               responsibleIds={task.responsibleIds}
-              people={people}
+              people={peopleForWorkspace(people, projectWorkspaceId, [...projectMemberIds, ...(task.responsibleIds ?? [])])}
               projectMemberIds={projectMemberIds}
               onSave={(value) => handleTaskFieldUpdate(task.id, { responsibleIds: value })}
             />
@@ -565,6 +601,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
             <StatusEditCell
               status={task.status}
               onSave={(value) => handleTaskFieldUpdate(task.id, { status: value })}
+              onWaiting={() => setWaitingTaskIds([task.id])}
             />
           );
         case 'priority':
@@ -703,7 +740,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>Alterar Status</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
-                    {(['pending', 'in_progress', 'blocked', 'completed', 'cancelled'] as TaskStatus[]).map((s) => (
+                    {TASK_STATUS_ORDER.map((s) => (
                       <DropdownMenuItem
                         key={s}
                         disabled={isBulkUpdating}
@@ -1053,7 +1090,7 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
           </AlertDialogHeader>
           <div className="max-h-64 overflow-y-auto space-y-0.5 border border-border rounded-lg p-1">
             {(() => {
-              const activePeople = people.filter((p) => {
+              const activePeople = selectablePeople.filter((p) => {
                 if (!p.active) return false;
                 if (projectMemberIds && projectMemberIds.length > 0) {
                   return projectMemberIds.includes(p.id);
@@ -1092,6 +1129,17 @@ export const ProjectTasksTable = ({ projectId, focusTaskId, onFocusTaskHandled }
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <WaitingDialog
+        open={waitingTaskIds !== null}
+        today={today}
+        subject={waitingTaskIds && waitingTaskIds.length > 1
+          ? `${waitingTaskIds.length} tarefas`
+          : projectTasks.find(t => t.id === waitingTaskIds?.[0])?.name}
+        people={selectablePeople}
+        onOpenChange={(open) => !open && setWaitingTaskIds(null)}
+        onSubmit={(input) => void handleConfirmWaiting(input)}
+      />
     </div>
   );
 };

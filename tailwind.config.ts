@@ -67,6 +67,7 @@ export default {
           blocked: "hsl(var(--status-blocked))",
           completed: "hsl(var(--status-completed))",
           cancelled: "hsl(var(--status-cancelled))",
+          waiting: "hsl(var(--status-waiting))",
         },
         priority: {
           low: "hsl(var(--priority-low))",

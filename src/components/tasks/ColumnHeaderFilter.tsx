@@ -243,6 +243,7 @@ interface StandardColumnFilterProps {
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pendente' },
   { value: 'in_progress', label: 'Em Progresso' },
+  { value: 'waiting', label: 'Aguardando' },
   { value: 'blocked', label: 'Bloqueado' },
   { value: 'completed', label: 'Concluído' },
   { value: 'cancelled', label: 'Cancelado' },

@@ -1,3 +1,6 @@
+import { HealthBadge, HealthDetails } from '@/components/projects/ProjectHealth';
+import { computeProjectHealth } from '@/lib/projectHealth';
+import { todayISO } from '@/lib/taskDates';
 import { useState, useMemo } from 'react';
 import {
   Plus,
@@ -49,10 +52,13 @@ const formatShortDate = (iso: string) =>
 
 const Projects = () => {
   const navigate = useNavigate();
-  const { projects = [], tasks = [], phases = [], deleteProject, loading, error } = useData();
+  const { projects = [], tasks = [], phases = [], milestones = [], deleteProject, loading, error } = useData();
+  const today = todayISO();
+  const healthOf = (project: Project) => computeProjectHealth(project, tasks || [], milestones || [], today);
   const [view, setView] = useState<'cards' | 'table'>('cards');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // Padrão: em andamento (Planejamento e Ativo); Ideia e os demais por opção
+  const [statusFilter, setStatusFilter] = useState<string>('current');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -66,10 +72,13 @@ const Projects = () => {
   const filteredProjects = useMemo(() => {
     return safeProjects.filter(project => {
       const matchesSearch = project.name.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
+      const matchesStatus = statusFilter === 'all'
+        || (statusFilter === 'current' ? project.status === 'planning' || project.status === 'active' : project.status === statusFilter);
       return matchesSearch && matchesStatus;
     });
   }, [safeProjects, search, statusFilter]);
+
+  const hiddenByStatus = safeProjects.filter(p => p.status !== 'planning' && p.status !== 'active').length;
 
   const getProjectProgress = (projectId: string) => {
     const projectTasks = safeTasks.filter(t => t.projectId === projectId);
@@ -184,18 +193,25 @@ const Projects = () => {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-56" aria-label="Filtrar por status">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="current">Planejamento e Ativo</SelectItem>
+                <SelectItem value="idea">Ideia (geladeira)</SelectItem>
                 <SelectItem value="planning">Planejamento</SelectItem>
                 <SelectItem value="active">Ativo</SelectItem>
                 <SelectItem value="paused">Pausado</SelectItem>
                 <SelectItem value="completed">Concluído</SelectItem>
                 <SelectItem value="cancelled">Cancelado</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
               </SelectContent>
             </Select>
+            {statusFilter === 'current' && hiddenByStatus > 0 && (
+              <Button variant="link" size="sm" className="text-xs" onClick={() => setStatusFilter('all')}>
+                Ver todos ({hiddenByStatus} em Ideia, pausados ou encerrados)
+              </Button>
+            )}
           </div>
 
           {/* Alternância cards/lista: mesmo desenho do TabsList segmentado (36px) */}
@@ -253,6 +269,17 @@ const Projects = () => {
                     </div>
                   </div>
 
+                  {/* Saúde: semáforo (fora de Ideia/Concluído/Cancelado), próxima ação, marco, parado */}
+                  {(() => {
+                    const health = healthOf(project);
+                    return (
+                      <div className="space-y-1">
+                        <HealthBadge health={health} />
+                        <HealthDetails health={health} today={today} />
+                      </div>
+                    );
+                  })()}
+
                   {/* Progresso sempre na largura total, colado no rodapé */}
                   <div className="mt-auto flex items-center gap-2">
                     <ProgressBar value={progress} size="sm" color="hsl(var(--primary))" className="flex-1" />
@@ -298,7 +325,10 @@ const Projects = () => {
                         </div>
                       </td>
                       <td className="px-5 py-2.5">
-                        <ProjectStatusBadge status={project.status} />
+                        <div className="flex flex-col gap-1">
+                          <ProjectStatusBadge status={project.status} />
+                          <HealthBadge health={healthOf(project)} />
+                        </div>
                       </td>
                       <td className="px-5 py-2.5 text-xs font-mono text-muted-foreground whitespace-nowrap">
                         {project.startDate && project.endDate ? (

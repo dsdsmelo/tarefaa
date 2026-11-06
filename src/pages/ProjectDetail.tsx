@@ -1,3 +1,6 @@
+import { ProjectHealthPanel } from '@/components/projects/ProjectHealthPanel';
+import { useAuth } from '@/contexts/AuthContext';
+import { todayISO } from '@/lib/taskDates';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
@@ -63,7 +66,8 @@ const PROJECT_TABS = ['dashboard', 'tasks', 'gantt', 'meetings'];
 const ProjectDetail = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { projects = [], tasks = [], people = [], phases = [], cells = [], customColumns = [], milestones = [], deleteMilestone, updateMilestone, deletePhase, updatePhase, loading, error, activateWorkspaceForProject } = useData();
+  const { projects = [], tasks = [], people = [], phases = [], cells = [], customColumns = [], milestones = [], deleteMilestone, updateMilestone, deletePhase, updatePhase, updateProject, loading, error, activateWorkspaceForProject } = useData();
+  const { user } = useAuth();
   // Aba e tarefa em foco vêm da URL (?tab=tasks&tarefa=<id>) para que links
   // do Dashboard levem direto ao ponto que precisa de ação.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -145,18 +149,20 @@ const ProjectDetail = () => {
     const inProgress = projectTasks.filter(t => t.status === 'in_progress').length;
     const completed = projectTasks.filter(t => t.status === 'completed').length;
     const blocked = projectTasks.filter(t => t.status === 'blocked').length;
+    const waiting = projectTasks.filter(t => t.status === 'waiting').length;
     const total = projectTasks.length;
     const avgProgress = total > 0 
       ? Math.round(projectTasks.reduce((acc, t) => acc + calculatePercentage(t), 0) / total)
       : 0;
 
-    return { pending, inProgress, completed, blocked, total, avgProgress };
+    return { pending, inProgress, completed, blocked, waiting, total, avgProgress };
   }, [projectTasks]);
 
   const statusDistribution = useMemo(() => {
     return [
       { name: 'Pendente', value: stats.pending, color: '#EAB308' },
       { name: 'Em Progresso', value: stats.inProgress, color: '#3B82F6' },
+      { name: 'Aguardando', value: stats.waiting, color: '#8B5CF6' },
       { name: 'Bloqueado', value: stats.blocked, color: '#EF4444' },
       { name: 'Concluído', value: stats.completed, color: '#22C55E' },
     ];
@@ -328,6 +334,14 @@ const ProjectDetail = () => {
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-4">
+            <ProjectHealthPanel
+              project={project}
+              tasks={safeTasks}
+              milestones={safeMilestones}
+              today={todayISO()}
+              canEdit={!!user && project.userId === user.id}
+              onUpdate={(updates) => updateProject(project.id, updates)}
+            />
             {/* Indicadores */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="bg-card rounded-xl border border-border p-4">

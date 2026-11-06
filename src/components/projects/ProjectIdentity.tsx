@@ -4,6 +4,7 @@ import { projectStatusLabels, type Project, type ProjectStatus } from '@/lib/typ
 import { cn } from '@/lib/utils';
 
 const STATUS_BADGE_VARIANT: Record<ProjectStatus, BadgeProps['variant']> = {
+  idea: 'outline',
   active: 'success',
   planning: 'default',
   paused: 'warning',

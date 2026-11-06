@@ -239,6 +239,7 @@ export const ProjectGanttChart = ({
     if (overdue) return { bg: 'bg-red-500', dot: 'bg-red-500' };
     if (task.status === 'completed') return { bg: 'bg-emerald-500', dot: 'bg-emerald-500' };
     if (task.status === 'in_progress') return { bg: 'bg-blue-500', dot: 'bg-blue-500' };
+    if (task.status === 'waiting') return { bg: 'bg-violet-500', dot: 'bg-violet-500' };
     if (task.status === 'blocked') return { bg: 'bg-red-500', dot: 'bg-red-500' };
     return { bg: 'bg-amber-500', dot: 'bg-amber-500' };
   };

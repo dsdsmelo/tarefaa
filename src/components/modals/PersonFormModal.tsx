@@ -23,6 +23,7 @@ import { useData } from '@/contexts/DataContext';
 import { Person } from '@/lib/types';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Camera, X, Loader2, UserPlus, Pencil, Send } from 'lucide-react';
 import { AvatarCircle } from '@/components/ui/avatar-circle';
 
@@ -32,7 +33,11 @@ const personSchema = z.object({
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   type: z.enum(['internal', 'partner']),
   color: z.string().min(1, 'Cor é obrigatória'),
+  /** id do workspace ou ALL_WORKSPACES */
+  workspaceId: z.string(),
 });
+
+const ALL_WORKSPACES = 'all';
 
 type PersonFormData = z.infer<typeof personSchema>;
 
@@ -54,7 +59,11 @@ const colorOptions = [
 ];
 
 export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalProps) {
-  const { addPerson, updatePerson } = useData();
+  const { addPerson, updatePerson, workspaces, activeWorkspaceId } = useData();
+  const { user } = useAuth();
+  // Só os workspaces do próprio usuário (o banco recusa workspace de outra pessoa)
+  const ownWorkspaces = workspaces.filter(w => w.userId === user?.id);
+  const defaultWorkspace = activeWorkspaceId && ownWorkspaces.some(w => w.id === activeWorkspaceId) ? activeWorkspaceId : ALL_WORKSPACES;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -68,6 +77,7 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
       email: '',
       type: 'internal',
       color: '#3B82F6',
+      workspaceId: ALL_WORKSPACES,
     },
   });
 
@@ -79,6 +89,7 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
         email: person.email || '',
         type: person.type,
         color: person.color,
+        workspaceId: person.workspaceId ?? ALL_WORKSPACES,
       });
       setAvatarUrl(person.avatarUrl);
     } else {
@@ -88,10 +99,12 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
         email: '',
         type: 'internal',
         color: '#3B82F6',
+        // Pessoa nova: workspace ativo (D11), com "Todos os workspaces" como opção
+        workspaceId: defaultWorkspace,
       });
       setAvatarUrl(undefined);
     }
-  }, [person, form, open]);
+  }, [person, form, open, defaultWorkspace]);
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -172,6 +185,7 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
         email: data.email || undefined,
         type: data.type,
         color: data.color,
+        workspaceId: data.workspaceId === ALL_WORKSPACES ? null : data.workspaceId,
         active: person?.active ?? true,
         avatarUrl: avatarUrl,
       };
@@ -348,6 +362,20 @@ export function PersonFormModal({ open, onOpenChange, person }: PersonFormModalP
                 <SelectItem value="partner">Parceiro</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="person-workspace">Workspace</Label>
+            <select
+              id="person-workspace"
+              value={form.watch('workspaceId')}
+              onChange={(e) => form.setValue('workspaceId', e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value={ALL_WORKSPACES}>Todos os workspaces</option>
+              {ownWorkspaces.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+            <p className="text-xs text-muted-foreground">Define em quais workspaces a pessoa aparece nos seletores de responsável.</p>
           </div>
 
           <div className="space-y-2">

@@ -33,3 +33,4 @@ supabase/.temp/
 
 # Snapshot do schema de produção (referência local, não versionar)
 schema_prod.json
+estado_prod*.csv

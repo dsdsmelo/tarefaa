@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
+  BellRing,
   CalendarCheck,
   CalendarDays,
   Check,
@@ -24,6 +25,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { TaskFormModal } from '@/components/modals/TaskFormModal';
 import { DateTextDialog, type DateField } from '@/components/planning/DateTextDialog';
 import { EstimateDialog } from '@/components/planning/EstimateDialog';
+import { WaitingDialog } from '@/components/planning/WaitingDialog';
+import { waitingOnLabel, waitingUpdates, type WaitingInput } from '@/lib/waiting';
 import { hasOpenOverlay, isPlainKey } from '@/components/quick-capture/hotkeys';
 import { useData } from '@/contexts/DataContext';
 import { cn } from '@/lib/utils';
@@ -34,7 +37,7 @@ import { formatShortDate } from '@/lib/quickCapture/format';
 import { formatMinutes } from '@/lib/estimate';
 import { commandFilter } from '@/lib/quickCapture/text';
 
-type Picker = 'move' | DateField | 'estimate' | 'responsible' | 'help' | null;
+type Picker = 'move' | DateField | 'estimate' | 'waiting' | 'responsible' | 'help' | null;
 
 const PRIORITY_BY_KEY: Record<string, TaskPriority> = { '1': 'urgent', '2': 'high', '3': 'medium', '4': 'low' };
 
@@ -51,6 +54,7 @@ const SHORTCUTS: [string, string][] = [
   ['d', 'Planejado para ("sexta", "15/11", vazio para tirar)'],
   ['D (Shift+d)', 'Prazo'],
   ['e', 'Estimativa ("30m", "1h30")'],
+  ['w', 'Aguardando (de quem e quando cobrar)'],
   ['1 2 3 4', 'Prioridade: urgente, alta, média, baixa'],
   ['r', 'Responsável (liga/desliga)'],
   ['Enter', 'Abrir o formulário completo'],
@@ -150,6 +154,20 @@ const Inbox = () => {
     } catch (err) { fail(err, 'Não foi possível mudar a estimativa.'); }
   };
 
+  const setWaiting = async (task: Task, input: WaitingInput) => {
+    setPicker(null);
+    const previous: Partial<Task> = {
+      status: task.status, waitingOnPersonId: task.waitingOnPersonId ?? null,
+      waitingOnText: task.waitingOnText ?? null, followUpDate: task.followUpDate ?? null,
+    };
+    try {
+      await updateTask(task.id, waitingUpdates(input));
+      toast.success(`Aguardando: cobrar em ${formatShortDate(input.followUpDate, today)}`, {
+        action: { label: 'Desfazer', onClick: () => { void updateTask(task.id, previous); } },
+      });
+    } catch (err) { fail(err, 'Não foi possível marcar como Aguardando.'); }
+  };
+
   const setPriority = useCallback(async (task: Task, priority: TaskPriority) => {
     if (task.priority === priority) return;
     try {
@@ -220,6 +238,7 @@ const Inbox = () => {
         case 'd': e.preventDefault(); setPicker('planned'); break;
         case 'D': e.preventDefault(); setPicker('due'); break;
         case 'e': e.preventDefault(); setPicker('estimate'); break;
+        case 'w': e.preventDefault(); setPicker('waiting'); break;
         case 'r': e.preventDefault(); setPicker('responsible'); break;
         case 'Enter': e.preventDefault(); setFormTask(selected); break;
         case 'x': e.preventDefault(); void complete(selected); break;
@@ -283,6 +302,12 @@ const Inbox = () => {
                   >
                     <span className={cn('h-2 w-2 shrink-0 rounded-full', PRIORITY_DOT[task.priority])} title={priorityLabels[task.priority]} />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{task.name}</span>
+                    {task.status === 'waiting' && (
+                      <span className="shrink-0 rounded-full bg-status-waiting/10 px-2 py-0.5 text-xs font-medium text-status-waiting">
+                        Aguardando{waitingOnLabel(task, people) ? ` ${waitingOnLabel(task, people)}` : ''}
+                        {task.followUpDate ? ` · cobrar ${formatShortDate(task.followUpDate, today)}` : ''}
+                      </span>
+                    )}
                     {task.estimateMinutes ? (
                       <span className="shrink-0 text-xs tabular-nums text-muted-foreground" title="Estimativa">~{formatMinutes(task.estimateMinutes)}</span>
                     ) : null}
@@ -304,6 +329,7 @@ const Inbox = () => {
                       <RowAction title="Planejado para (d)" icon={CalendarCheck} onClick={() => { setSelectedId(task.id); openPicker('planned'); }} />
                       <RowAction title="Prazo (D)" icon={CalendarDays} onClick={() => { setSelectedId(task.id); openPicker('due'); }} />
                       <RowAction title="Estimativa (e)" icon={Hourglass} onClick={() => { setSelectedId(task.id); openPicker('estimate'); }} />
+                      <RowAction title="Aguardando (w)" icon={BellRing} onClick={() => { setSelectedId(task.id); openPicker('waiting'); }} />
                       <RowAction title="Responsável (r)" icon={UserRound} onClick={() => { setSelectedId(task.id); openPicker('responsible'); }} />
                       <RowAction title="Concluir (x)" icon={Check} onClick={() => void complete(task)} />
                       <RowAction title="Excluir (Del)" icon={Trash2} onClick={() => void remove(task)} destructive />
@@ -377,6 +403,14 @@ const Inbox = () => {
         taskName={selected?.name}
         onOpenChange={(o) => !o && setPicker(null)}
         onSubmit={(iso) => selected && void setDate(selected, picker === 'due' ? 'due' : 'planned', iso)}
+      />
+      <WaitingDialog
+        open={picker === 'waiting'}
+        today={today}
+        subject={selected?.name}
+        people={people.filter(p => p.active !== false)}
+        onOpenChange={(o) => !o && setPicker(null)}
+        onSubmit={(input) => selected && void setWaiting(selected, input)}
       />
       <EstimateDialog
         open={picker === 'estimate'}

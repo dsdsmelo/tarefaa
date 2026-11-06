@@ -7,10 +7,13 @@
 // - Projetos de outras pessoas em que ele participa: só as tarefas em que ele
 //   está entre os responsáveis (responsible_ids contém uma pessoa com
 //   people.auth_user_id = ele), nos dois modos.
+// - Projetos em Ideia (geladeira) nunca entram (Etapa 4).
 //
 // SEÇÕES E PRECEDÊNCIA (cada tarefa aparece em uma só, na primeira que casar)
 //   1. Concluídas hoje: status concluído e completed_at no dia local de hoje.
 //      Outras concluídas e as canceladas não aparecem.
+//   1b. Aguardando (Etapa 4): sai de todas as outras seções e só aparece em
+//      "Aguardando cobrança hoje" quando follow_up_date <= hoje.
 //   2. Planejadas para hoje: planned_date = hoje. Vence "Atrasadas" para que
 //      arrastar uma atrasada para cá (planned_date = hoje) tenha efeito; se o
 //      prazo já passou, ganha o selo "prazo vencido".
@@ -18,7 +21,7 @@
 //      tarefa foi replanejada para um dia futuro (planned_date > hoje): aí ela
 //      sai daqui e volta no dia planejado com o selo "prazo vencido" (D4).
 //   4. Vencem hoje: end_date = hoje (planned_date não é hoje).
-//   5. Aguardando cobrança hoje: reservada para a Etapa 4 (sempre vazia).
+//   5. Aguardando cobrança hoje: tarefas Aguardando com cobrança vencida ou hoje.
 // "Hoje" é sempre a data local do navegador (todayISO), nunca UTC.
 import type { Project, Task, TaskPriority } from './types';
 
@@ -58,6 +61,7 @@ export function isRelevantForToday(task: Task, project: Project | undefined, ctx
   if (!project || !ctx.userId) return false;
   const responsible = task.responsibleIds ?? [];
   const mineByResponsible = responsible.some(id => ctx.myPersonIds.has(id));
+  if (project.status === 'idea') return false;
   const ownProject = project.isInbox || project.userId === ctx.userId;
   if (!ownProject) return mineByResponsible;
   if (ctx.scope === 'all') return true;
@@ -75,6 +79,10 @@ export function classifyForToday(task: Task, today: string): Omit<TodayItem, 'ta
     return task.completedAt && localDateOf(task.completedAt) === today
       ? { section: 'done', dueOverdue: false, canClearPlan: false }
       : null;
+  }
+  if (task.status === 'waiting') {
+    const followUp = task.followUpDate ? task.followUpDate.slice(0, 10) : null;
+    return followUp !== null && followUp <= today ? { section: 'waiting', dueOverdue, canClearPlan: false } : null;
   }
   if (planned === today) return { section: 'planned', dueOverdue, canClearPlan: !dueOverdue };
   if (planned !== null && planned < today) return { section: 'overdue', dueOverdue, canClearPlan: !dueOverdue };
@@ -112,13 +120,16 @@ export function buildTodaySections(tasks: Task[], projectsById: Map<string, Proj
   sections.planned.sort((a, b) => comparePlanned(a.task, b.task));
   sections.overdue.sort((a, b) => oldestDate(a.task).localeCompare(oldestDate(b.task)) || byPriorityThenCreated(a.task, b.task));
   sections.dueToday.sort((a, b) => byPriorityThenCreated(a.task, b.task));
+  sections.waiting.sort((a, b) => (a.task.followUpDate ?? '').localeCompare(b.task.followUpDate ?? '') || byPriorityThenCreated(a.task, b.task));
   sections.done.sort((a, b) => (b.task.completedAt ?? '').localeCompare(a.task.completedAt ?? ''));
   return sections;
 }
 
 export interface TodaySummary {
-  /** Planejadas + atrasadas (contador da barra lateral e card da Dashboard) */
+  /** Planejadas + atrasadas + cobranças do dia (contador da barra lateral e card da Dashboard) */
   count: number;
+  /** Cobranças do dia: Aguardando com follow_up_date <= hoje */
+  followUps: number;
   plannedMinutes: number;
   /** Planejadas para hoje sem estimativa */
   missingEstimate: number;
@@ -126,7 +137,8 @@ export interface TodaySummary {
 
 export function summarize(sections: TodaySections): TodaySummary {
   return {
-    count: sections.planned.length + sections.overdue.length,
+    count: sections.planned.length + sections.overdue.length + sections.waiting.length,
+    followUps: sections.waiting.length,
     plannedMinutes: sections.planned.reduce((sum, item) => sum + (item.task.estimateMinutes ?? 0), 0),
     missingEstimate: sections.planned.filter(item => !item.task.estimateMinutes).length,
   };

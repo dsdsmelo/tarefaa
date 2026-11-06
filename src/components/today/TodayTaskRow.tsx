@@ -1,9 +1,10 @@
 import type { DragEvent } from 'react';
-import { ArrowRight, CalendarCheck, CalendarMinus, CalendarPlus, Check, GripVertical, SquarePen, Sun } from 'lucide-react';
+import { ArrowRight, BellRing, CalendarCheck, CalendarMinus, CalendarPlus, Check, CornerDownLeft, GripVertical, Hourglass, SquarePen, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { priorityLabels, type Project, type Workspace } from '@/lib/types';
 import type { TodayItem } from '@/lib/today';
 import { formatShortDate } from '@/lib/quickCapture/format';
+import { daysUntil } from '@/lib/taskDates';
 import { EstimateEditCell } from '@/components/tasks/InlineTaskFieldEdit';
 
 const PRIORITY_DOT = {
@@ -35,6 +36,12 @@ interface TodayTaskRowProps {
   onClearPlan: () => void;
   onPullToToday: () => void;
   onEstimate: (minutes: number | null) => void;
+  /** Aguardando: de quem se espera (já resolvido para texto) */
+  waitingOn?: string | null;
+  /** Aguardando: cobrar de novo (nova data) */
+  onFollowUpAgain?: () => void;
+  /** Aguardando: voltou (retorna para Pendente) */
+  onBack?: () => void;
   onDragStart: (e: DragEvent) => void;
   onDragEnd: () => void;
   onDragOver?: (e: DragEvent<HTMLLIElement>) => void;
@@ -45,7 +52,9 @@ export function TodayTaskRow(props: TodayTaskRowProps) {
   const { item, project, workspace, today, selected, responsibleNames } = props;
   const { task, section, dueOverdue, canClearPlan } = item;
   const done = section === 'done';
+  const waiting = section === 'waiting';
   const plannedPast = !!task.plannedDate && task.plannedDate.slice(0, 10) < today;
+  const followUpLate = waiting ? -(daysUntil(task.followUpDate) ?? 0) : 0;
 
   return (
     <li
@@ -97,6 +106,13 @@ export function TodayTaskRow(props: TodayTaskRowProps) {
 
       {/* Selos de data */}
       <span className="flex shrink-0 flex-wrap items-center gap-1.5 text-xs">
+        {waiting && (
+          <span className="rounded-full bg-status-waiting/10 px-2 py-0.5 font-medium text-status-waiting">
+            <Hourglass className="mr-0.5 inline h-3 w-3" />
+            {props.waitingOn ? `Aguardando ${props.waitingOn}` : 'Aguardando'}
+            {' · '}{followUpLate > 0 ? `cobrança atrasada há ${followUpLate} ${followUpLate === 1 ? 'dia' : 'dias'}` : 'cobrar hoje'}
+          </span>
+        )}
         {dueOverdue && (
           <span className="rounded-full bg-red-500/10 px-2 py-0.5 font-medium text-red-600 dark:text-red-400" title={`Prazo: ${formatShortDate(task.endDate!, today)}`}>
             prazo vencido · {formatShortDate(task.endDate!, today)}
@@ -125,11 +141,20 @@ export function TodayTaskRow(props: TodayTaskRowProps) {
         </span>
       )}
 
-      {!done && (
+      {waiting && (
+        <span className={cn('flex shrink-0 items-center gap-0.5', selected ? 'flex' : 'hidden group-hover:flex group-focus-within:flex')}>
+          <RowAction title="Cobrar de novo (w)" icon={BellRing} onClick={() => props.onFollowUpAgain?.()} />
+          <RowAction title="Voltou (v)" icon={CornerDownLeft} onClick={() => props.onBack?.()} />
+          <RowAction title="Abrir (Enter)" icon={SquarePen} onClick={props.onOpen} />
+        </span>
+      )}
+
+      {!done && !waiting && (
         <span className={cn('flex shrink-0 items-center gap-0.5', selected ? 'flex' : 'hidden group-hover:flex group-focus-within:flex')}>
           {section !== 'planned' && <RowAction title="Fazer hoje (h)" icon={Sun} onClick={props.onPullToToday} />}
           <RowAction title="Amanhã (t)" icon={ArrowRight} onClick={props.onTomorrow} />
           <RowAction title="Escolher data (d)" icon={CalendarPlus} onClick={props.onPickDate} />
+          <RowAction title="Aguardando (w)" icon={Hourglass} onClick={() => props.onFollowUpAgain?.()} />
           {(section === 'planned' || section === 'overdue') && (
             <RowAction
               title={canClearPlan ? 'Tirar do dia' : `Tirar do dia: ${CLEAR_PLAN_DISABLED_REASON}`}

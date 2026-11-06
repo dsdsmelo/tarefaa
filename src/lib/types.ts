@@ -69,6 +69,8 @@ export interface Person {
   lastName?: string;
   inviteStatus?: 'none' | 'pending' | 'accepted';
   authUserId?: string;
+  /** Workspace da pessoa (people.workspace_id); null = todos os workspaces */
+  workspaceId?: string | null;
   type: 'internal' | 'partner';
   color: string;
   active: boolean;
@@ -99,10 +101,18 @@ export interface Project {
   description?: string;
   startDate?: string;
   endDate?: string;
-  status: 'planning' | 'active' | 'paused' | 'completed' | 'cancelled';
+  status: 'idea' | 'planning' | 'active' | 'paused' | 'completed' | 'cancelled';
   coverColor?: string | null;
   imageUrl?: string | null;
+  /** Ajuste manual do semáforo (projects.health_override); null = calculado */
+  healthOverride?: HealthColor | null;
+  /** Quando o ajuste manual foi feito (mantido por trigger no banco) */
+  healthOverrideAt?: string | null;
+  /** Próxima ação do projeto (projects.next_action_task_id) */
+  nextActionTaskId?: string | null;
 }
+
+export type HealthColor = 'green' | 'yellow' | 'red';
 
 export interface Phase {
   id: string;
@@ -149,8 +159,12 @@ export interface Task {
   todayOrder?: number | null;
   /** Quando foi concluída (tasks.completed_at, mantido por trigger no banco) */
   completedAt?: string | null;
+  /** Aguardando: de quem (pessoa cadastrada OU texto livre) e data de cobrança */
+  waitingOnPersonId?: string | null;
+  waitingOnText?: string | null;
+  followUpDate?: string | null;
   sprintDate?: string;
-  status: 'pending' | 'in_progress' | 'blocked' | 'completed' | 'cancelled';
+  status: 'pending' | 'in_progress' | 'waiting' | 'blocked' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   observation?: string;
   createdAt?: string;
@@ -214,9 +228,13 @@ export type TaskPriority = Task['priority'];
 export type ProjectStatus = Project['status'];
 export type PersonType = Person['type'];
 
+/** Ordem dos status nas listas (edição na tabela, lote, formulário) */
+export const TASK_STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'waiting', 'blocked', 'completed', 'cancelled'];
+
 export const statusLabels: Record<TaskStatus, string> = {
   pending: 'Pendente',
   in_progress: 'Em Progresso',
+  waiting: 'Aguardando',
   blocked: 'Bloqueado',
   completed: 'Concluído',
   cancelled: 'Cancelado',
@@ -230,6 +248,7 @@ export const priorityLabels: Record<TaskPriority, string> = {
 };
 
 export const projectStatusLabels: Record<ProjectStatus, string> = {
+  idea: 'Ideia',
   planning: 'Planejamento',
   active: 'Ativo',
   paused: 'Pausado',

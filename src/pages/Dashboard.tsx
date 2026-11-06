@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Inbox,
   Sun,
+  BellRing,
   type LucideIcon,
 } from 'lucide-react';
 import { useTodayView } from '@/hooks/useToday';
@@ -100,6 +101,10 @@ const Dashboard = () => {
   const todayCardLabel = `Hoje: ${todaySummary.count} ${todaySummary.count === 1 ? 'tarefa' : 'tarefas'}, ${formatMinutes(todaySummary.plannedMinutes)} planejadas`;
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Projetos em Ideia (geladeira) não entram nos contadores nem nas listas
+  const ideaProjectIds = useMemo(() => new Set(projects.filter(p => p.status === 'idea').map(p => p.id)), [projects]);
+  const nonIdeaTasks = useMemo(() => tasks.filter(t => !ideaProjectIds.has(t.projectId)), [tasks, ideaProjectIds]);
+
   const projectName = (projectId: string) => projects.find(p => p.id === projectId)?.name || '-';
   const responsibleNames = (task: Task) =>
     (task.responsibleIds ?? [])
@@ -113,7 +118,7 @@ const Dashboard = () => {
     const result: Record<AttentionKey, Task[]> = {
       atrasadas: [], hoje: [], semana: [], bloqueadas: [], 'sem-prazo': [],
     };
-    for (const task of tasks) {
+    for (const task of nonIdeaTasks) {
       if (!isTaskOpen(task)) continue;
       const days = daysUntilDue(task);
       if (task.status === 'blocked') result.bloqueadas.push(task);
@@ -124,7 +129,7 @@ const Dashboard = () => {
     }
     (Object.keys(result) as AttentionKey[]).forEach(key => result[key].sort(byDueThenPriority));
     return result;
-  }, [tasks]);
+  }, [nonIdeaTasks]);
 
   // A visão escolhida fica na URL (?ver=atrasadas): dá para favoritar e voltar
   const viewParam = searchParams.get('ver') as AttentionKey | null;
@@ -172,14 +177,15 @@ const Dashboard = () => {
   }, [projects, tasks]);
 
   const statusSummary = useMemo(() => {
-    const count = (status: Task['status']) => tasks.filter(t => t.status === status).length;
+    const count = (status: Task['status']) => nonIdeaTasks.filter(t => t.status === status).length;
     return [
       { label: 'Pendentes', value: count('pending'), color: 'bg-status-pending' },
       { label: 'Em progresso', value: count('in_progress'), color: 'bg-status-progress' },
+      { label: 'Aguardando', value: count('waiting'), color: 'bg-status-waiting' },
       { label: 'Bloqueadas', value: count('blocked'), color: 'bg-status-blocked' },
       { label: 'Concluídas', value: count('completed'), color: 'bg-status-completed' },
     ];
-  }, [tasks]);
+  }, [nonIdeaTasks]);
   const statusTotal = statusSummary.reduce((acc, s) => acc + s.value, 0);
 
   const handleComplete = async (task: Task) => {
@@ -228,8 +234,8 @@ const Dashboard = () => {
       <MainLayout>
         <Header title="Dashboard" subtitle={subtitle} />
         <PageBody>
-          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
-            {[...Array(7)].map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
+            {[...Array(8)].map((_, i) => (
               <Skeleton key={i} className="h-[92px] rounded-xl" />
             ))}
           </div>
@@ -262,7 +268,7 @@ const Dashboard = () => {
 
       <PageBody>
         {/* Indicadores de atenção: cada card filtra a lista abaixo */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
           <Link
             to="/today"
             aria-label={todayCardLabel}
@@ -282,6 +288,24 @@ const Dashboard = () => {
             <p className="text-xs text-muted-foreground truncate">
               {todaySummary.count === 1 ? 'tarefa' : 'tarefas'}, {formatMinutes(todaySummary.plannedMinutes)} planejadas
             </p>
+          </Link>
+          <Link
+            to="/today"
+            aria-label={`Cobranças hoje: ${todaySummary.followUps}`}
+            title={`Cobranças hoje: ${todaySummary.followUps}`}
+            className={cn(
+              'text-left bg-card rounded-xl border p-4 transition-colors hover:border-primary/40',
+              todaySummary.followUps > 0 ? 'border-status-waiting/40' : 'border-border'
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Cobranças hoje</span>
+              <span className="w-7 h-7 rounded-md flex items-center justify-center bg-status-waiting/10">
+                <BellRing className="w-3.5 h-3.5 text-status-waiting" />
+              </span>
+            </div>
+            <p className={cn('text-2xl font-semibold mt-1 tabular-nums', todaySummary.followUps > 0 ? 'text-status-waiting' : 'text-foreground')}>{todaySummary.followUps}</p>
+            <p className="text-xs text-muted-foreground truncate">aguardando retorno</p>
           </Link>
           <Link
             to="/inbox"

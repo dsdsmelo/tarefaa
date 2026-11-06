@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/auditLog';
+import { cellToDb, milestoneToDb, personToDb, phaseToDb, projectToDb, taskToDb } from '@/lib/dbMappers';
 import { fetchAllRows, fetchAllRowsByIds } from '@/lib/fetchAllRows';
 import { permissionError } from '@/lib/dbErrors';
 import { Person, Project, Phase, Cell, Task, CustomColumn, Milestone, MeetingNote, Spreadsheet, SpreadsheetSheet, SpreadsheetColumn, SpreadsheetRow, SpreadsheetCell, SpreadsheetMerge, Workspace } from '@/lib/types';
@@ -423,7 +424,12 @@ export function useSupabaseData() {
       .eq('id', id);
     if (error) throw error;
     const previousProject = projects.find(p => p.id === id);
-    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    // Espelha o trigger project_health_fields: a data do ajuste nasce ao mudar a cor manual
+    const mirrored: Partial<Project> = { ...updates };
+    if ('healthOverride' in updates && (updates.healthOverride ?? null) !== (previousProject?.healthOverride ?? null)) {
+      mirrored.healthOverrideAt = updates.healthOverride ? new Date().toISOString() : null;
+    }
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...mirrored } : p));
     if (updates.workspaceId && updates.workspaceId !== previousProject?.workspaceId) {
       const destination = workspaces.find(workspace => workspace.id === updates.workspaceId);
       logAuditEvent({ action: 'project_moved_workspace', entity_type: 'project', entity_id: id, entity_name: previousProject?.name, level: 'info', details: `Projeto movido para o workspace "${destination?.name || updates.workspaceId}"` });
@@ -582,6 +588,10 @@ export function useSupabaseData() {
       : updates.status === 'completed'
         ? (task?.status === 'completed' ? {} : { completedAt: now })
         : { completedAt: null };
+    // Espelha o trigger task_waiting_fields: fora de Aguardando os campos somem
+    if (updates.status !== undefined && updates.status !== 'waiting') {
+      Object.assign(completion, { waitingOnPersonId: null, waitingOnText: null, followUpDate: null });
+    }
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates, ...completion, updatedAt: now } : t));
     if (updates.status === 'completed' && task && task.status !== 'completed') {
       logAuditEvent({ action: 'task_completed', entity_type: 'task', entity_id: id, entity_name: task.name, level: 'success', details: `Tarefa "${task.name}" concluída` });
@@ -1175,6 +1185,7 @@ function mapPerson(data: any): Person {
     lastName: data.last_name,
     inviteStatus: data.invite_status,
     authUserId: data.auth_user_id,
+    workspaceId: data.workspace_id ?? null,
     type: data.type,
     color: data.color,
     active: data.active,
@@ -1195,6 +1206,9 @@ function mapProject(data: any): Project {
     status: data.status,
     coverColor: data.cover_color,
     imageUrl: data.image_url,
+    healthOverride: data.health_override ?? null,
+    healthOverrideAt: data.health_override_at ?? null,
+    nextActionTaskId: data.next_action_task_id ?? null,
   };
 }
 
@@ -1242,6 +1256,9 @@ function mapTask(data: any): Task {
     estimateMinutes: data.estimate_minutes ?? null,
     todayOrder: data.today_order ?? null,
     completedAt: data.completed_at ?? null,
+    waitingOnPersonId: data.waiting_on_person_id ?? null,
+    waitingOnText: data.waiting_on_text ?? null,
+    followUpDate: data.follow_up_date ?? null,
     sprintDate: data.sprint_date,
     status: data.status,
     priority: data.priority,
@@ -1269,33 +1286,7 @@ function mapCustomColumn(data: any): CustomColumn {
 }
 
 // Reverse mapping (App camelCase -> DB snake_case)
-function personToDb(person: Partial<Person>): any {
-  const result: any = {};
-  if (person.name !== undefined) result.name = person.name;
-  if (person.email !== undefined) result.email = person.email;
-  if (person.firstName !== undefined) result.first_name = person.firstName;
-  if (person.lastName !== undefined) result.last_name = person.lastName;
-  if (person.inviteStatus !== undefined) result.invite_status = person.inviteStatus;
-  if (person.authUserId !== undefined) result.auth_user_id = person.authUserId;
-  if (person.type !== undefined) result.type = person.type;
-  if (person.color !== undefined) result.color = person.color;
-  if (person.active !== undefined) result.active = person.active;
-  if (person.avatarUrl !== undefined) result.avatar_url = person.avatarUrl;
-  return result;
-}
 
-function projectToDb(project: Partial<Project>): any {
-  const result: any = {};
-  if (project.workspaceId !== undefined) result.workspace_id = project.workspaceId;
-  if (project.name !== undefined) result.name = project.name;
-  if (project.description !== undefined) result.description = project.description;
-  if (project.startDate !== undefined) result.start_date = project.startDate;
-  if (project.endDate !== undefined) result.end_date = project.endDate;
-  if (project.status !== undefined) result.status = project.status;
-  if (project.coverColor !== undefined) result.cover_color = project.coverColor;
-  if (project.imageUrl !== undefined) result.image_url = project.imageUrl;
-  return result;
-}
 
 function workspaceToDb(
   workspace: Partial<Pick<Workspace, 'name' | 'kind' | 'color'>>,
@@ -1309,51 +1300,8 @@ function workspaceToDb(
   return result;
 }
 
-function phaseToDb(phase: Partial<Phase>): any {
-  const result: any = {};
-  if (phase.name !== undefined) result.name = phase.name;
-  if (phase.order !== undefined) result.order = phase.order;
-  if (phase.color !== undefined) result.color = phase.color;
-  if (phase.projectId !== undefined) result.project_id = phase.projectId;
-  if (phase.startDate !== undefined) result.start_date = phase.startDate;
-  if (phase.endDate !== undefined) result.end_date = phase.endDate;
-  if (phase.description !== undefined) result.description = phase.description;
-  return result;
-}
 
-function cellToDb(cell: Partial<Cell>): any {
-  const result: any = {};
-  if (cell.name !== undefined) result.name = cell.name;
-  if (cell.description !== undefined) result.description = cell.description;
-  if (cell.active !== undefined) result.active = cell.active;
-  return result;
-}
 
-function taskToDb(task: Partial<Task>): any {
-  const result: any = {};
-  if (task.name !== undefined) result.name = task.name;
-  if (task.description !== undefined) result.description = task.description;
-  if (task.projectId !== undefined) result.project_id = task.projectId;
-  if (task.phaseId !== undefined) result.phase_id = task.phaseId;
-  if (task.cellId !== undefined) result.cell_id = task.cellId;
-  if (task.deviceId !== undefined) result.device_id = task.deviceId;
-  if (task.responsibleIds !== undefined) result.responsible_ids = task.responsibleIds;
-  if (task.quantity !== undefined) result.quantity = task.quantity;
-  if (task.collected !== undefined) result.collected = task.collected;
-  if (task.startDate !== undefined) result.start_date = task.startDate;
-  if (task.endDate !== undefined) result.end_date = task.endDate;
-  if (task.sprintDate !== undefined) result.sprint_date = task.sprintDate;
-  if (task.plannedDate !== undefined) result.planned_date = task.plannedDate;
-  if (task.estimateMinutes !== undefined) result.estimate_minutes = task.estimateMinutes;
-  if (task.todayOrder !== undefined) result.today_order = task.todayOrder;
-  // completed_at não é enviado: o trigger set_task_completed_at é quem grava
-  if (task.status !== undefined) result.status = task.status;
-  if (task.priority !== undefined) result.priority = task.priority;
-  if (task.observation !== undefined) result.observation = task.observation;
-  if (task.updatedAt !== undefined) result.updated_at = task.updatedAt;
-  if (task.customValues !== undefined) result.custom_values = task.customValues;
-  return result;
-}
 
 function customColumnToDb(column: Partial<CustomColumn>): any {
   const result: any = {};
@@ -1383,17 +1331,6 @@ function mapMilestone(data: any): Milestone {
   };
 }
 
-function milestoneToDb(milestone: Partial<Milestone>): any {
-  const result: any = {};
-  if (milestone.name !== undefined) result.name = milestone.name;
-  if (milestone.projectId !== undefined) result.project_id = milestone.projectId;
-  if (milestone.phaseId !== undefined) result.phase_id = milestone.phaseId || null;
-  if (milestone.description !== undefined) result.description = milestone.description;
-  if (milestone.color !== undefined) result.color = milestone.color;
-  if (milestone.date !== undefined) result.date = milestone.date;
-  if (milestone.completed !== undefined) result.completed = milestone.completed;
-  return result;
-}
 
 function mapMeetingNote(data: any): MeetingNote {
   // Extract category from participants array if not in separate field (backward compat)

@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { QuickCaptureProvider } from "@/components/quick-capture/QuickCaptureProvider";
 import { useQuickCapture } from "@/components/quick-capture/context";
 import { addDays } from "@/lib/quickCapture/dates";
-import { todayISO } from "@/lib/taskDates";
+import { addBusinessDaysISO, todayISO } from "@/lib/taskDates";
 
 const addTask = vi.fn();
 
@@ -161,6 +161,30 @@ describe("janela de captura rápida", () => {
     fireEvent.click(screen.getByLabelText('Remover: "~30m" volta para o nome'));
     await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
     expect(addTask).toHaveBeenCalledWith(expect.objectContaining({ name: "revisar ~30m", estimateMinutes: undefined }), { source: "quick_capture" });
+  });
+});
+
+describe("captura: aguardando (Etapa 4)", () => {
+  it("'aguardando @Maria sexta': status Aguardando, cobrança na sexta, Maria não vira responsável", async () => {
+    renderCapture();
+    fireEvent.click(screen.getByText("abrir"));
+    const input = typeText("contrato aguardando @Maria Silva sexta");
+    expect(screen.getByText(/^Aguardando Maria Silva/)).toBeInTheDocument();
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    const call = addTask.mock.calls[0][0];
+    expect(call).toMatchObject({ name: "contrato", status: "waiting", waitingOnPersonId: "u-maria", waitingOnText: null });
+    expect(call.plannedDate).toBeUndefined();
+    expect(call.followUpDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(call.responsibleIds).toBeUndefined();
+  });
+
+  it("sem data na frase, a cobrança fica em 3 dias úteis", async () => {
+    renderCapture();
+    fireEvent.click(screen.getByText("abrir"));
+    const input = typeText("nota aguardando fornecedor");
+    expect(screen.getByText(/cobrar .* \(padrão\)/)).toBeInTheDocument();
+    await act(async () => { fireEvent.keyDown(input, { key: "Enter" }); });
+    expect(addTask.mock.calls[0][0]).toMatchObject({ status: "waiting", waitingOnText: "fornecedor", followUpDate: addBusinessDaysISO(todayISO(), 3) });
   });
 });
 

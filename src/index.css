@@ -49,6 +49,7 @@
     --status-blocked: 0 84% 60%;
     --status-completed: 130 70% 40%;
     --status-cancelled: 210 15% 46%;
+    --status-waiting: 265 70% 58%;
 
     /* Priority Colors */
     --priority-low: 210 15% 46%;

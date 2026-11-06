@@ -401,3 +401,49 @@ describe("Etapa 3: parseEstimate e formatMinutes", () => {
     expect(formatMinutes(0)).toBe("0h");
   });
 });
+
+describe("Etapa 4: aguardando (D6)", () => {
+  it("'aguardando @Maria': pessoa de quem se espera, sem virar responsável", () => {
+    const r = parse("contrato aguardando @Maria sexta");
+    expect(r.waiting).toMatchObject({ person: { id: "u-maria" }, onText: null, text: "aguardando @Maria" });
+    expect(r.people).toEqual([]);
+    expect(r.planned?.iso).toBe("2026-11-06");
+    expect(r.name).toBe("contrato");
+  });
+
+  it("'aguardando Maria' sem @ também casa com a pessoa cadastrada (nome completo vence o primeiro nome)", () => {
+    expect(parse("x aguardando Maria").waiting?.person?.id).toBe("u-maria");
+    expect(parse("x aguardando maria silva").waiting).toMatchObject({ person: { id: "u-maria" }, text: "aguardando maria silva" });
+  });
+
+  it("sem casamento, a palavra seguinte vira texto livre", () => {
+    const r = parse("nota fiscal aguardando cliente até sexta");
+    expect(r.waiting).toMatchObject({ person: null, onText: "cliente" });
+    expect(r.due?.iso).toBe("2026-11-06");
+    expect(r.name).toBe("nota fiscal");
+  });
+
+  it("aspas para várias palavras", () => {
+    expect(parse('parecer aguardando "equipe jurídica" ~30m')).toMatchObject({
+      waiting: { onText: "equipe jurídica" }, estimate: { minutes: 30 }, name: "parecer",
+    });
+  });
+
+  it("@ responsável e aguardando juntos: só o @ fora do marcador vira responsável", () => {
+    const r = parse("revisar @João aguardando @Maria");
+    expect(r.people.map(p => p.id)).toEqual(["u-joao"]);
+    expect(r.waiting?.person?.id).toBe("u-maria");
+  });
+
+  it("'aguardando' sozinho no fim fica no nome; acento e maiúsculas não importam", () => {
+    expect(parse("x aguardando").waiting).toBeNull();
+    expect(parse("x Aguardando cliente").waiting?.onText).toBe("cliente");
+  });
+
+  it("removendo o chip, o texto volta para o nome", () => {
+    const r = parse("contrato aguardando @Maria", { ignore: { waiting: true } });
+    expect(r.waiting).toBeNull();
+    expect(r.people.map(p => p.id)).toEqual(["u-maria"]);
+    expect(r.name).toBe("contrato aguardando");
+  });
+});

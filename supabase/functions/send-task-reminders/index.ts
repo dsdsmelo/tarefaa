@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts'
 import { fetchAllRows, fetchAllRowsByIds } from '../_shared/fetchAllRows.ts'
+import { buildDigests, emailSubject, renderEmailHtml, renderEmailText, type PersonRow, type TaskRow } from './digest.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,25 +11,6 @@ const corsHeaders = {
 
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://app.tarefaa.com.br'
 
-type ReminderBucket = 'today' | 'tomorrow'
-
-interface TaskRow {
-  id: string
-  name: string
-  priority: string | null
-  end_date: string
-  responsible_ids: string[] | null
-  project_id: string
-  projects?: { name: string } | null
-}
-
-interface PersonRow {
-  id: string
-  name: string
-  email: string | null
-  active: boolean
-}
-
 function formatDateSaoPaulo(d: Date): string {
   // America/Sao_Paulo is UTC-3 (no DST since 2019)
   const sp = new Date(d.getTime() - 3 * 60 * 60 * 1000)
@@ -36,122 +18,6 @@ function formatDateSaoPaulo(d: Date): string {
   const m = String(sp.getUTCMonth() + 1).padStart(2, '0')
   const day = String(sp.getUTCDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
-const priorityLabels: Record<string, string> = {
-  low: 'Baixa',
-  medium: 'Média',
-  high: 'Alta',
-  urgent: 'Urgente',
-}
-
-const priorityColors: Record<string, string> = {
-  low: '#6b7280',
-  medium: '#2563eb',
-  high: '#d97706',
-  urgent: '#dc2626',
-}
-
-function renderTaskRow(t: TaskRow): string {
-  const projectName = t.projects?.name ? escapeHtml(t.projects.name) : 'Sem projeto'
-  const pKey = (t.priority ?? 'medium').toLowerCase()
-  const pLabel = priorityLabels[pKey] ?? 'Média'
-  const pColor = priorityColors[pKey] ?? '#2563eb'
-  return [
-    '<tr>',
-    '<td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;vertical-align:top;">',
-    `<div style="font-size:15px;font-weight:600;color:#111827;margin-bottom:2px;">${escapeHtml(t.name)}</div>`,
-    `<div style="font-size:13px;color:#6b7280;">${projectName}</div>`,
-    '</td>',
-    '<td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap;vertical-align:top;">',
-    `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#ffffff;background:${pColor};">${pLabel}</span>`,
-    '</td>',
-    '</tr>',
-  ].join('')
-}
-
-function renderSection(title: string, color: string, tasks: TaskRow[]): string {
-  if (tasks.length === 0) return ''
-  return [
-    `<h2 style="font-size:16px;color:${color};margin:24px 0 10px 0;font-weight:600;">${title} (${tasks.length})</h2>`,
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">',
-    '<tbody>',
-    tasks.map(renderTaskRow).join(''),
-    '</tbody>',
-    '</table>',
-  ].join('')
-}
-
-function renderEmailHtml(
-  personName: string,
-  tasksToday: TaskRow[],
-  tasksTomorrow: TaskRow[]
-): string {
-  const sections = [
-    renderSection('⚠️ Vencem hoje', '#dc2626', tasksToday),
-    renderSection('🔔 Vencem amanhã', '#d97706', tasksTomorrow),
-  ].filter(Boolean).join('')
-
-  const year = new Date().getFullYear()
-  const firstName = escapeHtml(personName.split(' ')[0] || personName)
-
-  return [
-    '<!DOCTYPE html>',
-    '<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lembrete de tarefas</title></head>',
-    '<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">',
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">',
-    '<tr><td align="center">',
-    '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">',
-    '<tr><td style="padding:32px 32px 8px 32px;">',
-    '<div style="font-size:22px;font-weight:700;color:#1e40af;line-height:1;">Tarefaa</div>',
-    '<div style="font-size:13px;color:#6b7280;margin-top:4px;">Lembrete de tarefas</div>',
-    '</td></tr>',
-    '<tr><td style="padding:16px 32px 0 32px;">',
-    `<h1 style="font-size:20px;color:#111827;margin:0 0 8px 0;font-weight:700;">Olá, ${firstName}!</h1>`,
-    '<p style="font-size:15px;color:#374151;line-height:1.5;margin:0;">Aqui está o resumo das suas tarefas com prazo próximo:</p>',
-    '</td></tr>',
-    '<tr><td style="padding:0 32px;">',
-    sections,
-    '</td></tr>',
-    '<tr><td style="padding:32px;text-align:center;">',
-    `<a href="${APP_URL}" style="display:inline-block;padding:12px 32px;background:#1e40af;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">Abrir Tarefaa</a>`,
-    '</td></tr>',
-    '<tr><td style="padding:16px 32px 24px 32px;border-top:1px solid #e5e7eb;">',
-    '<p style="font-size:12px;color:#9ca3af;margin:0;line-height:1.5;">',
-    'Você recebeu este email porque está como responsável em tarefas no Tarefaa.<br>',
-    `© ${year} Tarefaa. Todos os direitos reservados.`,
-    '</p>',
-    '</td></tr>',
-    '</table>',
-    '</td></tr>',
-    '</table>',
-    '</body></html>',
-  ].join('')
-}
-
-function renderEmailText(personName: string, tasksToday: TaskRow[], tasksTomorrow: TaskRow[]): string {
-  const lines: string[] = [`Olá, ${personName}!`, '', 'Resumo de tarefas com prazo próximo:', '']
-  if (tasksToday.length > 0) {
-    lines.push(`VENCEM HOJE (${tasksToday.length}):`)
-    tasksToday.forEach((t) => lines.push(`  - ${t.name}${t.projects?.name ? ` (${t.projects.name})` : ''}`))
-    lines.push('')
-  }
-  if (tasksTomorrow.length > 0) {
-    lines.push(`VENCEM AMANHÃ (${tasksTomorrow.length}):`)
-    tasksTomorrow.forEach((t) => lines.push(`  - ${t.name}${t.projects?.name ? ` (${t.projects.name})` : ''}`))
-    lines.push('')
-  }
-  lines.push(`Abra o Tarefaa: ${APP_URL}`)
-  return lines.join('\n')
 }
 
 serve(async (req) => {
@@ -192,15 +58,28 @@ serve(async (req) => {
     const tomorrowDate = new Date(now.getTime() + 24 * 60 * 60 * 1000)
     const tomorrow = formatDateSaoPaulo(tomorrowDate)
 
-    // 1) Busca todas as tarefas que vencem hoje ou amanhã (de todos os usuários: paginado)
-    let tasks: TaskRow[]
+    // 1) Tarefas abertas que vencem hoje ou amanhã (fora as Aguardando) e as
+    //    cobranças do dia (Aguardando com follow_up_date <= hoje). Todos os
+    //    usuários, paginado. Projetos em Ideia saem em buildDigests.
+    const select = 'id, name, priority, status, end_date, follow_up_date, waiting_on_person_id, waiting_on_text, responsible_ids, project_id, projects(name, status)'
+    let dueTasks: TaskRow[]
+    let followUpTasks: TaskRow[]
     try {
-      tasks = await fetchAllRows<TaskRow>(() =>
+      dueTasks = await fetchAllRows<TaskRow>(() =>
         supabase
           .from('tasks')
-          .select('id, name, priority, end_date, responsible_ids, project_id, status, projects(name)', { count: 'exact' })
+          .select(select, { count: 'exact' })
           .in('end_date', [today, tomorrow])
-          .not('status', 'in', '(completed,cancelled)')
+          .not('status', 'in', '(completed,cancelled,waiting)')
+          .not('responsible_ids', 'is', null)
+          .order('id')
+      )
+      followUpTasks = await fetchAllRows<TaskRow>(() =>
+        supabase
+          .from('tasks')
+          .select(select, { count: 'exact' })
+          .eq('status', 'waiting')
+          .lte('follow_up_date', today)
           .not('responsible_ids', 'is', null)
           .order('id')
       )
@@ -209,18 +88,21 @@ serve(async (req) => {
       throw tasksError
     }
 
-    const activeTasks = tasks.filter((t) =>
-      Array.isArray(t.responsible_ids) && t.responsible_ids.length > 0
-    ) as TaskRow[]
+    const withResponsible = (t: TaskRow) => Array.isArray(t.responsible_ids) && t.responsible_ids.length > 0
+    dueTasks = dueTasks.filter(withResponsible)
+    followUpTasks = followUpTasks.filter(withResponsible)
 
-    if (activeTasks.length === 0) {
-      return new Response(JSON.stringify({ success: true, sent: 0, message: 'Nenhuma tarefa com prazo hoje ou amanhã' }), {
+    if (dueTasks.length === 0 && followUpTasks.length === 0) {
+      return new Response(JSON.stringify({ success: true, sent: 0, message: 'Nenhuma tarefa com prazo hoje/amanhã nem cobrança hoje' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // 2) Junta todos os personIds únicos
-    const personIds = [...new Set(activeTasks.flatMap((t) => t.responsible_ids ?? []))]
+    // 2) Responsáveis (destinatários) e pessoas de quem se espera (só o nome)
+    const personIds = [...new Set([
+      ...[...dueTasks, ...followUpTasks].flatMap((t) => t.responsible_ids ?? []),
+      ...followUpTasks.map((t) => t.waiting_on_person_id).filter((id): id is string => !!id),
+    ])]
 
     let people: PersonRow[]
     try {
@@ -231,28 +113,12 @@ serve(async (req) => {
       console.error('[send-task-reminders] erro ao buscar people:', peopleError)
       throw peopleError
     }
+    const waitingOnNames = new Map(people.map((p) => [p.id, p.name]))
 
-    const peopleById = new Map<string, PersonRow>()
-    for (const p of people) peopleById.set(p.id, p)
+    // 3) Agrupa por responsável (ativo e com e-mail)
+    const digests = buildDigests({ dueTasks, followUpTasks, people, today })
 
-    // 3) Agrupa tarefas por pessoa (com email válido e ativa)
-    const tasksByPerson = new Map<string, { person: PersonRow; today: TaskRow[]; tomorrow: TaskRow[] }>()
-    for (const task of activeTasks) {
-      const bucket: ReminderBucket = task.end_date === today ? 'today' : 'tomorrow'
-      for (const pid of task.responsible_ids ?? []) {
-        const person = peopleById.get(pid)
-        if (!person || !person.email || !person.active) continue
-        let entry = tasksByPerson.get(pid)
-        if (!entry) {
-          entry = { person, today: [], tomorrow: [] }
-          tasksByPerson.set(pid, entry)
-        }
-        if (bucket === 'today') entry.today.push(task)
-        else entry.tomorrow.push(task)
-      }
-    }
-
-    if (tasksByPerson.size === 0) {
+    if (digests.length === 0) {
       return new Response(JSON.stringify({ success: true, sent: 0, message: 'Nenhum responsável com email para notificar' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -271,27 +137,22 @@ serve(async (req) => {
     let sent = 0
     const errors: { personId: string; error: string }[] = []
 
-    for (const [pid, { person, today: tt, tomorrow: tm }] of tasksByPerson) {
+    for (const digest of digests) {
+      const { person } = digest
       try {
-        const html = renderEmailHtml(person.name, tt, tm)
-        const text = renderEmailText(person.name, tt, tm)
-        const totalCount = tt.length + tm.length
-        const subject = tt.length > 0
-          ? `⚠️ ${tt.length} ${tt.length === 1 ? 'tarefa vence' : 'tarefas vencem'} hoje`
-          : `🔔 ${tm.length} ${tm.length === 1 ? 'tarefa vence' : 'tarefas vencem'} amanhã`
-
+        const totalCount = digest.today.length + digest.tomorrow.length + digest.followUps.length
         await smtpClient.send({
           from: `Tarefaa <${smtpFrom}>`,
           to: person.email!,
-          subject,
-          content: text,
-          html,
+          subject: emailSubject(digest),
+          content: renderEmailText(digest, today, waitingOnNames, APP_URL),
+          html: renderEmailHtml(digest, today, waitingOnNames, APP_URL),
         })
         sent++
-        console.log(`[send-task-reminders] enviado para ${person.email} (${totalCount} tarefas)`)
+        console.log(`[send-task-reminders] enviado para ${person.email} (${totalCount} itens)`)
       } catch (err) {
         console.error(`[send-task-reminders] erro ao enviar para ${person.email}:`, err)
-        errors.push({ personId: pid, error: (err as Error).message })
+        errors.push({ personId: person.id, error: (err as Error).message })
       }
     }
 

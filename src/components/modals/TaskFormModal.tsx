@@ -33,6 +33,9 @@ import { Task } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatMinutes, parseEstimate } from '@/lib/estimate';
+import { peopleForWorkspace } from '@/lib/people';
+import { defaultFollowUpDate, validateWaiting, waitingUpdates, WAITING_TEXT_MAX } from '@/lib/waiting';
+import { statusLabels, TASK_STATUS_ORDER, type TaskStatus } from '@/lib/types';
 
 const taskSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(200, 'Nome deve ter no máximo 200 caracteres'),
@@ -47,6 +50,14 @@ const taskSchema = z.object({
     'Use de 1 minuto a 24 horas, ex.: 45m ou 1h30'
   ),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
+  status: z.enum(['pending', 'in_progress', 'waiting', 'blocked', 'completed', 'cancelled']),
+  waitingOnPersonId: z.string().optional(),
+  waitingOnText: z.string().optional(),
+  followUpDate: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.status !== 'waiting') return;
+  const error = validateWaiting({ personId: data.waitingOnPersonId || null, text: data.waitingOnText ?? '', followUpDate: data.followUpDate ?? '' });
+  if (error) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['waitingOnText'], message: error });
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -88,6 +99,10 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
       plannedDate: '',
       estimate: '',
       priority: 'medium',
+      status: 'pending',
+      waitingOnPersonId: '',
+      waitingOnText: '',
+      followUpDate: '',
     },
   });
 
@@ -96,8 +111,13 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
 
   const selectedResponsibleIds = form.watch('responsibleIds') || [];
   const selectedPeople = people.filter(p => selectedResponsibleIds.includes(p.id));
+  // Pessoas do workspace do projeto + "todos os workspaces"; na Caixa de entrada, todas (D11)
+  const selectedProject = projectOptions.find(p => p.id === selectedProjectId);
+  const projectWorkspaceId = selectedProject && !selectedProject.isInbox ? selectedProject.workspaceId : null;
+  const workspacePeople = peopleForWorkspace(people, projectWorkspaceId, [...projectMemberIds, ...selectedResponsibleIds]);
+  const waitingPeople = peopleForWorkspace(people, projectWorkspaceId, [...projectMemberIds, ...(task?.waitingOnPersonId ? [task.waitingOnPersonId] : [])]);
   // Filtrar pessoas ativas pelos membros do projeto (se houver membros definidos)
-  const activePeople = people.filter(p => {
+  const activePeople = workspacePeople.filter(p => {
     if (!p.active) return false;
     if (projectMemberIds && projectMemberIds.length > 0) {
       return projectMemberIds.includes(p.id);
@@ -128,6 +148,10 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
         plannedDate: task.plannedDate || '',
         estimate: task.estimateMinutes ? formatMinutes(task.estimateMinutes) : '',
         priority: task.priority,
+        status: task.status,
+        waitingOnPersonId: task.waitingOnPersonId ?? '',
+        waitingOnText: task.waitingOnText ?? '',
+        followUpDate: task.followUpDate ?? '',
       });
     } else {
       form.reset({
@@ -140,6 +164,10 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
         plannedDate: '',
         estimate: '',
         priority: 'medium',
+        status: 'pending',
+        waitingOnPersonId: '',
+        waitingOnText: '',
+        followUpDate: '',
       });
     }
   }, [task, defaultProjectId, defaultResponsibleIds, form, open]);
@@ -168,7 +196,11 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
         // null limpa no banco (undefined seria ignorado)
         plannedDate: data.plannedDate || null,
         estimateMinutes: data.estimate?.trim() ? parseEstimate(data.estimate) : null,
-        status: task?.status || 'pending' as const, // Keep existing status or default to pending
+        status: data.status,
+        // Aguardando: de quem e data de cobrança (fora dele o banco limpa os campos)
+        ...(data.status === 'waiting'
+          ? waitingUpdates({ waitingOnPersonId: data.waitingOnPersonId || null, waitingOnText: data.waitingOnText || null, followUpDate: data.followUpDate! })
+          : {}),
         priority: data.priority,
         observation: task?.observation, // Keep existing observation
         customValues: task?.customValues || {}, // Keep existing custom values
@@ -333,6 +365,25 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
               </Popover>
             </div>
 
+            {/* Status */}
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <select
+                id="status"
+                value={form.watch('status')}
+                onChange={(e) => {
+                  const value = e.target.value as TaskStatus;
+                  form.setValue('status', value);
+                  if (value === 'waiting' && !form.getValues('followUpDate')) {
+                    form.setValue('followUpDate', defaultFollowUpDate(getTodayStr()));
+                  }
+                }}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {TASK_STATUS_ORDER.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
+              </select>
+            </div>
+
             {/* Priority */}
             <div className="space-y-2">
               <Label htmlFor="priority">Prioridade</Label>
@@ -352,6 +403,38 @@ export function TaskFormModal({ open, onOpenChange, task, defaultProjectId, defa
               </Select>
             </div>
           </div>
+
+          {form.watch('status') === 'waiting' && (
+            <div className="grid grid-cols-2 gap-4 rounded-lg border border-status-waiting/30 bg-status-waiting/5 p-3">
+              <div className="space-y-2">
+                <Label htmlFor="waitingOnPersonId">Aguardando de quem</Label>
+                <select
+                  id="waitingOnPersonId"
+                  value={form.watch('waitingOnPersonId') ?? ''}
+                  onChange={(e) => form.setValue('waitingOnPersonId', e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Outra (escrever abaixo)</option>
+                  {waitingPeople.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                {!form.watch('waitingOnPersonId') && (
+                  <Input
+                    aria-label="De quem (texto livre)"
+                    placeholder="ex.: cliente, financeiro"
+                    maxLength={WAITING_TEXT_MAX}
+                    {...form.register('waitingOnText')}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="followUpDate">Cobrar em</Label>
+                <Input id="followUpDate" type="date" {...form.register('followUpDate')} />
+              </div>
+              {form.formState.errors.waitingOnText && (
+                <p className="col-span-2 text-xs text-destructive">{form.formState.errors.waitingOnText.message}</p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             {/* Start Date */}

@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 import { Columns3, Plus, Edit, Trash2, GripVertical, X, FolderKanban, Pencil, Palette, Eye, EyeOff, Users, Camera, Loader2, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { STANDARD_COLUMNS } from '@/lib/standardColumns';
+import { peopleForWorkspace } from '@/lib/people';
 import { supabase } from '@/lib/supabase';
 
 // Storage bucket dedicated to project/client images
@@ -45,7 +46,7 @@ const projectSchema = z.object({
   description: z.string().optional(),
   startDate: z.string().min(1, 'Data início é obrigatória'),
   endDate: z.string().optional(),
-  status: z.enum(['planning', 'active', 'paused', 'completed', 'cancelled']),
+  status: z.enum(['idea', 'planning', 'active', 'paused', 'completed', 'cancelled']),
 });
 
 type ProjectFormData = z.infer<typeof projectSchema>;
@@ -101,7 +102,6 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
   // Members state
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [membersPopoverOpen, setMembersPopoverOpen] = useState(false);
-  const activePeople = people.filter(p => p.active);
   const selectedMembers = people.filter(p => selectedMemberIds.includes(p.id));
   
   // Custom columns state
@@ -136,6 +136,8 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
       status: 'planning',
     },
   });
+  // Membros: pessoas do workspace escolhido + "todos os workspaces" (+ quem já está na equipe)
+  const activePeople = peopleForWorkspace(people, form.watch('workspaceId'), selectedMemberIds);
 
   // For editing existing project - get real columns
   const existingProjectColumns = project 
@@ -959,7 +961,9 @@ export function ProjectFormModal({ open, onOpenChange, project }: ProjectFormMod
                   <Select value={form.watch('status')} onValueChange={(value: ProjectFormData['status']) => form.setValue('status', value)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="planning">Planejamento</SelectItem>
+                      <SelectItem value="idea">Ideia (geladeira)</SelectItem>
+                      <SelectItem value="idea">Ideia (geladeira)</SelectItem>
+                    <SelectItem value="planning">Planejamento</SelectItem>
                       <SelectItem value="active">Ativo</SelectItem>
                       <SelectItem value="paused">Pausado</SelectItem>
                       <SelectItem value="completed">Concluído</SelectItem>

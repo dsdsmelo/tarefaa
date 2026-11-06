@@ -9,6 +9,7 @@ interface StatusBadgeProps {
 const statusStyles: Record<TaskStatus, string> = {
   pending: 'bg-status-pending/10 text-status-pending border-status-pending/20',
   in_progress: 'bg-status-progress/10 text-status-progress border-status-progress/20',
+  waiting: 'bg-status-waiting/10 text-status-waiting border-status-waiting/20',
   blocked: 'bg-status-blocked/10 text-status-blocked border-status-blocked/20',
   completed: 'bg-status-completed/10 text-status-completed border-status-completed/20',
   cancelled: 'bg-status-cancelled/10 text-status-cancelled border-status-cancelled/20',

@@ -58,8 +58,10 @@ const Gantt = () => {
   const chartRef = useRef<HTMLDivElement>(null);
   const headerScrollRef = useRef<HTMLDivElement>(null);
 
-  const safeTasks = tasks || [];
-  const safeProjects = projects || [];
+  // Projetos em Ideia (geladeira) ficam fora do Gantt, com as tarefas deles
+  const ideaProjectIds = new Set((projects || []).filter(p => p.status === 'idea').map(p => p.id));
+  const safeTasks = (tasks || []).filter(t => !ideaProjectIds.has(t.projectId));
+  const safeProjects = (projects || []).filter(p => p.status !== 'idea');
   const safePeople = people || [];
 
   const toggleGroup = (groupId: string) => {
@@ -190,6 +192,7 @@ const Gantt = () => {
     switch (task.status) {
       case 'completed': return { bg: 'bg-emerald-500', dot: 'bg-emerald-500' };
       case 'in_progress': return { bg: 'bg-blue-500', dot: 'bg-blue-500' };
+      case 'waiting': return { bg: 'bg-violet-500', dot: 'bg-violet-500' };
       case 'blocked': return { bg: 'bg-red-500', dot: 'bg-red-500' };
       default: return { bg: 'bg-amber-500', dot: 'bg-amber-500' };
     }

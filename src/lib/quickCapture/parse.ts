@@ -15,6 +15,11 @@
 //   Vale a ÚLTIMA de cada tipo; as outras ficam no nome.
 //   Hora não é salva (as datas guardam só o dia) e fica no nome.
 // - Estimativa: "~30m", "~2h", "~1h30" (1 min a 24 h). Vale a última.
+// - Aguardando (Etapa 4, D6): "aguardando @Maria" ou "aguardando Maria" (pessoa
+//   cadastrada; a menção NÃO vira responsável), senão a palavra seguinte vira
+//   texto livre ("aguardando cliente"); várias palavras entre aspas
+//   ("aguardando \"equipe jurídica\""). A data simples da frase vira a data de
+//   cobrança (não a planejada); quem decide é a tela (QuickCaptureDialog).
 // - Mais de um #projeto: vale o último; mais de um @pessoa: todas.
 // - Chip removido na prévia: a expressão volta para o nome (ver ParseIgnore).
 import type { TaskPriority } from '@/lib/types';
@@ -33,6 +38,8 @@ export interface ParseIgnore {
   dates?: string[];
   /** `key` das estimativas removidas */
   estimates?: string[];
+  /** Chip "Aguardando" removido */
+  waiting?: boolean;
   /** prioridades removidas ('p1'...'p4') */
   priorities?: string[];
   projectIds?: string[];
@@ -59,6 +66,13 @@ export interface ParsedEstimate extends Span {
   key: string;
 }
 
+export interface ParsedWaiting extends Span {
+  /** Pessoa cadastrada de quem se espera */
+  person: CaptureEntity | null;
+  /** Ou texto livre (até 120 caracteres) */
+  onText: string | null;
+}
+
 export interface ParsedCapture {
   /** Nome da tarefa: o texto sem os itens reconhecidos */
   name: string;
@@ -67,6 +81,8 @@ export interface ParsedCapture {
   /** Prazo (end_date): data com marcador de prazo */
   due: ParsedDate | null;
   estimate: ParsedEstimate | null;
+  /** "aguardando fulano": status Aguardando */
+  waiting: ParsedWaiting | null;
   priority: (Span & { value: TaskPriority; key: string }) | null;
   /** null = Caixa de entrada */
   project: (Span & CaptureEntity) | null;
@@ -145,6 +161,41 @@ function findMentions(
 }
 
 const PRIORITY_RE = /p[1-4]/g;
+const WAITING_RE = /(^|\s)aguardando\s+/g;
+const WAITING_TEXT_MAX = 120;
+
+/** Primeiro "aguardando <quem>" do texto */
+function findWaiting(folded: string, original: string, people: CaptureEntity[]): ParsedWaiting | null {
+  WAITING_RE.lastIndex = 0;
+  const m = WAITING_RE.exec(folded);
+  if (!m) return null;
+  const start = m.index + m[1].length;
+  let at = m.index + m[0].length;
+  const make = (end: number, person: CaptureEntity | null, onText: string | null): ParsedWaiting =>
+    ({ start, end, text: original.slice(start, end), person, onText });
+
+  const withAt = folded[at] === '@';
+  if (withAt) at += 1;
+  // Pessoa cadastrada: nome mais longo (ou primeiro nome único), com ou sem @
+  const rest = folded.slice(at);
+  let best: { len: number; entity: CaptureEntity } | null = null;
+  for (const o of candidates(people, true)) {
+    if (!rest.startsWith(o.folded) || isWordChar(rest[o.folded.length])) continue;
+    if (!best || o.folded.length > best.len) best = { len: o.folded.length, entity: o.entity };
+  }
+  if (best) return make(at + best.len, best.entity, null);
+
+  // Várias palavras entre aspas
+  const quote = withAt ? null : /^["“]([^"”]{1,200})["”]/.exec(original.slice(at));
+  if (quote) {
+    const onText = quote[1].trim().slice(0, WAITING_TEXT_MAX);
+    return onText ? make(at + quote[0].length, null, onText) : null;
+  }
+  // Uma palavra
+  const word = /^[\p{L}\p{N}][\p{L}\p{N}._-]*/u.exec(original.slice(at));
+  if (!word) return null;
+  return make(at + word[0].length, null, word[0].slice(0, WAITING_TEXT_MAX));
+}
 // "~" no começo de palavra seguido do valor ("~30m", "~1h30", "~2h")
 const ESTIMATE_RE = /(^|\s)~(\d(?:[\d.,:hmin]*[\dhmin])?)(?![\p{L}\p{N}])/gu;
 
@@ -152,6 +203,13 @@ export function parseQuickCapture(input: string, ctx: ParseContext): ParsedCaptu
   const ignore = ctx.ignore ?? {};
   const removed: { start: number; end: number }[] = [];
   let folded = fold(input);
+
+  // 0. "aguardando ..." (antes das menções: o @ dele não vira responsável)
+  const waiting = ignore.waiting ? null : findWaiting(folded, input, ctx.people);
+  if (waiting) {
+    removed.push(waiting);
+    folded = mask(folded, waiting.start, waiting.end);
+  }
 
   // 1. #projeto (vale o último) e @pessoas
   const projects = findMentions(folded, input, '#', ctx.projects, false, ignore.projectIds);
@@ -230,6 +288,7 @@ export function parseQuickCapture(input: string, ctx: ParseContext): ParsedCaptu
     planned,
     due,
     estimate,
+    waiting,
     priority,
     project,
     people: parsedPeople,

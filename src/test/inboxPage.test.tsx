@@ -137,6 +137,16 @@ describe("página Caixa de entrada", () => {
     expect(screen.getByRole("button", { name: /Atalhos/ })).toBeInTheDocument();
   });
 
+  it("w marca como Aguardando (de quem e data de cobrança)", async () => {
+    renderInbox();
+    await press("w");
+    fireEvent.change(screen.getByLabelText("De quem"), { target: { value: "u-maria" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Marcar como Aguardando" })); });
+    expect(updateTask).toHaveBeenCalledWith("t-new", expect.objectContaining({
+      status: "waiting", waitingOnPersonId: "u-maria", followUpDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    }));
+  });
+
   it("Enter abre o formulário completo", async () => {
     renderInbox();
     await press("Enter");

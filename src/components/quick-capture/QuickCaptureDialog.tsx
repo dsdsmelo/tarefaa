@@ -21,6 +21,8 @@ import {
 } from '@/lib/quickCapture/parse';
 import { formatShortDate } from '@/lib/quickCapture/format';
 import { formatMinutes } from '@/lib/estimate';
+import { peopleForWorkspace } from '@/lib/people';
+import { defaultFollowUpDate, waitingUpdates } from '@/lib/waiting';
 
 const CREATE_MORE_KEY = 'tarefaa.quick-capture.create-more';
 
@@ -61,15 +63,31 @@ export function QuickCaptureDialog({ open, onOpenChange }: QuickCaptureDialogPro
       .map(p => ({ id: p.id, name: p.name, hint: workspaces.find(w => w.id === p.workspaceId)?.name })),
     [allProjects, workspaces]
   );
-  const personEntities = useMemo<Suggestion[]>(
+  // Pessoas: sem #projeto, todas (a Caixa de entrada atende todos os workspaces);
+  // com #projeto, as do workspace dele + "todos os workspaces" (D11)
+  const allPersonEntities = useMemo<Suggestion[]>(
     () => people.filter(p => p.active !== false).map(p => ({ id: p.id, name: p.name })),
     [people]
   );
-
-  const parsed = useMemo(
-    () => parseQuickCapture(text, { today, projects: projectEntities, people: personEntities, ignore }),
-    [text, today, projectEntities, personEntities, ignore]
+  const firstPass = useMemo(
+    () => parseQuickCapture(text, { today, projects: projectEntities, people: allPersonEntities, ignore }),
+    [text, today, projectEntities, allPersonEntities, ignore]
   );
+  const projectWorkspaceId = firstPass.project ? allProjects.find(p => p.id === firstPass.project!.id)?.workspaceId ?? null : null;
+  const personEntities = useMemo<Suggestion[]>(
+    () => projectWorkspaceId
+      ? peopleForWorkspace(people, projectWorkspaceId).map(p => ({ id: p.id, name: p.name }))
+      : allPersonEntities,
+    [people, projectWorkspaceId, allPersonEntities]
+  );
+  const parsed = useMemo(
+    () => (personEntities === allPersonEntities
+      ? firstPass
+      : parseQuickCapture(text, { today, projects: projectEntities, people: personEntities, ignore })),
+    [firstPass, personEntities, allPersonEntities, text, today, projectEntities, ignore]
+  );
+  // Aguardando: a data simples da frase vira a data de cobrança (padrão: 3 dias úteis)
+  const followUpDate = parsed.waiting ? (parsed.planned?.iso ?? defaultFollowUpDate(today)) : null;
 
   const parsedProjectWorkspace = parsed.project
     ? workspaceName(allProjects.find(p => p.id === parsed.project!.id)?.workspaceId ?? '')
@@ -115,7 +133,7 @@ export function QuickCaptureDialog({ open, onOpenChange }: QuickCaptureDialogPro
     requestAnimationFrame(() => inputRef.current?.setSelectionRange(pos, pos));
   };
 
-  const addIgnore = (key: keyof ParseIgnore, value: string) =>
+  const addIgnore = (key: Exclude<keyof ParseIgnore, 'waiting'>, value: string) =>
     setIgnore(prev => ({ ...prev, [key]: [...(prev[key] ?? []), value] }));
 
   const submit = async () => {
@@ -131,9 +149,12 @@ export function QuickCaptureDialog({ open, onOpenChange }: QuickCaptureDialogPro
           status: 'pending',
           priority: parsed.priority?.value ?? DEFAULT_PRIORITY,
           // Data simples = planejada (planned_date); com marcador de prazo = end_date
-          plannedDate: parsed.planned?.iso,
+          plannedDate: parsed.waiting ? undefined : parsed.planned?.iso,
           endDate: parsed.due?.iso,
           estimateMinutes: parsed.estimate?.minutes,
+          ...(parsed.waiting
+            ? waitingUpdates({ waitingOnPersonId: parsed.waiting.person?.id ?? null, waitingOnText: parsed.waiting.onText, followUpDate: followUpDate! })
+            : {}),
           responsibleIds: parsed.people.length > 0 ? parsed.people.map(p => p.id) : undefined,
         },
         { source: 'quick_capture' }
@@ -242,7 +263,13 @@ export function QuickCaptureDialog({ open, onOpenChange }: QuickCaptureDialogPro
               ) : (
                 <Chip icon={Inbox} muted>Caixa de entrada</Chip>
               )}
-              {parsed.planned && (
+              {parsed.waiting && (
+                <Chip icon={Hourglass} onRemove={() => setIgnore(prev => ({ ...prev, waiting: true }))} title={`Remover: "${parsed.waiting.text}" volta para o nome`}>
+                  Aguardando {parsed.waiting.person?.name ?? parsed.waiting.onText}
+                  <span className="text-muted-foreground"> · cobrar {formatShortDate(followUpDate!, today)}{parsed.planned ? '' : ' (padrão)'}</span>
+                </Chip>
+              )}
+              {parsed.planned && !parsed.waiting && (
                 <Chip icon={CalendarCheck} onRemove={() => addIgnore('dates', parsed.planned!.key)} title={`Remover: "${parsed.planned.text}" volta para o nome`}>
                   Planejado {formatShortDate(parsed.planned.iso, today)}
                   <span className="text-muted-foreground"> · "{parsed.planned.text}"</span>

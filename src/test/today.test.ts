@@ -145,12 +145,24 @@ describe("Hoje: ordem, resumo e capacidade", () => {
       task({ endDate: "2026-11-01", estimateMinutes: 600 }),
       task({ endDate: TODAY }),
     ], projectsById, ctx());
-    expect(summarize(s)).toEqual({ count: 4, plannedMinutes: 120, missingEstimate: 1 });
+    expect(summarize(s)).toEqual({ count: 4, followUps: 0, plannedMinutes: 120, missingEstimate: 1 });
   });
 
-  it("seção 'Aguardando cobrança hoje' existe e fica vazia (Etapa 4)", () => {
-    const s = buildTodaySections([task({ plannedDate: TODAY })], projectsById, ctx());
-    expect(s.waiting).toEqual([]);
+  it("Aguardando: sai das outras seções e entra em cobranças quando follow_up_date <= hoje", () => {
+    const due = task({ status: "waiting", followUpDate: TODAY, plannedDate: TODAY, endDate: "2026-11-01" });
+    const late = task({ status: "waiting", followUpDate: "2026-11-03" });
+    const future = task({ status: "waiting", followUpDate: "2026-11-09", endDate: "2026-11-01" });
+    const s = buildTodaySections([due, late, future], projectsById, ctx());
+    expect(s.waiting.map(i => i.task.id)).toEqual([late.id, due.id]);
+    expect([...s.planned, ...s.overdue, ...s.dueToday]).toEqual([]);
+    expect(summarize(s)).toMatchObject({ count: 2, followUps: 2 });
+  });
+
+  it("Ideia: tarefas de projeto em Ideia nunca entram", () => {
+    const ideaProjects = new Map(projectsById);
+    ideaProjects.set("p-idea", { id: "p-idea", name: "Geladeira", workspaceId: "w1", userId: ME, status: "idea" });
+    const s = buildTodaySections([task({ projectId: "p-idea", plannedDate: TODAY }), task({ projectId: "p-idea", endDate: "2026-11-01" })], ideaProjects, ctx());
+    expect(summarize(s).count).toBe(0);
   });
 
   it("capacidade por dia da semana e níveis", () => {

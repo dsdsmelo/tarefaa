@@ -34,7 +34,7 @@ import {
 import { toast } from 'sonner';
 
 const People = () => {
-  const { people = [], tasks = [], deletePerson, loading, error } = useData();
+  const { people = [], tasks = [], deletePerson, loading, error, activeWorkspaceId, activeWorkspace, workspaces = [] } = useData();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -46,8 +46,17 @@ const People = () => {
   const safePeople = people || [];
   const safeTasks = tasks || [];
 
+  // Pessoas do workspace ativo + as de "Todos os workspaces"
+  // (inativas também aparecem: a página gerencia o cadastro)
+  const workspacePeople = useMemo(
+    () => safePeople.filter(p => !activeWorkspaceId || !p.workspaceId || p.workspaceId === activeWorkspaceId),
+    [safePeople, activeWorkspaceId]
+  );
+  const workspaceLabel = (person: Person) =>
+    person.workspaceId ? workspaces.find(w => w.id === person.workspaceId)?.name ?? 'Outro workspace' : 'Todos os workspaces';
+
   const filteredPeople = useMemo(() => {
-    return safePeople.filter(person => {
+    return workspacePeople.filter(person => {
       const matchesSearch = person.name.toLowerCase().includes(search.toLowerCase());
       const matchesTab = 
         activeTab === 'all' || 
@@ -55,7 +64,7 @@ const People = () => {
         (activeTab === 'partner' && person.type === 'partner');
       return matchesSearch && matchesTab;
     });
-  }, [safePeople, search, activeTab]);
+  }, [workspacePeople, search, activeTab]);
 
   const getTaskCount = (personId: string) => {
     return safeTasks.filter(t => t.responsibleIds?.includes(personId) && t.status !== 'completed' && t.status !== 'cancelled').length;
@@ -98,7 +107,7 @@ const People = () => {
   const pageHeader = (
     <Header
       title="Pessoas"
-      subtitle="Gerencie os membros da equipe e parceiros"
+      subtitle={`Pessoas de ${activeWorkspace?.name ?? 'todos os workspaces'} e as marcadas em todos os workspaces`}
       actions={
         <Button onClick={handleOpenNew} disabled={loading || !!error}>
           <Plus className="w-4 h-4" />
@@ -193,7 +202,7 @@ const People = () => {
                   <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold truncate" title={person.name}>{person.name}</h3>
                     <p className="text-xs text-muted-foreground truncate mt-0.5" title={person.email || undefined}>
-                      {person.email || 'Sem e-mail'}
+                      {person.email || 'Sem e-mail'} · {workspaceLabel(person)}
                     </p>
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">

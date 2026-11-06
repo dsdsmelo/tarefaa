@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CalendarCheck,
   CalendarClock,
+  BellRing,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -29,6 +30,9 @@ import { CapacityBar } from '@/components/today/CapacityBar';
 import { TodayTaskRow } from '@/components/today/TodayTaskRow';
 import { AddToDayDialog, type AddToDayCandidate } from '@/components/today/AddToDayDialog';
 import { CloseDayDialog, type CloseDayDecision } from '@/components/today/CloseDayDialog';
+import { WaitingDialog } from '@/components/planning/WaitingDialog';
+import { peopleForWorkspace } from '@/lib/people';
+import { defaultFollowUpDate, waitingOnLabel, waitingUpdates, type WaitingInput } from '@/lib/waiting';
 import { useData } from '@/contexts/DataContext';
 import { useTodayView } from '@/hooks/useToday';
 import { usePlanningSettings } from '@/hooks/usePlanningSettings';
@@ -46,8 +50,8 @@ const SECTIONS: { key: TodaySectionKey; title: string; icon: typeof Sun; iconCla
   { key: 'overdue', title: 'Atrasadas', icon: AlertTriangle, iconClassName: 'text-red-500', empty: '' },
   { key: 'planned', title: 'Planejadas para hoje', icon: CalendarCheck, empty: 'Arraste tarefas para cá, use h numa tarefa ou "Adicionar ao dia".' },
   { key: 'dueToday', title: 'Vencem hoje', icon: CalendarClock, iconClassName: 'text-amber-500', empty: '' },
-  // Etapa 4: "Aguardando cobrança hoje" (status Aguardando). Seção reservada: vazia e oculta.
-  { key: 'waiting', title: 'Aguardando cobrança hoje', icon: CalendarClock, empty: '' },
+  // Tarefas Aguardando com cobrança vencida ou hoje (some quando vazia)
+  { key: 'waiting', title: 'Aguardando cobrança hoje', icon: BellRing, iconClassName: 'text-status-waiting', empty: '' },
 ];
 
 const SHORTCUTS: [string, string][] = [
@@ -58,6 +62,8 @@ const SHORTCUTS: [string, string][] = [
   ['h', 'Fazer hoje (planejar para hoje)'],
   ['t', 'Mover para amanhã'],
   ['d', 'Escolher a data planejada'],
+  ['w', 'Aguardando (ou cobrar de novo)'],
+  ['v', 'Voltou: Aguardando volta para Pendente'],
   ['Alt+↑ Alt+↓', 'Reordenar em "Planejadas para hoje"'],
   ['a', 'Adicionar ao dia'],
   ['q ou Ctrl/Cmd+K', 'Captura rápida'],
@@ -83,6 +89,8 @@ const Today = () => {
   const [closing, setClosing] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [drop, setDrop] = useState<{ index: number } | null>(null);
+  // Aguardando: marcar (set) ou cobrar de novo (again)
+  const [waitingFor, setWaitingFor] = useState<{ task: Task; mode: 'set' | 'again' } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const tomorrow = addDaysISO(today, 1);
@@ -91,8 +99,8 @@ const Today = () => {
 
   // Ordem visual das tarefas abertas (navegação pelo teclado)
   const flat = useMemo(
-    () => [...sections.overdue, ...sections.planned, ...sections.dueToday],
-    [sections.overdue, sections.planned, sections.dueToday]
+    () => [...sections.overdue, ...sections.planned, ...sections.dueToday, ...sections.waiting],
+    [sections.overdue, sections.planned, sections.dueToday, sections.waiting]
   );
   const selectedIndex = flat.findIndex(i => i.task.id === selectedId);
   const selected: TodayItem | null = flat[selectedIndex] ?? null;
@@ -110,6 +118,12 @@ const Today = () => {
   const workspaceOf = (projectId: string) => {
     const project = projectsById.get(projectId);
     return project ? workspaces.find(w => w.id === project.workspaceId) : undefined;
+  };
+  // Pessoas para "Aguardando de quem": as do workspace do projeto da tarefa
+  const waitingPeopleFor = (task: Task) => {
+    const project = projectsById.get(task.projectId);
+    const workspaceId = project && !project.isInbox ? project.workspaceId : null;
+    return peopleForWorkspace(people, workspaceId, task.waitingOnPersonId ? [task.waitingOnPersonId] : []);
   };
   const responsibleNames = (task: Task) =>
     (task.responsibleIds ?? []).map(id => people.find(p => p.id === id)?.name?.split(' ')[0]).filter(Boolean) as string[];
@@ -160,6 +174,35 @@ const Today = () => {
       if (comingIn) toast.success(`"${task.name}" planejada para hoje`);
     } catch (err) { fail(err, 'Não foi possível reordenar.'); }
   }, [plannedTasks, today, updateTask]);
+
+  const markWaiting = async (task: Task, input: WaitingInput, again: boolean) => {
+    const previous: Partial<Task> = {
+      status: task.status, waitingOnPersonId: task.waitingOnPersonId ?? null,
+      waitingOnText: task.waitingOnText ?? null, followUpDate: task.followUpDate ?? null,
+    };
+    try {
+      await updateTask(task.id, waitingUpdates(input));
+      toast.success(`"${task.name}": ${again ? 'cobrar de novo' : 'aguardando'} em ${formatShortDate(input.followUpDate, today)}`, {
+        action: { label: 'Desfazer', onClick: () => { void updateTask(task.id, previous); } },
+      });
+    } catch (err) { fail(err, 'Não foi possível marcar como Aguardando.'); }
+  };
+
+  /** Voltou: sai de Aguardando (o banco limpa de quem e a data de cobrança) */
+  const backFromWaiting = async (task: Task) => {
+    const previous: Partial<Task> = {
+      status: task.status, waitingOnPersonId: task.waitingOnPersonId ?? null,
+      waitingOnText: task.waitingOnText ?? null, followUpDate: task.followUpDate ?? null,
+    };
+    try {
+      await updateTask(task.id, { status: 'pending' });
+      toast.success(`"${task.name}" voltou para Pendente`, {
+        action: { label: 'Desfazer', onClick: () => { void updateTask(task.id, previous); } },
+      });
+    } catch (err) { fail(err, 'Não foi possível mudar o status.'); }
+  };
+
+  const openWaiting = (task: Task) => setWaitingFor({ task, mode: task.status === 'waiting' ? 'again' : 'set' });
 
   const clearPlan = (item: TodayItem) => {
     if (!item.canClearPlan) { toast.info('O prazo já passou; mude o prazo.'); return; }
@@ -228,6 +271,9 @@ const Today = () => {
         const next = flat[Math.min(flat.length - 1, Math.max(0, selectedIndex + delta))];
         if (next) setSelectedId(next.task.id);
       };
+      const isWaiting = selected.section === 'waiting';
+      // Datas do dia não valem para Aguardando (ela fica na seção de cobranças)
+      if (isWaiting && ['t', 'd', 'h'].includes(e.key)) return;
       switch (e.key) {
         case 'ArrowDown': case 'j': e.preventDefault(); step(1); break;
         case 'ArrowUp': case 'k': e.preventDefault(); step(-1); break;
@@ -237,6 +283,8 @@ const Today = () => {
         case 'd': e.preventDefault(); setPicker('date'); break;
         case 't': e.preventDefault(); void plan(selected.task, tomorrow); break;
         case 'h': e.preventDefault(); if (selected.section !== 'planned') pullToToday(selected.task); break;
+        case 'w': e.preventDefault(); openWaiting(selected.task); break;
+        case 'v': e.preventDefault(); if (isWaiting) void backFromWaiting(selected.task); break;
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -308,7 +356,7 @@ const Today = () => {
           today={today}
           selected={item.task.id === selected?.task.id}
           responsibleNames={responsibleNames(item.task)}
-          draggable={key !== 'done'}
+          draggable={key !== 'done' && key !== 'waiting'}
           dragging={dragId === item.task.id}
           dropIndicator={key === 'planned' && drop
             ? (drop.index === index ? 'before' : drop.index === items.length && index === items.length - 1 ? 'after' : null)
@@ -321,6 +369,9 @@ const Today = () => {
           onClearPlan={() => clearPlan(item)}
           onPullToToday={() => pullToToday(item.task)}
           onEstimate={(minutes) => void setEstimate(item.task, minutes)}
+          waitingOn={key === 'waiting' ? waitingOnLabel(item.task, people) : null}
+          onFollowUpAgain={() => openWaiting(item.task)}
+          onBack={() => void backFromWaiting(item.task)}
           onDragStart={onDragStart(item.task)}
           onDragEnd={onDragEnd}
           onDragOver={key === 'planned' ? plannedRowDragOver(index) : undefined}
@@ -440,6 +491,26 @@ const Today = () => {
         current={selected?.task.estimateMinutes}
         onOpenChange={(o) => !o && setPicker(null)}
         onSubmit={(minutes) => { setPicker(null); if (selected) void setEstimate(selected.task, minutes); }}
+      />
+      <WaitingDialog
+        open={!!waitingFor}
+        today={today}
+        subject={waitingFor?.task.name}
+        people={waitingFor ? waitingPeopleFor(waitingFor.task) : []}
+        initial={waitingFor?.mode === 'again'
+          ? {
+              waitingOnPersonId: waitingFor.task.waitingOnPersonId ?? null,
+              waitingOnText: waitingFor.task.waitingOnText ?? null,
+              followUpDate: defaultFollowUpDate(today),
+            }
+          : undefined}
+        confirmLabel={waitingFor?.mode === 'again' ? 'Cobrar de novo' : undefined}
+        onOpenChange={(o) => !o && setWaitingFor(null)}
+        onSubmit={(input) => {
+          const target = waitingFor;
+          setWaitingFor(null);
+          if (target) void markWaiting(target.task, input, target.mode === 'again');
+        }}
       />
       <AddToDayDialog
         open={picker === 'add'}

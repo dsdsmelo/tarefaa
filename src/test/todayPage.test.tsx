@@ -41,6 +41,7 @@ vi.mock("@/contexts/DataContext", () => ({
     allProjects: [
       { id: "p-mine", name: "Site novo", workspaceId: "w-corp", userId: "me", status: "active" },
       { id: "p-other", name: "Projeto do Fulano", workspaceId: "w-ext", userId: "fulano", status: "active" },
+      { id: "p-idea", name: "Geladeira", workspaceId: "w-corp", userId: "me", status: "idea" },
     ],
     inboxProject: { id: "p-inbox", name: "Caixa de entrada", workspaceId: "w-pessoal", userId: "me", isInbox: true, status: "active" },
     workspaces: [
@@ -87,6 +88,9 @@ beforeEach(() => {
     task("t-other-mine", "do Fulano comigo", { projectId: "p-other", plannedDate: TODAY, responsibleIds: ["person-me"] }),
     task("t-other-not", "do Fulano sem mim", { projectId: "p-other", plannedDate: TODAY, responsibleIds: ["person-x"] }),
     task("t-mine-x", "minha do Xavier", { plannedDate: YESTERDAY, responsibleIds: ["person-x"] }),
+    task("t-wait", "aguardando o Xavier", { status: "waiting", followUpDate: YESTERDAY, waitingOnPersonId: "person-x", plannedDate: TODAY }),
+    task("t-wait-later", "aguardando depois", { status: "waiting", followUpDate: TOMORROW, endDate: YESTERDAY }),
+    task("t-idea", "tarefa na geladeira", { projectId: "p-idea", plannedDate: TODAY }),
   ];
 });
 
@@ -104,8 +108,11 @@ describe("página Hoje", () => {
     expect(screen.queryByText("concluída hoje")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Concluídas hoje/ }));
     expect(screen.getByText("concluída hoje")).toBeInTheDocument();
-    // Seção da Etapa 4 fica oculta
-    expect(section("waiting")).toBeNull();
+    // Aguardando: só na seção de cobranças, e só quando a cobrança chegou
+    expect(namesIn("waiting")).toEqual(["aguardando o Xavier"]);
+    expect(screen.queryByText("aguardando depois")).toBeNull();
+    // Projeto em Ideia fica fora
+    expect(screen.queryByText("tarefa na geladeira")).toBeNull();
   });
 
   it("cada item mostra workspace e projeto (inclusive Caixa de entrada)", () => {
@@ -251,6 +258,44 @@ describe("página Hoje", () => {
     fireEvent.change(screen.getByPlaceholderText(/Adicionar ao dia/), { target: { value: "revisao orcamento" } });
     await act(async () => { fireEvent.click(screen.getByText("Revisão do orçamento")); });
     expect(updateTask).toHaveBeenCalledWith("t-free", { plannedDate: TODAY, todayOrder: 4000 });
+  });
+});
+
+describe("página Hoje: Aguardando (Etapa 4)", () => {
+  it("linha mostra de quem e o atraso da cobrança", () => {
+    renderToday();
+    const row = screen.getByText("aguardando o Xavier").closest("li")!;
+    expect(row.textContent).toContain("Aguardando Xavier · cobrança atrasada há 1 dia");
+  });
+
+  it("v (voltou) devolve para Pendente; w cobra de novo com nova data", async () => {
+    renderToday();
+    fireEvent.click(screen.getByText("aguardando o Xavier"));
+    await press("v");
+    expect(updateTask).toHaveBeenCalledWith("t-wait", { status: "pending" });
+    await press("w");
+    const dialog = screen.getByRole("dialog");
+    expect((within(dialog).getByLabelText("De quem") as HTMLSelectElement).value).toBe("person-x");
+    await act(async () => { fireEvent.click(within(dialog).getByRole("button", { name: "Cobrar de novo" })); });
+    expect(updateTask).toHaveBeenLastCalledWith("t-wait", expect.objectContaining({ status: "waiting", waitingOnPersonId: "person-x" }));
+  });
+
+  it("w numa tarefa comum marca como Aguardando", async () => {
+    renderToday();
+    fireEvent.click(screen.getByText("planejada B"));
+    await press("w");
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("De quem (texto livre)"), { target: { value: "financeiro" } });
+    await act(async () => { fireEvent.click(within(dialog).getByRole("button", { name: "Marcar como Aguardando" })); });
+    expect(updateTask).toHaveBeenCalledWith("t-plan-b", expect.objectContaining({ status: "waiting", waitingOnText: "financeiro" }));
+  });
+
+  it("t, d e h não valem para Aguardando", async () => {
+    renderToday();
+    fireEvent.click(screen.getByText("aguardando o Xavier"));
+    await press("t");
+    await press("h");
+    expect(updateTask).not.toHaveBeenCalled();
   });
 });
 

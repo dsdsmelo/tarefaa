@@ -1,3 +1,8 @@
+import { WaitingDialog } from '@/components/planning/WaitingDialog';
+import { peopleForWorkspace } from '@/lib/people';
+import { waitingUpdates } from '@/lib/waiting';
+import { todayISO } from '@/lib/taskDates';
+import { withCustomValue } from '@/lib/dbMappers';
 import { useState, useMemo, useCallback } from 'react';
 import {
   Plus,
@@ -74,6 +79,8 @@ const Tasks = () => {
   const { tasks = [], addTask, updateTask, deleteTask, projects = [], phases = [], people = [], customColumns = [], loading, error, getProjectMemberIds } = useData();
   const [search, setSearch] = useState('');
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  // Aguardando: tarefa que vai receber o status (pede de quem e data de cobrança)
+  const [waitingTask, setWaitingTask] = useState<Task | null>(null);
   const [projectFilter, setProjectFilter] = useState('all');
   // Filtros padrão agora usam arrays para seleção múltipla
   const [standardFilters, setStandardFilters] = useState<StandardFiltersState>({
@@ -170,10 +177,8 @@ const Tasks = () => {
     
     try {
       await updateTask(taskId, {
-        customValues: {
-          ...task.customValues,
-          [columnId]: value,
-        },
+        // Vazio remove a chave (em vez de gravar "")
+        customValues: withCustomValue(task.customValues, columnId, value),
       });
     } catch (err) {
       console.error('Error updating custom value:', err);
@@ -522,7 +527,8 @@ const Tasks = () => {
                       <td className="py-4 px-4">
                         <ResponsibleEditCell
                           responsibleIds={task.responsibleIds}
-                          people={people}
+                          people={peopleForWorkspace(people, projects.find(p => p.id === task.projectId)?.workspaceId,
+                            [...getProjectMemberIds(task.projectId), ...(task.responsibleIds ?? [])])}
                           projectMemberIds={getProjectMemberIds(task.projectId)}
                           onSave={(value) => handleTaskFieldUpdate(task.id, { responsibleIds: value })}
                         />
@@ -531,6 +537,7 @@ const Tasks = () => {
                         <StatusEditCell
                           status={task.status}
                           onSave={(value) => handleTaskFieldUpdate(task.id, { status: value })}
+                          onWaiting={() => setWaitingTask(task)}
                         />
                       </td>
                       <td className="py-4 px-4">
@@ -643,6 +650,21 @@ const Tasks = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <WaitingDialog
+        open={!!waitingTask}
+        today={todayISO()}
+        subject={waitingTask?.name}
+        people={waitingTask
+          ? peopleForWorkspace(people, projects.find(p => p.id === waitingTask.projectId)?.workspaceId, getProjectMemberIds(waitingTask.projectId))
+          : []}
+        onOpenChange={(open) => !open && setWaitingTask(null)}
+        onSubmit={(input) => {
+          const task = waitingTask;
+          setWaitingTask(null);
+          if (task) void handleTaskFieldUpdate(task.id, waitingUpdates(input));
+        }}
+      />
     </MainLayout>
   );
 };

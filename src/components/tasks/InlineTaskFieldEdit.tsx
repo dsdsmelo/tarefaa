@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { formatMinutes, parseEstimate } from '@/lib/estimate';
-import { Task, TaskStatus, TaskPriority, Person, Phase } from '@/lib/types';
+import { Task, TaskStatus, TaskPriority, Person, Phase, TASK_STATUS_ORDER } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -28,14 +28,18 @@ import {
 interface StatusEditCellProps {
   status: TaskStatus;
   onSave: (status: TaskStatus) => void;
+  /** Escolher "Aguardando" pede de quem e a data de cobrança (diálogo do chamador) */
+  onWaiting?: () => void;
 }
 
-export const StatusEditCell = ({ status, onSave }: StatusEditCellProps) => {
+export const StatusEditCell = ({ status, onSave, onWaiting }: StatusEditCellProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSelect = (value: TaskStatus) => {
-    onSave(value);
     setIsOpen(false);
+    if (value === status) return;
+    if (value === 'waiting' && onWaiting) { onWaiting(); return; }
+    onSave(value);
   };
 
   return (
@@ -48,7 +52,7 @@ export const StatusEditCell = ({ status, onSave }: StatusEditCellProps) => {
       </PopoverTrigger>
       <PopoverContent className="w-44 p-1" align="start">
         <div className="space-y-0.5">
-          {(['pending', 'in_progress', 'blocked', 'completed', 'cancelled'] as TaskStatus[]).map((s) => (
+          {TASK_STATUS_ORDER.map((s) => (
             <button
               key={s}
               className={cn(

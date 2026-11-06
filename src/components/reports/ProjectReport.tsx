@@ -36,6 +36,7 @@ const fmtDate = (d?: string | null) =>
 const statusColor: Record<TaskStatus, string> = {
   pending: '#f59e0b',
   in_progress: '#3b82f6',
+  waiting: '#8b5cf6',
   blocked: '#ef4444',
   completed: '#10b981',
   cancelled: '#9ca3af',
@@ -360,7 +361,7 @@ export function ProjectReport({ project, tasks, phases, milestones, people, onCl
 
           {/* Legenda */}
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
-            {(['pending', 'in_progress', 'blocked', 'completed'] as TaskStatus[]).map(s => (
+            {(['pending', 'in_progress', 'waiting', 'blocked', 'completed'] as TaskStatus[]).map(s => (
               <span key={s} className="inline-flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: statusColor[s] }} />
                 {statusLabels[s]}
